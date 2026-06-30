@@ -1,0 +1,23 @@
+{
+    "entry": [
+        "src/main.js",
+        "src/bot.js",
+        "src/workers/captcha.js",
+        "src/vendor/autovote/index.js",
+        "src/commands/admin.js",
+        "src/events/ready.js",
+        "src/events/messageCreate.js",
+        "src/services/mainHandler.js",
+        "src/modules/*.js",
+        "src/vendor/huntbot_captcha/huntbotcaptcha.js"
+    ],
+    "project": ["src/**/*.js"],
+    "ignore": ["src/vendor/hcaptchasolver/**"],
+    "ignoreDependencies": [
+        "puppeteer",
+        "puppeteer-extra-plugin-adblocker",
+        "puppeteer-real-browser",
+        "sharp",
+        "yargs"
+    ]
+}

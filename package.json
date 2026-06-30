@@ -4,7 +4,7 @@
     "updater_version": "1.0.0",
     "version_note": "Fixed web captcha solver",
     "description": "Discord OwO farm bot stable with CAPTCHA(BAN) protection",
-    "main": "main.js",
+    "main": "src/main.js",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/Mid0Hub/owofarmbot_stable.git"
@@ -29,21 +29,24 @@
     "license": "ISC",
     "type": "commonjs",
     "scripts": {
-        "start": "node main.js",
-        "run": "node main.js",
+        "start": "node src/main.js",
+        "run": "node src/main.js",
         "setup": "npm i",
-        "format": "prettier --write ."
+        "lint": "biome check .",
+        "format": "biome format --write .",
+        "lint:fix": "biome check --write ."
     },
     "dependencies": {
-        "axios": "^1.9.0",
+        "axios": "^1.15.0",
         "chalk": "^4.1.2",
         "discord.js-selfbot-v13": "^3.6.1",
-        "ejs": "^3.1.10",
-        "express": "^5.1.0",
+        "dotenv": "^17.4.2",
         "fs-extra": "^11.3.0",
         "node-notifier": "^10.0.1",
+        "puppeteer": "^24.40.0",
+        "puppeteer-extra-plugin-adblocker": "^2.13.6",
+        "puppeteer-real-browser": "^1.4.4",
         "sharp": "^0.34.2",
-        "ws": "^8.18.2",
         "yargs": "^17.7.2"
     },
     "bugs": {
@@ -51,9 +54,6 @@
     },
     "homepage": "https://github.com/Mid0Hub/owofarmbot_stable#readme",
     "devDependencies": {
-        "@eslint/js": "^9.27.0",
-        "eslint": "^9.27.0",
-        "globals": "^16.1.0",
-        "prettier": "^3.5.3"
+        "@biomejs/biome": "^2.5.1"
     }
 }

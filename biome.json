@@ -1,0 +1,105 @@
+{
+    "$schema": "https://biomejs.dev/schemas/2.5.1/schema.json",
+    "files": {
+        "maxSize": 5242880,
+        "includes": ["**/*.js", "**/*.json", "**/*.mjs"]
+    },
+    "formatter": {
+        "enabled": true,
+        "indentStyle": "space",
+        "indentWidth": 4,
+        "lineEnding": "crlf"
+    },
+    "linter": {
+        "enabled": true,
+        "rules": {
+            "preset": "recommended",
+            "complexity": {
+                "noExcessiveCognitiveComplexity": "error",
+                "noExcessiveLinesPerFunction": {
+                    "level": "warn",
+                    "options": { "maxLines": 80 }
+                },
+                "useMaxParams": { "level": "warn", "options": { "max": 5 } }
+            }
+        }
+    },
+    "javascript": {
+        "globals": ["process"],
+        "formatter": {
+            "quoteStyle": "double",
+            "trailingCommas": "all"
+        }
+    },
+    "vcs": {
+        "enabled": true,
+        "clientKind": "git",
+        "useIgnoreFile": true
+    },
+    "overrides": [
+        {
+            "includes": [
+                "src/vendor/hcaptchasolver/**",
+                "src/vendor/adblockcache/**",
+                "src/vendor/autovote/**",
+                "src/webui/**"
+            ],
+            "linter": { "enabled": false },
+            "formatter": { "enabled": false }
+        },
+        {
+            "includes": ["src/tests/**"],
+            "linter": { "enabled": false },
+            "formatter": { "enabled": false }
+        },
+        {
+            "includes": ["config.json"],
+            "linter": { "enabled": false },
+            "formatter": { "indentWidth": 2 }
+        },
+        {
+            "includes": ["biome.json"],
+            "formatter": { "indentWidth": 4 }
+        },
+        {
+            "includes": ["src/main.js"],
+            "linter": {
+                "rules": {
+                    "correctness": {
+                        "noInnerDeclarations": "off"
+                    }
+                }
+            }
+        },
+        {
+            "includes": ["src/modules/inventory.js"],
+            "linter": {
+                "rules": {
+                    "suspicious": {
+                        "noAssignInExpressions": "off"
+                    }
+                }
+            }
+        },
+        {
+            "includes": ["src/utils/globalutil.js"],
+            "linter": {
+                "rules": {
+                    "suspicious": {
+                        "noControlCharactersInRegex": "off"
+                    }
+                }
+            }
+        },
+        {
+            "includes": ["src/services/logger.js"],
+            "linter": {
+                "rules": {
+                    "correctness": {
+                        "noInnerDeclarations": "off"
+                    }
+                }
+            }
+        }
+    ]
+}

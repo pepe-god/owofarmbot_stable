@@ -1,0 +1,3 @@
+# Exclude vendored third-party code (Chrome extensions, bundled deps)
+src/vendor/
+src/vendor/adblockcache/
