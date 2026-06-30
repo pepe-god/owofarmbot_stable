@@ -61,7 +61,7 @@
 - `complexity/noExcessiveLinesPerFunction` (max 80) — warn
 - `complexity/useMaxParams` (max 5) — warn
 - Indent: 4 spaces, CRLF line endings, double quotes, trailing commas
-- Overrides: hcaptchasolver, autovote, tests, config.json all lint-ignored
+- Overrides: hcaptchasolver, tests, config.json all lint-ignored
 - Individual file overrides: main.js (noInnerDeclarations off), inventory.js (noAssignInExpressions off), globalutil.js (noControlCharactersInRegex off), logger.js (biome pass clean — class-based)
 
 ## Remaining Lint Noise (pre-existing, do NOT "fix")
@@ -69,15 +69,13 @@
 - `joingiveaways.js:66` — `noExcessiveLinesPerFunction` (105 lines, needs real refactor)
 
 ## Ignored Directories
-- `src/vendor/hcaptchasolver/` — 60MB Chrome extension, excluded from lint, knip, graphify
+- `src/vendor/hcaptchasolver/` — 60MB Chrome extension, excluded from lint, graphify
 - `src/vendor/adblockcache/` — auto-generated Puppeteer cache
-- `src/vendor/autovote/` — merged submodule, excluded from lint
 - `graphify-out/`, `.opencode/` — in .gitignore
 
 ## Other Gotchas
 - `src/main.js` auto-installs missing deps via `npm install` at startup
 - Termux support removed
-- `knip.json` silences false-positive "unused" files and dependencies
 - `pnpm-workspace.yaml` allows builds for puppeteer, sharp, sleep
 - autovote is a merged submodule at `src/vendor/autovote/` (was `git submodule`)
 - No test runner configured; `src/tests/` is lint-ignored and empty

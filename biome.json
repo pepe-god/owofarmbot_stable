@@ -41,7 +41,6 @@
             "includes": [
                 "src/vendor/hcaptchasolver/**",
                 "src/vendor/adblockcache/**",
-                "src/vendor/autovote/**",
                 "src/webui/**"
             ],
             "linter": { "enabled": false },

@@ -1,16 +1,16 @@
 # Graph Report - owofarmbot_stable  (2026-06-30)
 
 ## Corpus Check
-- 36 files · ~179,985 words
+- 35 files · ~179,718 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 284 nodes · 339 edges · 28 communities (26 shown, 2 thin omitted)
+- 281 nodes · 335 edges · 28 communities (25 shown, 3 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5791546d`
+- Built from commit: `c2b89e50`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -39,14 +39,14 @@
 ## God Nodes (most connected - your core abstractions)
 1. `commandrandomizer()` - 14 edges
 2. `OwO Farm Bot Stable — AGENTS.md` - 12 edges
-3. `Logger` - 10 edges
-4. `getrand()` - 10 edges
+3. `getrand()` - 10 edges
+4. `Logger` - 9 edges
 5. `scripts` - 7 edges
 6. `showerr()` - 7 edges
 7. `inventory()` - 6 edges
 8. `smol()` - 6 edges
-9. `OwO Farm Bot Stable` - 5 edges
-10. `formatter` - 5 edges
+9. `formatter` - 5 edges
+10. `OwO Farm Bot Stable` - 5 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `fetchInventoryData()` --calls--> `commandrandomizer()`  [EXTRACTED]
@@ -63,7 +63,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (28 total, 2 thin omitted)
+## Communities (28 total, 3 thin omitted)
 
 ### Community 0 - "App Entry & Package Config"
 Cohesion: 0.09
@@ -88,10 +88,6 @@ Nodes (13): ANIMAL_TYPE_MAP, checkDuplicateChannels(), checkGambleAmount(), chec
 ### Community 5 - "Huntbot & Inventory"
 Cohesion: 0.14
 Nodes (14): noExcessiveCognitiveComplexity, noExcessiveLinesPerFunction, useMaxParams, linter, enabled, rules, level, options (+6 more)
-
-### Community 6 - "Biome Lint Rules"
-Cohesion: 0.21
-Nodes (3): ANSI_RE, chalk, Logger
 
 ### Community 7 - "Main Command Router"
 Cohesion: 0.15
@@ -138,19 +134,19 @@ Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: What does safety.js connect to?, Source Nodes
 
 ## Knowledge Gaps
-- **124 isolated node(s):** `Commands`, `Entrypoint & Architecture`, `Config`, `Key Patterns`, `File Organization` (+119 more)
+- **123 isolated node(s):** `Commands`, `Entrypoint & Architecture`, `Config`, `Key Patterns`, `File Organization` (+118 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **2 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **3 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `dependencies` connect `Package Lock Config` to `Farming & Luck Commands`?**
-  _High betweenness centrality (0.038) - this node is a cross-community bridge._
+  _High betweenness centrality (0.039) - this node is a cross-community bridge._
 - **Why does `commandrandomizer()` connect `App Entry & Package Config` to `Message Event Handler`, `Logging System`, `Huntbot Captcha Solver`?**
-  _High betweenness centrality (0.027) - this node is a cross-community bridge._
+  _High betweenness centrality (0.028) - this node is a cross-community bridge._
 - **What connects `Commands`, `Entrypoint & Architecture`, `Config` to the rest of the system?**
-  _124 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _123 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `App Entry & Package Config` be split into smaller, more focused modules?**
   _Cohesion score 0.09243697478991597 - nodes in this community are weakly interconnected._
 - **Should `Farming & Luck Commands` be split into smaller, more focused modules?**
