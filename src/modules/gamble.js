@@ -185,3 +185,6 @@ async function playGame(type, client, channel) {
 
     loop();
 }
+
+module.exports.processResult = processResult;
+module.exports.GAME_CONFIG = GAME_CONFIG;

@@ -47,11 +47,6 @@
             "formatter": { "enabled": false }
         },
         {
-            "includes": ["src/tests/**"],
-            "linter": { "enabled": false },
-            "formatter": { "enabled": false }
-        },
-        {
             "includes": ["config.json"],
             "linter": { "enabled": false },
             "formatter": { "indentWidth": 2 }

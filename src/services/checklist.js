@@ -200,3 +200,6 @@ async function smol(client, channel) {
         );
     }, client.global.temp.intervals.checklist);
 }
+
+module.exports.parseChecklistInterval = parseChecklistInterval;
+module.exports.getIncompleteItems = getIncompleteItems;

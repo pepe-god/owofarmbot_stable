@@ -199,3 +199,5 @@ async function questActionOther(client, channel, quest) {
         useGetRand: true,
     });
 }
+
+module.exports.parseQuests = parseQuests;

@@ -189,3 +189,7 @@ async function elaina2(client, channel) {
         );
     }
 }
+
+module.exports.capitalize = capitalize;
+module.exports.huntResult = huntResult;
+module.exports.handleMissingGems = handleMissingGems;

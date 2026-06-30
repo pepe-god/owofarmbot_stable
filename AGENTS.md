@@ -71,7 +71,7 @@
 ## Ignored Directories
 - `src/vendor/hcaptchasolver/` — 60MB Chrome extension, excluded from lint, graphify
 - `src/vendor/adblockcache/` — auto-generated Puppeteer cache
-- `graphify-out/`, `.opencode/` — in .gitignore
+- `.opencode/` — in .gitignore
 
 ## Other Gotchas
 - `src/main.js` auto-installs missing deps via `npm install` at startup
@@ -80,3 +80,4 @@
 - autovote is a merged submodule at `src/vendor/autovote/` (was `git submodule`)
 - No test runner configured; `src/tests/` is lint-ignored and empty
 - `config.json` formatting uses 2-space indent (biome override)
+- `graphify-out/` is gitignored (auto-generated, local only). Hook: pre-commit (sync rebuild before each commit)
