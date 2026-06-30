@@ -1,8 +1,8 @@
 # OwO Farm Bot Stable
 
-Originally created by [Mido](https://github.com/Mid0Hub). Licensed under [CC BY-NC-SA 4.0](LICENSE).
-
 Auto farm bot for OwO Discord bot.
+
+Fork with refactored codebase, test infrastructure, and cleaned-up dependencies.
 
 ## Requirements
 
@@ -12,15 +12,13 @@ Auto farm bot for OwO Discord bot.
 ## Install & Run
 
 ```bash
-git clone https://github.com/Mid0Hub/owofarmbot_stable
-cd owofarmbot_stable
 pnpm install
 ```
 
 Edit `config.json` with your token and channel IDs, then:
 
 ```bash
-node src/main.js
+pnpm start
 ```
 
 Type `owostart` in your farm channel to begin.
@@ -34,6 +32,21 @@ Type `owostart` in your farm channel to begin.
 | `oworesume` | Resume farming |
 | `oworestart` | Restart farming |
 | `owostats` | Show stats |
+
+## Test
+
+```bash
+pnpm test
+```
+
+## Lint
+
+```bash
+pnpm lint
+pnpm lint:fix
+```
+
+Originally created by [Mid0aria / Mid0Hub](https://github.com/Mid0Hub).
 
 ## License
 

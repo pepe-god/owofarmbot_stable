@@ -1,13 +1,12 @@
 {
     "name": "owofarmbot_stable",
-    "version": "0.0.9.4",
-    "updater_version": "1.0.0",
-    "version_note": "Fixed web captcha solver",
+    "version": "0.1.0",
+    "private": true,
     "description": "Discord OwO farm bot stable with CAPTCHA(BAN) protection",
     "main": "src/main.js",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/Mid0Hub/owofarmbot_stable.git"
+        "url": ""
     },
     "keywords": [
         "nodejs",
@@ -25,7 +24,7 @@
         "owobot",
         "owoautofarmer"
     ],
-    "author": "Mid0aria",
+    "author": "",
     "license": "ISC",
     "type": "commonjs",
     "scripts": {
@@ -51,9 +50,9 @@
         "yargs": "^17.7.2"
     },
     "bugs": {
-        "url": "https://github.com/Mid0Hub/owofarmbot_stable/issues"
+        "url": ""
     },
-    "homepage": "https://github.com/Mid0Hub/owofarmbot_stable#readme",
+    "homepage": "",
     "devDependencies": {
         "@biomejs/biome": "^2.5.1"
     }
