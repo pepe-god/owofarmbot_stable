@@ -2,3 +2,5 @@ allowBuilds:
   puppeteer: true
   sharp: true
   sleep: true
+minimumReleaseAgeExclude:
+  - fs-extra@11.3.6
