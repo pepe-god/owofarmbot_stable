@@ -48,7 +48,7 @@
         "puppeteer-extra-plugin-adblocker": "^2.13.6",
         "puppeteer-real-browser": "^1.4.4",
         "sharp": "^0.34.2",
-        "yargs": "^17.7.2"
+        "yargs": "^18.0.0"
     },
     "bugs": {
         "url": ""
