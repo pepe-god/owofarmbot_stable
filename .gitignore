@@ -20,6 +20,9 @@ test.js
 # Editor
 .vscode
 
+# GitHub templates / CI
+.github/
+
 # OpenCode / graphify
 .opencode/
 graphify-out/
