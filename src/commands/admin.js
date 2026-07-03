@@ -1,3 +1,11 @@
+/**
+ * Send a reply message to the command channel and optionally delete
+ * the triggering command message for a clean UX.
+ *
+ * @param {Client} client - The Discord client instance.
+ * @param {Message} message - The command message to delete.
+ * @param {string} text - The reply text to send.
+ */
 async function replyAndDelete(client, message, text) {
     await message.delete();
     if (client.config.settings.chatfeedback) {
@@ -5,6 +13,15 @@ async function replyAndDelete(client, message, text) {
     }
 }
 
+/**
+ * Admin command definitions.
+ *
+ * Commands:
+ *  - pause: Pause the bot.
+ *  - restart: Restart the entire process.
+ *  - start/resume: Resume or start the bot.
+ *  - stats: Display runtime statistics.
+ */
 const commands = [
     {
         config: { name: "pause" },

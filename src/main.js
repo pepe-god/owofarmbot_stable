@@ -1,5 +1,15 @@
 /* eslint-disable no-unused-vars */
 
+/**
+ * Entry point for OwO Farm Bot Stable.
+ *
+ * Responsibilities:
+ *  - Suppress Node deprecation warnings to keep startup output clean.
+ *  - Auto-install any missing npm dependencies declared in package.json.
+ *  - Fork a child worker process via Node's cluster module so the bot
+ *    can automatically restart on crash without external supervision.
+ */
+
 process.emitWarning = (warning, type) => {
     if (type === "DeprecationWarning") {
         return;
@@ -28,6 +38,10 @@ for (const dep of Object.keys(packageJson.dependencies)) {
 const cluster = require("node:cluster");
 
 if (cluster.isPrimary) {
+    /**
+     * Primary process: keep the bot alive by re-forking whenever the
+     * worker exits for any reason (crash, unhandled exception, etc.).
+     */
     cluster.on("exit", () => {
         console.log("The bot is down, restarting...");
         cluster.fork();
@@ -35,5 +49,8 @@ if (cluster.isPrimary) {
 
     cluster.fork();
 } else {
+    /**
+     * Worker process: boot the actual bot implementation.
+     */
     require("./bot.js");
 }

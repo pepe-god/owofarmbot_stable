@@ -1,6 +1,17 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-useless-escape */
 
+/**
+ * Bot runtime bootstrap.
+ *
+ * Responsibilities:
+ *  - Suppress Node deprecation warnings.
+ *  - Load configuration and package metadata.
+ *  - Build the shared global state object attached to the Discord client.
+ *  - Wire Discord Rich Presence (RPC).
+ *  - Validate config, then log in and register handlers/commands.
+ */
+
 process.emitWarning = (warning, type) => {
     if (type === "DeprecationWarning") {
         return;
@@ -22,6 +33,16 @@ const configValidator = require("./services/configValidator.js");
 //client
 const { Client, Collection, RichPresence } = require("discord.js-selfbot-v13");
 const client = new Client();
+
+/**
+ * Factory that creates the shared global state object stored at
+ * `client.global`. This object tracks runtime flags (paused, captcha,
+ * inventory, checklist) and counters for every bot feature.
+ *
+ * @param {string} name - Identifier for this state instance.
+ * @param {string} type - Display type used in logs/RPC.
+ * @returns {Object} The initialized global state object.
+ */
 function createGlobalState(name, type) {
     return {
         name,
@@ -87,6 +108,14 @@ const owofarmbot_stable = createGlobalState("owofarmbot_stable", "Main");
 const notifier = require("node-notifier");
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Sets or updates the Discord Rich Presence activity shown on the
+ * bot owner's profile. Presence reflects whether the bot is currently
+ * paused or running.
+ *
+ * @param {string} type - The subsystem triggering the RPC update
+ *   (e.g. "Farm", "Quest", "Huntbot").
+ */
 function rpc(type) {
     const status = new RichPresence(client)
         .setApplicationId("1253757665520259173")
@@ -143,6 +172,10 @@ process.title = `OwO Farm Bot Stable v${packageJson.version}`;
     );
 })();
 
+/**
+ * Finalizes client setup: initializes command/alias collections,
+ * loads handlers, and logs into Discord using the configured token.
+ */
 async function initializeBot() {
     for (const x of ["aliases", "commands"]) client[x] = new Collection();
 

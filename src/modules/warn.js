@@ -1,5 +1,13 @@
 const notifier = require("node-notifier");
 
+/**
+ * Send a native desktop notification when a captcha is detected.
+ *
+ * Uses node-notifier to display a toast with a custom icon and sound.
+ * The notification is blocking (wait: true) so the user must dismiss it.
+ *
+ * @param {Client} client - The Discord client instance.
+ */
 module.exports = (client) => {
     notifier.notify({
         title: "Captcha Detected!",

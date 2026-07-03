@@ -1,8 +1,32 @@
+/**
+ * General-purpose runtime utilities used across the bot.
+ *
+ * Included helpers:
+ *  - removeInvisibleChars: strip zero-width/control characters.
+ *  - waitForMessage: wait for a specific message with a fallback timeout.
+ *  - commandrandomizer: pick a random element from an array.
+ *  - getrand: generate a random float between min and max.
+ *  - waitWhileBusy: block execution while bot is paused/captcha/inventory/checklist.
+ *  - parseDuration: convert strings like "1H 30M" into milliseconds.
+ */
+
 exports.removeInvisibleChars = (str) => {
     const invisibleRegex = /[\u0000-\u001F\u007F\u200B-\u200D\uFEFF]/g;
     return str.replace(invisibleRegex, "");
 };
 
+/**
+ * Wait for a Discord message that satisfies the given filter.
+ *
+ * Uses an immediate `messageCreate` listener first, then falls back to a
+ * `MessageCollector` after `timeout` ms if no matching message arrives.
+ *
+ * @param {Client} client - The Discord client.
+ * @param {TextChannel} channel - The channel to collect from.
+ * @param {Function} filter - Predicate that returns true for the wanted message.
+ * @param {number} [timeout=6100] - Milliseconds before collector fallback.
+ * @returns {Promise<Message|null>} The matched message or null.
+ */
 exports.waitForMessage = (client, channel, filter, timeout = 6100) => {
     return new Promise((resolve) => {
         const listener = (msg) => {
@@ -30,10 +54,37 @@ exports.waitForMessage = (client, channel, filter, timeout = 6100) => {
     });
 };
 
+/**
+ * Return a random element from the provided array.
+ *
+ * @template T
+ * @param {T[]} arr - Array to sample from.
+ * @returns {T} Randomly selected element.
+ */
 exports.commandrandomizer = (arr) =>
     arr[Math.floor(Math.random() * arr.length)];
+
+/**
+ * Generate a random floating-point number between min and max.
+ *
+ * @param {number} min - Lower bound (inclusive).
+ * @param {number} max - Upper bound (exclusive).
+ * @returns {number} Random float in [min, max).
+ */
 exports.getrand = (min, max) => Math.random() * (max - min) + min;
 
+/**
+ * Pause execution while any global busy flag is active.
+ *
+ * Busy flags checked:
+ *  - paused: user/admin paused the bot.
+ *  - captchadetected: OwO captcha detected and not yet solved.
+ *  - inventory: inventory module is currently running.
+ *  - checklist: checklist module is currently running.
+ *
+ * @param {Client} client - The Discord client with `client.global` state.
+ * @returns {Promise<void>} Resolves when all flags are clear.
+ */
 exports.waitWhileBusy = async (client) => {
     while (
         client.global.paused ||
@@ -45,6 +96,14 @@ exports.waitWhileBusy = async (client) => {
     }
 };
 
+/**
+ * Parse a duration string composed of digit+unit segments into milliseconds.
+ *
+ * Supported units: S (seconds), M (minutes), H (hours), D (days).
+ *
+ * @param {string} str - Duration string (e.g. "1H 30M").
+ * @returns {number} Total milliseconds.
+ */
 exports.parseDuration = (str) => {
     const regex = /(\d+)([SMHD])/g;
     const matches = str.matchAll(regex);

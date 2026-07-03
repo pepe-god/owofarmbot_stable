@@ -8,6 +8,15 @@ const CAPTCHA_PHRASES = [
     "captcha",
 ];
 
+/**
+ * Determine whether a captcha message contains a web link requiring
+ * automated browser solving.
+ *
+ * @param {string} msgcontent - Lowercased message content.
+ * @param {?Object} helloChristopher - Optional button component linking to owobot.com.
+ * @param {?string} canulickmymonster - Optional URL containing owobot.com.
+ * @returns {boolean} True if the message appears to be a web captcha.
+ */
 function isWebCaptchaMessage(msgcontent, helloChristopher, canulickmymonster) {
     const suspiciousPhrases = [".com", "please use the link"];
     const hasSuspiciousContent = suspiciousPhrases.some((phrase) =>
@@ -16,10 +25,23 @@ function isWebCaptchaMessage(msgcontent, helloChristopher, canulickmymonster) {
     return hasSuspiciousContent || helloChristopher || canulickmymonster;
 }
 
+/**
+ * Escape special regex characters in a string so it can be used safely
+ * inside a RegExp constructor.
+ *
+ * @param {string} str - Input string.
+ * @returns {string} Regex-safe escaped string.
+ */
 function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/**
+ * Dispatch desktop notifications when a captcha is detected.
+ *
+ * Triggers system toast notifications and/or a native OS prompt
+ * depending on the alert configuration.
+ */
 function sendDesktopNotifications(client) {
     const showDesktop =
         !client.config.settings.captcha.autosolve ||
@@ -47,6 +69,10 @@ function sendDesktopNotifications(client) {
     }
 }
 
+/**
+ * Send a Discord webhook alert when a captcha is detected.
+ * Skipped if auto-solve is enabled or webhook URL is not configured.
+ */
 function sendWebhookNotification(client) {
     if (client.config.settings.captcha.autosolve) return;
     if (
@@ -71,6 +97,12 @@ function sendWebhookNotification(client) {
     });
 }
 
+/**
+ * Launch automated Chromium browser instances to solve the captcha.
+ *
+ * Spawns `src/workers/captcha.js` for each configured thread, with
+ * a 3s stagger between spawns.
+ */
 async function launchAutoSolve(client) {
     if (process.platform === "android") {
         client.logger.warn("Bot", "Captcha", "Unsupported platform!");
@@ -97,6 +129,13 @@ async function launchAutoSolve(client) {
     }
 }
 
+/**
+ * Handle a newly received OwO message that may contain a captcha.
+ *
+ * Validates the message is from OwO in a monitored channel and
+ * contains captcha-related phrases before triggering alerts and
+ * optional auto-solve.
+ */
 async function handleCaptchaDetection(client, message, msgcontent) {
     const CHANNEL_IDS = [
         client.basic.commandschannelid,
@@ -143,6 +182,11 @@ async function handleCaptchaDetection(client, message, msgcontent) {
     }
 }
 
+/**
+ * Handle a captcha solved notification (DM from OwO).
+ *
+ * Resets the captcha flag and resumes the bot if autoresume is enabled.
+ */
 function handleCaptchaSolved(client, message, msgcontent) {
     if (
         !msgcontent.includes("i have verified") ||
@@ -168,6 +212,13 @@ function handleCaptchaSolved(client, message, msgcontent) {
     }
 }
 
+/**
+ * Parse and dispatch a user command message.
+ *
+ * Strips the prefix/mention, extracts the command name and arguments,
+ * looks up the registered command, and executes it if the author
+ * matches the configured user ID.
+ */
 function handleCommand(client, message) {
     const PREFIX = client.prefix();
     const prefixRegex = new RegExp(
@@ -190,6 +241,14 @@ function handleCommand(client, message) {
     cmd.run(client, message, args);
 }
 
+/**
+ * Message event handler.
+ *
+ * Routes incoming messages to captcha detection/solving and command dispatch.
+ *
+ * @param {Client} client - The Discord client instance.
+ * @param {Message} message - The received Discord message.
+ */
 module.exports = async (client, message) => {
     if (message.author.id === "408785106942164992") {
         const msgcontent = client.globalutil.removeInvisibleChars(

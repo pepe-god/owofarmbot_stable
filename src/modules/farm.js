@@ -4,6 +4,14 @@ const OWO_ID = "408785106942164992";
 const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const REQUIRED_GEMS = ["gem1", "gem3", "gem4"];
 
+/**
+ * Farm module entry point.
+ *
+ * Starts optional autophrases, then begins the hunt/battle loop.
+ * If hunt is enabled, battle is executed after each hunt.
+ *
+ * @param {Client} client - The Discord client instance.
+ */
 module.exports = async (client) => {
     const channel = client.channels.cache.get(client.basic.commandschannelid);
 
@@ -30,6 +38,20 @@ module.exports = async (client) => {
         });
 };
 
+/**
+ * Generic self-looping action for hunt or battle.
+ *
+ * Waits for the bot to be free, sends the command, increments the
+ * action counter, optionally processes the result, then schedules
+ * the next run after a randomized interval.
+ *
+ * @param {Client} client - The Discord client instance.
+ * @param {TextChannel} channel - The commands channel.
+ * @param {Object} opts - Action configuration.
+ * @param {string} opts.type - "hunt" or "battle".
+ * @param {Function} opts.cmd - Returns the randomized command string.
+ * @param {Function} [opts.onResult] - Optional post-result handler.
+ */
 async function farmAction(client, channel, { type, cmd, onResult }) {
     await client.globalutil.waitWhileBusy(client);
     while (client.global.use || client.global[type]) {
@@ -73,6 +95,10 @@ async function farmAction(client, channel, { type, cmd, onResult }) {
     }
 }
 
+/**
+ * Analyze the hunt result for missing gems or event stars,
+ * then trigger inventory usage if needed.
+ */
 async function huntResult(client, channel, huntmsg) {
     if (!client.config.settings.inventory.use.gems) return;
 
@@ -124,6 +150,15 @@ async function huntResult(client, channel, huntmsg) {
     }
 }
 
+/**
+ * Decide how to resolve missing gems:
+ *  - First missing: open all lootboxes immediately.
+ *  - Subsequent: wait until enough hunts have passed without inventory check.
+ *
+ * @param {Client} client - The Discord client instance.
+ * @param {TextChannel} channel - The commands channel.
+ * @param {string} huntContent - Raw hunt result message content.
+ */
 function handleMissingGems(client, channel, huntContent) {
     client.logger.warn(
         "Farm",
@@ -162,6 +197,11 @@ function handleMissingGems(client, channel, huntContent) {
 
 let phrasesCache = null;
 
+/**
+ * Start the autophrases background loop.
+ * Loads phrases from `assets/phrases.json` and sends them at
+ * randomized intervals between 8s and 25s.
+ */
 function startAutophrases(client, channel) {
     if (!channel) {
         client.logger.debug(

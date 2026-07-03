@@ -2,6 +2,14 @@ const { getrand } = require("../utils/globalutil.js");
 
 const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
+/**
+ * Luck module entry point.
+ *
+ * Sends pray or curse commands on a randomized interval to maintain
+ * the luck buff. Only one mode (pray or curse) is active at a time.
+ *
+ * @param {Client} client - The Discord client instance.
+ */
 module.exports = async (client) => {
     const channel = client.channels.cache.get(client.basic.commandschannelid);
 
@@ -9,6 +17,13 @@ module.exports = async (client) => {
     else if (client.basic.commands.curse) prayOrCurse(client, channel, "curse");
 };
 
+/**
+ * Self-looping pray or curse command sender.
+ *
+ * @param {Client} client - The Discord client instance.
+ * @param {TextChannel} channel - The commands channel.
+ * @param {string} type - "pray" or "curse".
+ */
 async function prayOrCurse(client, channel, type) {
     await client.globalutil.waitWhileBusy(client);
     const interval = getrand(

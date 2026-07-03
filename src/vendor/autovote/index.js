@@ -70,7 +70,7 @@ if (!fse.existsSync(adblockcachedir)) {
     });
 
     if (isLoggedIn) {
-        let topgglink = `https://top.gg/bot/${botid}/vote`;
+        const topgglink = `https://top.gg/bot/${botid}/vote`;
         await page.goto(topgglink, { waitUntil: "load" });
 
         while (true) {

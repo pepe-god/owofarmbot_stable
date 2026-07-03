@@ -3,11 +3,27 @@ const { commandrandomizer } = require("../utils/globalutil.js");
 
 const OWO_ID = "408785106942164992";
 
+/**
+ * Checklist subsystem entry point.
+ *
+ * Triggers an immediate checklist read via `smol()`, then starts the
+ * farm module so hunting/battle continues while checklist is being processed.
+ *
+ * @param {Client} client - The Discord client instance.
+ * @param {TextChannel} channel - The commands channel to use.
+ */
 module.exports = async (client, channel) => {
     smol(client, channel);
     require("../modules/farm.js")(client);
 };
 
+/**
+ * Send the checklist command and wait for OwO's reply embed.
+ *
+ * @param {Client} client - The Discord client instance.
+ * @param {TextChannel} channel - The commands channel.
+ * @returns {Promise<Message|null>} The checklist embed message, or null on timeout.
+ */
 async function fetchChecklistEmbed(client, channel) {
     const msg = await channel.send({
         content: `${client.prefix()} ${commandrandomizer(["cl", "checklist"])}`,
@@ -27,6 +43,12 @@ async function fetchChecklistEmbed(client, channel) {
     );
 }
 
+/**
+ * Extract the next checklist refresh interval from the embed footer text.
+ *
+ * @param {string} footerText - Raw footer string (e.g. "Next: 1H 30M").
+ * @returns {number} Milliseconds until the next checklist refresh.
+ */
 function parseChecklistInterval(footerText) {
     const regex = /(\d+)\s*H|(\d+)\s*M|(\d+)\s*S/g;
     const matches = [...footerText.matchAll(regex)];
@@ -41,11 +63,21 @@ function parseChecklistInterval(footerText) {
     return hours * 3600000 + minutes * 60000 + seconds * 1000;
 }
 
+/**
+ * Split checklist description into individual incomplete task lines.
+ * Returns an empty array if the checklist shows a completion emoji.
+ *
+ * @param {string} description - Raw embed description text.
+ * @returns {string[]} Array of incomplete task lines.
+ */
 function getIncompleteItems(description) {
     if (description.includes("☑️ 🎉")) return [];
     return description.trim().split("\n");
 }
 
+/**
+ * Claim the daily checklist reward if enabled in config.
+ */
 async function handleDaily(client, channel) {
     if (!client.config.settings.checklist.types.daily) return;
     await client.delay(3000);
@@ -54,6 +86,9 @@ async function handleDaily(client, channel) {
     await client.delay(6000);
 }
 
+/**
+ * Trigger the automated vote handler (spawns the autovote subprocess).
+ */
 async function handleVote(client) {
     if (!client.config.settings.checklist.types.vote) return;
     client.logger.info(
@@ -74,6 +109,9 @@ async function handleVote(client) {
     client.global.total.vote++;
 }
 
+/**
+ * Send a cookie command to a random guild member (or OwO if no members exist).
+ */
 async function handleCookie(client, channel) {
     if (!client.config.settings.checklist.types.cookie) return;
     await client.delay(3000);
@@ -97,6 +135,14 @@ async function handleCookie(client, channel) {
     await client.delay(3000);
 }
 
+/**
+ * Execute a single checklist line by matching its emoji prefix to the
+ * corresponding handler (daily, vote, cookie, etc.).
+ *
+ * @param {Client} client - The Discord client instance.
+ * @param {TextChannel} channel - The commands channel.
+ * @param {string} line - A single line from the checklist embed description.
+ */
 async function executeChecklistLine(client, channel, line) {
     if (client.global.captchadetected || client.global.paused) return;
 
@@ -125,6 +171,10 @@ async function executeChecklistLine(client, channel, line) {
     }
 }
 
+/**
+ * Block until `client.global.captchadetected` becomes false, or timeout
+ * after 1000 iterations (~16 minutes).
+ */
 async function waitWhileCaptcha(client) {
     for (let i = 0; i < 1000; i++) {
         if (client.global.captchadetected === false) {
@@ -135,6 +185,12 @@ async function waitWhileCaptcha(client) {
     }
 }
 
+/**
+ * Core checklist loop: fetch embed, parse items, execute handlers,
+ * then schedule the next run based on the embed's refresh interval.
+ *
+ * On error, retries after 10 minutes.
+ */
 async function smol(client, channel) {
     if (client.global.captchadetected || client.global.paused) return;
     try {

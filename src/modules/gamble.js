@@ -1,6 +1,11 @@
 const { commandrandomizer, getrand } = require("../utils/globalutil.js");
 const OWO_ID = "408785106942164992";
 
+/**
+ * Game-specific configuration maps for coinflip and slot logic.
+ * Each entry defines command construction, win/loss detection, result parsing,
+ * collector filters, and display labels for its respective game type.
+ */
 const GAME_CONFIG = {
     coinflip: {
         cmd: (bet) =>
@@ -29,6 +34,13 @@ const GAME_CONFIG = {
     },
 };
 
+/**
+ * Gamble module entry point.
+ *
+ * Starts coinflip and/or slot loops depending on config.
+ *
+ * @param {Client} client - The Discord client instance.
+ */
 module.exports = async (client) => {
     const channel = client.channels.cache.get(client.basic.gamblechannelid);
 
@@ -41,6 +53,19 @@ module.exports = async (client) => {
     }
 };
 
+/**
+ * Process a single game result message.
+ *
+ * Determines whether the gamble was a win or loss, updates counters,
+ * and returns the new bet amount for the next round (martingale-style
+ * on loss, reset to default on win).
+ *
+ * @param {Client} client - The Discord client instance.
+ * @param {Object} game - The merged game config including betting settings.
+ * @param {string} content - The raw result message content.
+ * @param {number} currentBet - The wager for this round.
+ * @returns {{ newBet: number }|null} The next bet amount, or null if indeterminate.
+ */
 function processResult(client, game, content, currentBet) {
     const isWin = game.checkWin(content);
     const isLoss = !isWin && game.checkLoss(content);
@@ -60,6 +85,15 @@ function processResult(client, game, content, currentBet) {
     };
 }
 
+/**
+ * Send a bet command to the gamble channel and return the sent message ID.
+ *
+ * @param {Client} client - The Discord client instance.
+ * @param {TextChannel} channel - The gamble commands channel.
+ * @param {Object} cfg - The game command configuration.
+ * @param {number} bet - The wager amount.
+ * @returns {Promise<string>} The ID of the sent bet message.
+ */
 async function sendBet(client, channel, cfg, bet) {
     channel.sendTyping();
     const content = `${client.prefix()} ${cfg.cmd(bet)}`;
@@ -73,6 +107,11 @@ async function sendBet(client, channel, cfg, bet) {
     return msg.id;
 }
 
+/**
+ * Attach listeners to catch the game result via both message edits
+ * and new message collectors. Resolves the bet state when a result
+ * is detected, or cleans up after the 10s timeout.
+ */
 function setupResultListeners(client, channel, messageId, game, currentBetRef) {
     let processed = false;
 
@@ -136,6 +175,16 @@ function setupResultListeners(client, channel, messageId, game, currentBetRef) {
     client.on("messageUpdate", onUpdate);
 }
 
+/**
+ * Self-looping game runner for a single gamble type.
+ *
+ * Waits for the bot to be free, sends a bet, attaches result listeners,
+ * then schedules the next round after a randomized interval.
+ *
+ * @param {string} type - "coinflip" or "slot".
+ * @param {Client} client - The Discord client instance.
+ * @param {TextChannel} channel - The gamble commands channel.
+ */
 async function playGame(type, client, channel) {
     const cfg = GAME_CONFIG[type];
     const settings = client.config.settings.gamble[type];

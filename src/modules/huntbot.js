@@ -2,6 +2,14 @@ const { commandrandomizer } = require("../utils/globalutil.js");
 
 const OWO_ID = "408785106942164992";
 
+/**
+ * Huntbot module entry point.
+ *
+ * Checks the current huntbot status and either triggers a new hunt
+ * or schedules a retry based on the remaining hunt duration.
+ *
+ * @param {Client} client - The Discord client instance.
+ */
 module.exports = async (client) => {
     let channel;
     if (client.basic.huntbotchannelid.length <= 0) {
@@ -16,12 +24,22 @@ module.exports = async (client) => {
     await checkHuntbot(client, channel);
 };
 
+/**
+ * Schedule a retry for the huntbot check after a delay.
+ */
 function scheduleRetry(client, channel, delay = 61000) {
     setTimeout(() => {
         checkHuntbot(client, channel);
     }, delay);
 }
 
+/**
+ * Extract huntbot status fields from the embed.
+ *
+ * @param {Client} client - The Discord client instance.
+ * @param {Array<Object>} fields - Embed fields array.
+ * @returns {Object} Parsed huntbot state.
+ */
 function parseHuntbotEmbed(client, fields) {
     const result = {
         isHunting: false,
@@ -48,6 +66,10 @@ function parseHuntbotEmbed(client, fields) {
     return result;
 }
 
+/**
+ * Fetch the huntbot status embed and decide whether to trigger a new hunt
+ * or wait for the current one to finish.
+ */
 async function checkHuntbot(client, channel) {
     client.logger.info("Farm", "Huntbot", "Getting huntbot...");
 
@@ -111,6 +133,10 @@ async function checkHuntbot(client, channel) {
     }
 }
 
+/**
+ * Trigger the huntbot activation sequence: send command, solve captcha,
+ * and confirm the hunt started.
+ */
 async function triggerHB(client, channel) {
     const msg = await channel.send({
         content: `${client.prefix()} ${commandrandomizer(["autohunt", "huntbot", "hb", "ah"])} ${client.global.temp.huntbot.maxtime}h`,
@@ -194,6 +220,9 @@ async function triggerHB(client, channel) {
     }
 }
 
+/**
+ * Upgrade huntbot traits if the upgrade feature is enabled in config.
+ */
 async function upgradeHuntbot(client, channel) {
     if (!client.basic.commands.huntbot.upgrade) return;
 

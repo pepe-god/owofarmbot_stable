@@ -7,6 +7,14 @@ const CHANNEL_IDS = [
 ];
 const OWO_ID = "408785106942164992";
 
+/**
+ * Retrieve (or initialize) the per-user list of giveaway message IDs
+ * the user has already entered.
+ *
+ * @param {Object} enteredGiveaways - The persisted state object.
+ * @param {string} userId - Discord user ID.
+ * @returns {string[]} Array of giveaway message IDs.
+ */
 function getEnteredList(enteredGiveaways, userId) {
     if (!enteredGiveaways[userId]) {
         enteredGiveaways[userId] = [];
@@ -14,6 +22,15 @@ function getEnteredList(enteredGiveaways, userId) {
     return enteredGiveaways[userId];
 }
 
+/**
+ * Scan a giveaway message for active buttons that the user has not
+ * yet clicked.
+ *
+ * @param {Message} message - The giveaway message to inspect.
+ * @param {Object} enteredGiveaways - Persisted entered state.
+ * @param {string} userId - Discord user ID.
+ * @returns {Array<{customId: string, message: Message}>} Queue of clickable buttons.
+ */
 function findActiveButtons(message, enteredGiveaways, userId) {
     const myEntered = getEnteredList(enteredGiveaways, userId);
     const buttons = [];
@@ -31,6 +48,10 @@ function findActiveButtons(message, enteredGiveaways, userId) {
     return buttons;
 }
 
+/**
+ * Click each queued giveaway button sequentially with a 15s delay
+ * between clicks to avoid rate limits.
+ */
 async function pressButtonsSequentially(client, enteredGiveaways, buttonQueue) {
     const myEntered = getEnteredList(enteredGiveaways, client.user.id);
     for (const { customId, message } of buttonQueue) {
@@ -59,10 +80,22 @@ async function pressButtonsSequentially(client, enteredGiveaways, buttonQueue) {
     }
 }
 
+/**
+ * Persist the entered-giveaways state to disk.
+ */
 function saveEnteredGiveaways(enteredGiveaways, filePath) {
     fs.writeFileSync(filePath, JSON.stringify(enteredGiveaways, null, 2));
 }
 
+/**
+ * Auto-join giveaways module entry point.
+ *
+ * On start, scans recent messages in configured giveaway channels and
+ * joins any active giveaways. Then listens for new giveaway messages
+ * in real time.
+ *
+ * @param {Client} client - The Discord client instance.
+ */
 module.exports = async (client) => {
     let ENTERED_GIVEAWAYS_FILE = path.join(
         __dirname,

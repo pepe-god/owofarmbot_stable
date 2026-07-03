@@ -1,6 +1,10 @@
 const dotenv = require("dotenv");
 dotenv.config();
 
+/**
+ * Detect developer mode based on environment variable or current username.
+ * Developer mode loads the developer-specific config file.
+ */
 let DEVELOPER_MODE = process.env.DEV_MODE === "true";
 if (!DEVELOPER_MODE) {
     try {

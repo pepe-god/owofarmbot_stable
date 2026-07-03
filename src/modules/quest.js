@@ -9,6 +9,14 @@ const REWARD_KINDS = {
     crate: "Bunch of weapon crate",
 };
 
+/**
+ * Quest module entry point.
+ *
+ * Fetches the current quest log, selects an active quest based on config,
+ * and executes it via the appropriate quest handler.
+ *
+ * @param {Client} client - The Discord client instance.
+ */
 module.exports = async (client) => {
     client.logger.warn("Farm", "Quest", "Waiting");
     const channel = client.channels.cache.get(client.basic.autoquestchannelid);
@@ -16,6 +24,12 @@ module.exports = async (client) => {
     questHandler(client, channel);
 };
 
+/**
+ * Main quest orchestration loop.
+ *
+ * Fetches the quest embed, parses available quests, selects one, and
+ * starts its execution loop. Retries after 61s on failure.
+ */
 async function questHandler(client, channel) {
     await client.globalutil.waitWhileBusy(client);
 
@@ -58,6 +72,13 @@ async function questHandler(client, channel) {
     }
 }
 
+/**
+ * Send the quest command and wait for OwO's quest log embed.
+ *
+ * @param {Client} client - The Discord client instance.
+ * @param {TextChannel} channel - The quest commands channel.
+ * @returns {Promise<Message|null>} The quest log embed, or null on timeout.
+ */
 async function fetchQuestEmbed(client, channel) {
     channel.sendTyping();
     const questmsg = await channel.send({
@@ -78,6 +99,15 @@ async function fetchQuestEmbed(client, channel) {
     return message;
 }
 
+/**
+ * Parse the quest log embed description into structured quest objects.
+ *
+ * Each quest object contains title, reward, reward type, progress,
+ * and lock status.
+ *
+ * @param {string} embedDescription - Raw embed description text.
+ * @returns {Array<Object>} Parsed quest entries.
+ */
 function parseQuests(embedDescription) {
     const questLines = embedDescription
         .split(/\n(?=\*\*\d+\.)/)
@@ -101,6 +131,10 @@ function parseQuests(embedDescription) {
     });
 }
 
+/**
+ * Iterate over parsed quests and pick the first unlocked quest
+ * that the bot can execute (say owo, gamble, or action commands).
+ */
 async function selectQuest(client, channel, quests) {
     for (const quest of quests) {
         if (quest.isLocked) continue;
@@ -138,6 +172,22 @@ async function selectQuest(client, channel, quests) {
     client.global.quest.progress = "Recheck after 61 seconds";
 }
 
+/**
+ * Generic quest execution loop.
+ *
+ * Repeatedly sends the quest command until progress reaches the target,
+ * then re-fetches the quest log after a short delay.
+ *
+ * @param {Client} client - The Discord client instance.
+ * @param {TextChannel} channel - The quest commands channel.
+ * @param {Object} quest - The parsed quest object.
+ * @param {Object} opts - Loop configuration.
+ * @param {number} [opts.delay=16000] - Base delay between actions.
+ * @param {number} [opts.delayBefore] - Optional pre-loop delay.
+ * @param {number} [opts.loopMinus] - Target progress adjustment.
+ * @param {boolean} [opts.useGetRand] - Use randomized delay instead of fixed.
+ * @param {Function} opts.build - Returns the command string to send.
+ */
 async function questLoop(client, channel, quest, opts) {
     const delayMs = opts.delay || 16000;
 
