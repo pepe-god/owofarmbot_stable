@@ -1,5 +1,13 @@
 # OwO Farm Bot Stable — AGENTS.md
 
+## Coding Principles
+
+Follow these when touching code:
+
+- **KISS** — Prefer the simplest solution that works. Avoid clever abstractions, unnecessary indirection, or speculative generality.
+- **DRY** — Extract duplicated logic into shared helpers. If you're copying the same block, refactor it once.
+- **YAGNI** — Don't add hooks, extensibility points, or "just in case" features. Implement only what's needed now.
+
 ## Commands
 - `pnpm start` — run from repo root
 - `pnpm lint` — `biome check .`
@@ -69,7 +77,7 @@
 - `joingiveaways.js:66` — `noExcessiveLinesPerFunction` (105 lines, needs real refactor)
 
 ## Ignored Directories
-- `src/vendor/hcaptchasolver/` — 60MB Chrome extension, excluded from lint, graphify
+- `src/vendor/hcaptchasolver/` — 60MB Chrome extension, excluded from lint
 - `src/vendor/adblockcache/` — auto-generated Puppeteer cache
 - `.opencode/` — in .gitignore
 
@@ -80,4 +88,3 @@
 - autovote is a merged submodule at `src/vendor/autovote/` (was `git submodule`)
 - No test runner configured; `src/tests/` is lint-ignored and empty
 - `config.json` formatting uses 2-space indent (biome override)
-- `graphify-out/` is gitignored (auto-generated, local only). Hook: pre-commit (sync rebuild before each commit)

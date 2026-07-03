@@ -7,6 +7,10 @@ const REQUIRED_GEMS = ["gem1", "gem3", "gem4"];
 module.exports = async (client) => {
     const channel = client.channels.cache.get(client.basic.commandschannelid);
 
+    if (client.config.settings.autophrases) {
+        startAutophrases(client, channel);
+    }
+
     if (client.basic.commands.hunt) {
         await farmAction(client, channel, {
             type: "hunt",
@@ -24,11 +28,6 @@ module.exports = async (client) => {
             type: "battle",
             cmd: () => commandrandomizer(["b", "battle"]),
         });
-    else if (client.config.settings.autophrases) {
-        setInterval(() => {
-            elaina2(client, channel);
-        }, 16000);
-    }
 };
 
 async function farmAction(client, channel, { type, cmd, onResult }) {
@@ -161,33 +160,100 @@ function handleMissingGems(client, channel, huntContent) {
     }
 }
 
-async function elaina2(client, channel) {
-    if (client.global.captchadetected || client.global.paused) return;
-    try {
-        const data = await client.fs.readFile(
-            `${__dirname}/../assets/phrases.json`,
-            "utf8",
-        );
-        const phrasesObject = JSON.parse(data);
-        const phrases = phrasesObject.phrases;
-        if (!phrases?.length) {
-            return client.logger.alert(
-                "Farm",
-                "Phrases",
-                "Phrases array is undefined or empty.",
-            );
-        }
-        const result = Math.floor(Math.random() * phrases.length);
-        channel.sendTyping();
-        await channel.send({ content: phrases[result] });
-        client.logger.info("Farm", "Phrases", "Successfuly sent.");
-    } catch (err) {
-        client.logger.alert(
+let phrasesCache = null;
+
+function startAutophrases(client, channel) {
+    if (!channel) {
+        client.logger.debug(
             "Farm",
             "Phrases",
-            `Error reading phrases.json: ${err}`,
+            "Commands channel not found, autophrases disabled.",
         );
+        return;
     }
+
+    (async () => {
+        if (!phrasesCache) {
+            try {
+                const data = await client.fs.promises.readFile(
+                    `${__dirname}/../assets/phrases.json`,
+                    "utf8",
+                );
+                const phrasesObject = JSON.parse(data);
+                phrasesCache = phrasesObject.phrases || [];
+                if (!phrasesCache.length) {
+                    client.logger.alert(
+                        "Farm",
+                        "Phrases",
+                        "Phrases array is empty.",
+                    );
+                    return;
+                }
+            } catch (err) {
+                client.logger.alert(
+                    "Farm",
+                    "Phrases",
+                    `Failed to load phrases.json: ${err}`,
+                );
+                return;
+            }
+        }
+
+        const MIN_DELAY = 8000;
+        const MAX_DELAY = 25000;
+
+        async function sendPhrase() {
+            if (client.global.captchadetected || client.global.paused) {
+                scheduleNext();
+                return;
+            }
+
+            if (!channel) {
+                client.logger.debug(
+                    "Farm",
+                    "Phrases",
+                    "Channel lost, stopping autophrases.",
+                );
+                return;
+            }
+
+            try {
+                await client.globalutil.waitWhileBusy(client);
+
+                let idx = Math.floor(Math.random() * phrasesCache.length);
+                if (
+                    phrasesCache.length > 1 &&
+                    idx === client.global.temp.lastPhraseIndex
+                ) {
+                    idx = (idx + 1) % phrasesCache.length;
+                }
+                const text = phrasesCache[idx];
+
+                await channel.sendTyping();
+                await client.delay(800);
+                await channel.send({ content: text });
+                client.global.temp.lastPhraseIndex = idx;
+                client.logger.info("Farm", "Phrases", "Successfully sent.");
+            } catch (err) {
+                client.logger.alert(
+                    "Farm",
+                    "Phrases",
+                    `Error sending phrase: ${err}`,
+                );
+            }
+
+            scheduleNext();
+        }
+
+        function scheduleNext() {
+            const delay = getrand(MIN_DELAY, MAX_DELAY);
+            client.logger.debug("Farm", "Phrases", `Next phrase in ${delay}ms`);
+            setTimeout(sendPhrase, delay);
+        }
+
+        client.logger.info("Farm", "Phrases", "Phrases interval started.");
+        scheduleNext();
+    })();
 }
 
 module.exports.capitalize = capitalize;
