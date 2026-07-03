@@ -94,6 +94,16 @@
                     }
                 }
             }
+        },
+        {
+            "includes": ["tests/**"],
+            "linter": {
+                "rules": {
+                    "complexity": {
+                        "noExcessiveLinesPerFunction": "off"
+                    }
+                }
+            }
         }
     ]
 }

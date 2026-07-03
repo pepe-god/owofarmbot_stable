@@ -88,40 +88,10 @@ function saveEnteredGiveaways(enteredGiveaways, filePath) {
 }
 
 /**
- * Auto-join giveaways module entry point.
- *
- * On start, scans recent messages in configured giveaway channels and
- * joins any active giveaways. Then listens for new giveaway messages
- * in real time.
- *
- * @param {Client} client - The Discord client instance.
+ * Scan configured giveaway channels for active, unjoined giveaways
+ * and join them.
  */
-module.exports = async (client) => {
-    let ENTERED_GIVEAWAYS_FILE = path.join(
-        __dirname,
-        "../../../data/enteredGiveaways.json",
-    );
-    if (client.global.devmod) {
-        ENTERED_GIVEAWAYS_FILE = path.join(
-            __dirname,
-            "../../../developer/enteredGiveaways.json",
-        );
-    }
-
-    let enteredGiveaways = {};
-    if (fs.existsSync(ENTERED_GIVEAWAYS_FILE)) {
-        enteredGiveaways = JSON.parse(fs.readFileSync(ENTERED_GIVEAWAYS_FILE));
-    }
-
-    const guild = client.guilds.cache.get("420104212895105044");
-    if (!guild) {
-        return client.logger.alert(
-            "Farm",
-            "Auto Join Giveaways",
-            "Guild (420104212895105044) not found.",
-        );
-    }
-
+async function scanChannelGiveaways(client, guild, enteredGiveaways) {
     for (const channelId of CHANNEL_IDS) {
         const channel = guild.channels.cache.get(channelId);
         if (channel?.type !== "GUILD_TEXT") {
@@ -191,6 +161,44 @@ module.exports = async (client) => {
             );
         }
     }
+}
+
+/**
+ * Auto-join giveaways module entry point.
+ *
+ * On start, scans recent messages in configured giveaway channels and
+ * joins any active giveaways. Then listens for new giveaway messages
+ * in real time.
+ *
+ * @param {Client} client - The Discord client instance.
+ */
+module.exports = async (client) => {
+    let ENTERED_GIVEAWAYS_FILE = path.join(
+        __dirname,
+        "../../../data/enteredGiveaways.json",
+    );
+    if (client.global.devmod) {
+        ENTERED_GIVEAWAYS_FILE = path.join(
+            __dirname,
+            "../../../developer/enteredGiveaways.json",
+        );
+    }
+
+    let enteredGiveaways = {};
+    if (fs.existsSync(ENTERED_GIVEAWAYS_FILE)) {
+        enteredGiveaways = JSON.parse(fs.readFileSync(ENTERED_GIVEAWAYS_FILE));
+    }
+
+    const guild = client.guilds.cache.get("420104212895105044");
+    if (!guild) {
+        return client.logger.alert(
+            "Farm",
+            "Auto Join Giveaways",
+            "Guild (420104212895105044) not found.",
+        );
+    }
+
+    await scanChannelGiveaways(client, guild, enteredGiveaways);
     saveEnteredGiveaways(enteredGiveaways, ENTERED_GIVEAWAYS_FILE);
 
     client.on("messageCreate", async (message) => {

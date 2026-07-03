@@ -1,6 +1,6 @@
 const { describe, it, mock, afterEach, beforeEach } = require("node:test");
 const assert = require("node:assert");
-const path = require("path");
+const path = require("node:path");
 
 const MAIN_HANDLER_DIR = path.dirname(
     require.resolve("../src/services/mainHandler.js"),

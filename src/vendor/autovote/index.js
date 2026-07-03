@@ -2,7 +2,7 @@
  * autovoter for top.gg
  */
 
-const path = require("path");
+const path = require("node:path");
 const fse = require("fs-extra");
 const { connect } = require("puppeteer-real-browser");
 const yargs = require("yargs");
