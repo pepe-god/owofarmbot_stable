@@ -51,7 +51,7 @@ function sendDesktopNotifications(client) {
         showDesktop &&
         client.config.settings.captcha.alerttype.desktop.notification
     ) {
-        require("../../modules/warn.js")(client);
+        require("../../modules/captchaNotify.js")(client);
     }
     if (
         showDesktop &&

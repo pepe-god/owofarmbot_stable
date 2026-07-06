@@ -21,7 +21,7 @@ process.emitWarning = (warning, type) => {
 
 const cp = require("node:child_process");
 
-const { config, DEVELOPER_MODE } = require("./services/configLoader.js");
+const { config, DEVELOPER_MODE } = require("./services/runtimeConfig.js");
 const packageJson = require("../package.json");
 
 const fs = require("node:fs");

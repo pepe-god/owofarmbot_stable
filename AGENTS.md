@@ -10,16 +10,13 @@ Follow these when touching code:
 
 ## Commands
 - `pnpm start` — run from repo root
-- `pnpm lint:fix ; pnpm format` // use this
-- `pnpm lint` — `biome check .`
-- `pnpm lint:fix` — `biome check --write .`
-- `pnpm format` — `biome format --write .`
+- `pnpm lint:fix ; pnpm format` // lint and format
 
 ## Entrypoint & Architecture
 - `src/main.js` forks itself via `cluster.fork()`; worker calls `src/bot.js`
 - `src/bot.js` attaches everything to the Discord.js `Client` via `Object.assign`, then: load handlers → login → wait for message commands
 - `src/bot.js` startup: `configValidator.verifyconfig()` → `configValidator.getconfig()` → `initializeBot()`
-- `src/handlers/index.js` wires: commandHandler, eventHandler, antiCrash
+- `src/handlers/index.js` wires: antiCrash, command registration, event binding
 - `src/commands/admin.js` — pause/resume/start/restart/stats
 - `src/events/messageCreate.js` — captcha detection + command dispatch
 - `start`/`resume` command → `src/services/mainHandler.js` → orchestrates:
@@ -36,7 +33,7 @@ Follow these when touching code:
 
 ## Config
 - `config.json` is primary; `.env` overrides: `MAIN_TOKEN`, `MAIN_USERID`, `WEBHOOK_URL`
-- `config.settings.owoprefix` defaults to `"owo"` if missing/empty (in configLoader.js)
+- `config.settings.owoprefix` defaults to `"owo"` if missing/empty (in runtimeConfig.js)
 - `extra` config section exists but code for it was fully removed (YAGNI) — do not add back
 - `client.prefix()` randomizes between `"owo"` and `config.settings.owoprefix` — use this instead of hardcoding
 - Config validation lives in `src/services/configValidator.js` (verifyconfig + getconfig + helpers)
@@ -60,10 +57,11 @@ Follow these when touching code:
 
 ## Key Files
 - `src/utils/globalutil.js` — runtime utilities (waitForMessage, waitWhileBusy, parseDuration, commandrandomizer, getrand, removeInvisibleChars)
+- `src/services/runtimeConfig.js` — config file loading + .env overrides + default prefix initialization
 - `src/services/configValidator.js` — startup config validation (verifyconfig, getconfig, 8 helpers)
 - `src/services/checklist.js` — checklist subsystem (smol, executeChecklistLine, handleDaily/Vote/Cookie, etc.)
 - `src/services/mainHandler.js` — orchestrator (module.exports + 7 init functions, no top-level requires)
-- `src/modules/` — 10 self-looping modules: farm, gamble, quest, luck, huntbot, safety, inventory, joingiveaways, animals, warn
+- `src/modules/` — self-looping modules: farm, gamble, quest, luck, huntbot, safety, inventory, joingiveaways, animals, captchaNotify
 
 ## Biome (lint config)
 - `complexity/noExcessiveCognitiveComplexity` (max 15) — error
