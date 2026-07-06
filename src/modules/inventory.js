@@ -18,11 +18,26 @@ const ITEM_ACTIONS = {
     100: { setting: "crate", cmd: () => commandrandomizer(["wc", "crate"]) },
 };
 
+/**
+ * Inventory module entry point.
+ *
+ * Self-looping module that periodically reads the user's inventory,
+ * consumes configured usable items, and applies selected gems.
+ *
+ * @param {Client} client - The Discord client instance.
+ */
 module.exports = async (client) => {
     const channel = client.channels.cache.get(client.basic.commandschannelid);
     await inventory(client, channel);
 };
 
+/**
+ * Send the inventory command and wait for OwO's inventory reply.
+ *
+ * @param {Client} client - The Discord client instance.
+ * @param {TextChannel} channel - The commands channel.
+ * @returns {Promise<string|null>} Raw inventory message content, or null on timeout.
+ */
 async function fetchInventoryData(client, channel) {
     channel.sendTyping();
     client.global.inventory = true;
@@ -55,6 +70,12 @@ async function fetchInventoryData(client, channel) {
     return reply.content;
 }
 
+/**
+ * Extract inline item codes from the inventory response text.
+ *
+ * @param {string} invContent - Raw inventory message content.
+ * @returns {string[]} Array of item codes found in backticks.
+ */
 function parseItemCodes(invContent) {
     const values = [];
     const regex = /`([^`]+)`/g;
@@ -65,6 +86,12 @@ function parseItemCodes(invContent) {
     return values;
 }
 
+/**
+ * Mark gem item codes for use based on config and current rarity level.
+ *
+ * @param {Client} client - The Discord client instance.
+ * @param {string[]} values - Extracted inventory item codes.
+ */
 function selectGemCodes(client, values) {
     if (
         client.global.gems.need.length === 0 ||
@@ -84,6 +111,13 @@ function selectGemCodes(client, values) {
     });
 }
 
+/**
+ * Use inventory items that are enabled in config.
+ *
+ * @param {Client} client - The Discord client instance.
+ * @param {TextChannel} channel - The commands channel.
+ * @param {string[]} values - Extracted inventory item codes.
+ */
 async function useItemsFromInventory(client, channel, values) {
     for (const code of values) {
         const action = ITEM_ACTIONS[code];
@@ -96,6 +130,12 @@ async function useItemsFromInventory(client, channel, values) {
     }
 }
 
+/**
+ * Apply the selected gem codes with a single `use` command.
+ *
+ * @param {Client} client - The Discord client instance.
+ * @param {TextChannel} channel - The commands channel.
+ */
 async function applyGems(client, channel) {
     if (client.global.gems.use.length === 0) return;
 
@@ -113,6 +153,14 @@ async function applyGems(client, channel) {
     await client.delay(3000);
 }
 
+/**
+ * Core inventory loop: fetch, parse, use items, apply gems.
+ *
+ * Resets `client.global.inventory` to false when finished.
+ *
+ * @param {Client} client - The Discord client instance.
+ * @param {TextChannel} channel - The commands channel.
+ */
 async function inventory(client, channel) {
     if (
         client.global.captchadetected ||
@@ -142,6 +190,15 @@ async function inventory(client, channel) {
     );
 }
 
+/**
+ * Send a generic use/item command with rate-limit awareness.
+ *
+ * @param {Client} client - The Discord client instance.
+ * @param {TextChannel} channel - The commands channel.
+ * @param {string} item - The item/command string to send.
+ * @param {string} count - Quantity or "" for default.
+ * @param {string} where - Caller context ("inventory" or other).
+ */
 async function use(client, channel, item, count, where) {
     if (
         client.global.captchadetected ||

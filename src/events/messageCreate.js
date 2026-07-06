@@ -242,12 +242,12 @@ function handleCommand(client, message) {
 }
 
 /**
- * Message event handler.
+ * Main message event handler.
  *
- * Routes incoming messages to captcha detection/solving and command dispatch.
- *
- * @param {Client} client - The Discord client instance.
- * @param {Message} message - The received Discord message.
+ * Every incoming message flows through this function. The routing order is:
+ *  1. Captcha detection (only from OwO bot on monitored channels)
+ *  2. Captcha solved notification (DM from OwO)
+ *  3. User command dispatch
  */
 module.exports = async (client, message) => {
     if (message.author.id === "408785106942164992") {

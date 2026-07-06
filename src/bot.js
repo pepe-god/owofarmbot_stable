@@ -141,6 +141,11 @@ function rpc(type) {
     }
 }
 
+/**
+ * Attach shared utilities, config, and helpers directly onto the
+ * Discord client instance so every module can access them via `client.X`.
+ * This avoids passing the same objects through long call chains.
+ */
 Object.assign(client, {
     chalk,
     fs,
@@ -157,8 +162,14 @@ Object.assign(client, {
         globalutil.commandrandomizer(["owo", client.config.settings.owoprefix]),
 });
 
+// Show the bot version in process listings (e.g. `ps aux`).
 process.title = `OwO Farm Bot Stable v${packageJson.version}`;
 
+/**
+ * Use an IIFE to allow top-level async/await without requiring
+ * the file to be fully module-exported. This bootstraps config
+ * validation and login before the process continues.
+ */
 (async () => {
     await configValidator.verifyconfig(client, config);
     await configValidator.getconfig(config, client);

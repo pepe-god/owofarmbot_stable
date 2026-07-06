@@ -1,14 +1,20 @@
 /**
- * Consolidated handler module.
+ * Consolidated handler entry point.
  *
- * Wires all core handler subsystems:
- *  - Anti-crash: global process error listeners
- *  - Command registration: loads slash/text commands
- *  - Event binding: attaches Discord events to the client
+ * Loads and wires the three core runtime subsystems in order:
+ *  1. Anti-crash — global process error listeners
+ *  2. Command registration — discovers and registers text/slash commands
+ *  3. Event binding — attaches Discord event handlers to the client
  *
  * @param {Client} client - The Discord client instance.
  */
 
+/**
+ * Install global process-level error listeners.
+ *
+ * Catches unhandled promise rejections and uncaught exceptions,
+ * logging them through the client's logger before the process exits.
+ */
 const setupAntiCrash = (client) => {
     const logError = (type, err, origin = null) => {
         const errMessage = `--------------------------------------
@@ -33,6 +39,15 @@ Origin: ${origin || "N/A"}
     });
 };
 
+/**
+ * Register a single command file.
+ *
+ * Supports both single-command and multi-command exports (arrays).
+ * Registers aliases if present.
+ *
+ * @param {Client} client - The Discord client instance.
+ * @param {Function|Function[]} pull - Exported command(s) from file.
+ */
 const registerCommand = (client, pull) => {
     const list = Array.isArray(pull) ? pull : [pull];
     for (const cmd of list) {
@@ -44,6 +59,9 @@ const registerCommand = (client, pull) => {
     }
 };
 
+/**
+ * Discover and register all commands from src/commands/.
+ */
 const registerCommands = (client) => {
     const files = client.fs
         .readdirSync(`${__dirname}/../commands/`)
@@ -62,11 +80,23 @@ const registerCommands = (client) => {
     }
 };
 
+/**
+ * Bind a single event file to the client.
+ * The event name is derived from the filename (without .js).
+ *
+ * @param {Client} client - The Discord client instance.
+ * @param {string} file - Event filename (e.g. "messageCreate.js").
+ * @param {Function} evt - Exported handler function from the event module.
+ */
 const bindEvent = (client, file, evt) => {
     const eName = file.split(".")[0];
     client.on(eName, evt.bind(null, client));
 };
 
+/**
+ * Load all event handlers from src/events/ and bind them to the client.
+ * Events are triggered by Discord.js when the corresponding action occurs.
+ */
 const bindEvents = (client) => {
     const events = client.fs
         .readdirSync(`${__dirname}/../events/`)
@@ -85,6 +115,14 @@ const bindEvents = (client) => {
     }
 };
 
+/**
+ * Master entry point for the handler system.
+ *
+ * Executes all three setup phases in order:
+ *  1. Anti-crash listeners
+ *  2. Command registration
+ *  3. Event binding
+ */
 module.exports = (client) => {
     setupAntiCrash(client);
     registerCommands(client);

@@ -1,5 +1,15 @@
+// OwO Bot Support sunucusunun sabit guild ID’si.
 const OWO_SUPPORT_GUILD_ID = "420104212895105044";
 
+/**
+ * Handle the autostart flow on ready.
+ *
+ * If `autostart` is enabled, clears any stale captcha flag, unpauses
+ * the bot, updates RPC, and triggers `mainHandler` after a short delay.
+ * Distinguishes first start from resume-after-pause via `temp.started`.
+ *
+ * @param {Client} client - The Discord client instance.
+ */
 async function handleAutoStart(client) {
     if (!client.basic.autostart) return;
     if (!client.global.paused) {
@@ -32,6 +42,12 @@ async function handleAutoStart(client) {
     }
 }
 
+/**
+ * Ready event’te yapılan hazırlık adımlarını yönetir:
+ *   - OwO support sunucusu üyeliği kontrolü
+ *   - RPC durumu güncelleme
+ *   - autostart açıksa botu ilk/tekrar başlatma
+ */
 module.exports = async (client) => {
     client.logger.info(
         "Bot",
@@ -64,6 +80,13 @@ module.exports = async (client) => {
     await handleAutoStart(client);
 };
 
+/**
+ * Periodically trim the Discord message cache to avoid unbounded memory
+ * growth. Runs every 5 minutes and deletes the oldest ~85% of cached
+ * messages across all visible channels.
+ *
+ * @param {Client} botClient - The Discord client instance.
+ */
 function setupSweeper(botClient) {
     setInterval(
         () => {

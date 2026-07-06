@@ -72,6 +72,7 @@ async function initGambling(client, message) {
     ) {
         await client.globalutil.waitWhileBusy(client);
         require("../modules/gamble.js")(client, message);
+        // Small buffer before launching next subsystem.
         await client.delay(8000);
     }
 }
@@ -111,6 +112,7 @@ async function initAnimals(client, channel) {
 async function initPrayer(client, message) {
     if (client.basic.commands.pray || client.basic.commands.curse) {
         await client.globalutil.waitWhileBusy(client);
+        // Initial wait to space out luck buffs from farming actions.
         await client.delay(32000);
         require("../modules/luck.js")(client, message);
     }
