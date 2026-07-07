@@ -1,4 +1,4 @@
-const { getrand } = require("../utils/globalutil.js");
+const { getrand } = require("../core/globalutil.js");
 
 const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 

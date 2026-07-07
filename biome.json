@@ -76,7 +76,7 @@
             }
         },
         {
-            "includes": ["src/utils/globalutil.js"],
+            "includes": ["src/core/globalutil.js"],
             "linter": {
                 "rules": {
                     "suspicious": {

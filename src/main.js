@@ -52,5 +52,5 @@ if (cluster.isPrimary) {
     /**
      * Worker process: boot the actual bot implementation.
      */
-    require("./bot.js");
+    require("./core/bot.js");
 }

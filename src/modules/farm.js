@@ -1,4 +1,4 @@
-const { commandrandomizer, getrand } = require("../utils/globalutil.js");
+const { commandrandomizer, getrand } = require("../core/globalutil.js");
 
 const OWO_ID = "408785106942164992";
 const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -216,7 +216,7 @@ function startAutophrases(client, channel) {
         if (!phrasesCache) {
             try {
                 const data = await client.fs.promises.readFile(
-                    `${__dirname}/../assets/phrases.json`,
+                    `${__dirname}/../core/phrases.json`,
                     "utf8",
                 );
                 const phrasesObject = JSON.parse(data);

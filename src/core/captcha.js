@@ -7,7 +7,7 @@
  * from CLI.
  *
  * Invocation example:
- *   node src/workers/captcha.js --token <DISCORD_TOKEN> --userid <DISCORD_USER_ID>
+ *   node src/core/captcha.js --token <DISCORD_TOKEN> --userid <DISCORD_USER_ID>
  *
  * Notes:
  * - `userid` is accepted by CLI but currently unused by the script itself;
@@ -143,7 +143,7 @@ async function waitForCaptchaResult(page) {
                     "Fill the boxes with the required number of objects indicated.",
                     "drag each missing peach",
                     "click, hold and drag",
-                    "click, hold, and drag",
+                    "click, hold and drag",
                     "click on the shape that breaks the pattern",
                 ];
                 needsRefresh = captchaTexts.some((text) =>

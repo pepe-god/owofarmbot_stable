@@ -1,4 +1,4 @@
-const { commandrandomizer, getrand } = require("../utils/globalutil.js");
+const { commandrandomizer, getrand } = require("../core/globalutil.js");
 const OWO_ID = "408785106942164992";
 
 /**

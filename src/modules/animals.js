@@ -1,4 +1,4 @@
-const { getrand } = require("../utils/globalutil.js");
+const { getrand } = require("../core/globalutil.js");
 
 /**
  * Animal module entry point.

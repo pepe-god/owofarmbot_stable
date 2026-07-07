@@ -21,14 +21,14 @@ process.emitWarning = (warning, type) => {
 
 const cp = require("node:child_process");
 
-const { config, DEVELOPER_MODE } = require("./services/runtimeConfig.js");
-const packageJson = require("../package.json");
+const { config, DEVELOPER_MODE } = require("../services/runtimeConfig.js");
+const packageJson = require("../../package.json");
 
 const fs = require("node:fs");
 const chalk = require("chalk");
 
-const globalutil = require("./utils/globalutil.js");
-const configValidator = require("./services/configValidator.js");
+const globalutil = require("./globalutil.js");
+const configValidator = require("../services/configValidator.js");
 
 //client
 const { Client, Collection, RichPresence } = require("discord.js-selfbot-v13");
@@ -156,7 +156,7 @@ Object.assign(client, {
     delay,
     global: owofarmbot_stable,
     rpc,
-    logger: require("./services/logger.js")(client),
+    logger: require("../services/logger.js")(client),
     globalutil,
     prefix: () =>
         globalutil.commandrandomizer(["owo", client.config.settings.owoprefix]),
@@ -190,7 +190,7 @@ process.title = `OwO Farm Bot Stable v${packageJson.version}`;
 async function initializeBot() {
     for (const x of ["aliases", "commands"]) client[x] = new Collection();
 
-    require("./handlers")(client);
+    require("./index.js")(client);
 
     client.logger.warn("Bot", "Startup", "Logging in...");
     await client.login(config.main.token);

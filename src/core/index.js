@@ -60,20 +60,30 @@ const registerCommand = (client, pull) => {
 };
 
 /**
- * Discover and register all commands from src/commands/.
+ * Discover and register all commands/events from src/core/.
  */
 const registerCommands = (client) => {
+    const EXCLUDE = new Set([
+        "index.js",
+        "globalutil.js",
+        "captcha.js",
+        "autovote.js",
+    ]);
     const files = client.fs
-        .readdirSync(`${__dirname}/../commands/`)
-        .filter((d) => d.endsWith(".js"));
+        .readdirSync(__dirname)
+        .filter((d) => d.endsWith(".js") && !EXCLUDE.has(d));
     for (const file of files) {
         try {
-            const pull = require(`../commands/${file}`);
-            registerCommand(client, pull);
+            const pull = require(`./${file}`);
+            if (typeof pull === "function") {
+                bindEvent(client, file, pull);
+            } else {
+                registerCommand(client, pull);
+            }
         } catch (err) {
             client.logger.alert(
                 "Handler",
-                "Commands",
+                "Discovery",
                 `Failed to load ${file}: ${err.message}`,
             );
         }
@@ -94,28 +104,6 @@ const bindEvent = (client, file, evt) => {
 };
 
 /**
- * Load all event handlers from src/events/ and bind them to the client.
- * Events are triggered by Discord.js when the corresponding action occurs.
- */
-const bindEvents = (client) => {
-    const events = client.fs
-        .readdirSync(`${__dirname}/../events/`)
-        .filter((d) => d.endsWith(".js"));
-    for (const file of events) {
-        try {
-            const evt = require(`../events/${file}`);
-            bindEvent(client, file, evt);
-        } catch (err) {
-            client.logger.alert(
-                "Handler",
-                "Events",
-                `Failed to load ${file}: ${err.message}`,
-            );
-        }
-    }
-};
-
-/**
  * Master entry point for the handler system.
  *
  * Executes all three setup phases in order:
@@ -126,5 +114,4 @@ const bindEvents = (client) => {
 module.exports = (client) => {
     setupAntiCrash(client);
     registerCommands(client);
-    bindEvents(client);
 };

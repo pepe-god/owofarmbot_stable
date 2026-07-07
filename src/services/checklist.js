@@ -1,5 +1,5 @@
 const path = require("node:path");
-const { commandrandomizer } = require("../utils/globalutil.js");
+const { commandrandomizer } = require("../core/globalutil.js");
 
 const OWO_ID = "408785106942164992";
 
@@ -102,7 +102,7 @@ async function handleVote(client) {
         "Opening automated chromium browser...",
     );
     client.childprocess.spawn("node", [
-        path.join(__dirname, "../vendor/autovote/index.js"),
+        path.join(__dirname, "../core/autovote.js"),
         `--token=${client.basic.token}`,
         "--bid=408785106942164992",
     ]);

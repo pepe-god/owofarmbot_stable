@@ -1,4 +1,4 @@
-// OwO Bot Support sunucusunun sabit guild ID’si.
+// OwO Bot Support sunucusunun sabit guild ID'si.
 const OWO_SUPPORT_GUILD_ID = "420104212895105044";
 
 /**
@@ -43,7 +43,7 @@ async function handleAutoStart(client) {
 }
 
 /**
- * Ready event’te yapılan hazırlık adımlarını yönetir:
+ * Ready event'te yapılan hazırlık adımlarını yönetir:
  *   - OwO support sunucusu üyeliği kontrolü
  *   - RPC durumu güncelleme
  *   - autostart açıksa botu ilk/tekrar başlatma

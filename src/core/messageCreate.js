@@ -51,7 +51,7 @@ function sendDesktopNotifications(client) {
         showDesktop &&
         client.config.settings.captcha.alerttype.desktop.notification
     ) {
-        require("../../modules/captchaNotify.js")(client);
+        require("../modules/captchaNotify.js")(client);
     }
     if (
         showDesktop &&
@@ -100,7 +100,7 @@ function sendWebhookNotification(client) {
 /**
  * Launch automated Chromium browser instances to solve the captcha.
  *
- * Spawns `src/workers/captcha.js` for each configured thread, with
+ * Spawns `src/core/captcha.js` for each configured thread, with
  * a 3s stagger between spawns.
  */
 async function launchAutoSolve(client) {
@@ -121,7 +121,7 @@ async function launchAutoSolve(client) {
 
     for (let spawncount = 0; spawncount < spawnthread; spawncount++) {
         client.childprocess.spawn("node", [
-            "./workers/captcha.js",
+            "./core/captcha.js",
             `--token=${client.basic.token}`,
             `--userid=${client.user.id}`,
         ]);
