@@ -6,7 +6,7 @@ const {
     parseDuration,
     getrand,
     commandrandomizer,
-} = require("../src/utils/globalutil");
+} = require("../src/core/globalutil");
 
 describe("removeInvisibleChars", () => {
     it("removes control characters (0x00-0x1F)", () => {

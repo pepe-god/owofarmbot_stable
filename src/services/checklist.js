@@ -310,3 +310,4 @@ async function smol(client, channel) {
 
 module.exports.parseChecklistInterval = parseChecklistInterval;
 module.exports.getIncompleteItems = getIncompleteItems;
+module.exports.executeChecklistLine = executeChecklistLine;

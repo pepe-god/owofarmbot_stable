@@ -13,26 +13,58 @@ module.exports = async (client) => {
     const safetyInterval = client.config.settings.safety.pauseafter * 60 * 1000;
     const pauseDuration = client.config.settings.safety.pausefor * 60 * 1000;
 
-    const pause = () => {
-        if (client.global.paused || client.global.captchadetected) return;
-        client.global.paused = true;
-        client.logger.warn(
-            "Bot",
-            "Safety",
-            "Safety paused to reduce bot rate.",
-        );
-        setTimeout(resume, pauseDuration);
-    };
-
-    const resume = () => {
-        if (client.global.captchadetected) {
-            setTimeout(resume, 30000);
-            return;
-        }
-        client.global.paused = false;
-        client.logger.warn("Bot", "Safety", "Resuming after a safety pause.");
-        setTimeout(pause, safetyInterval);
-    };
-
-    setTimeout(pause, safetyInterval);
+    setTimeout(
+        () => pause(client, pauseDuration, safetyInterval),
+        safetyInterval,
+    );
 };
+
+/**
+ * Pause the bot for a cooldown window.
+ *
+ * No-op if the bot is already paused or a captcha is being handled. Otherwise
+ * sets `global.paused`, logs the action, and schedules {@link resume} after
+ * `pauseDuration` ms.
+ *
+ * @param {Client} client - The Discord client instance; mutates `global.paused`.
+ * @param {number} pauseDuration - Cooldown length in ms before resuming.
+ * @param {number} safetyInterval - Cooldown length in ms before the next pause.
+ * @returns {void} Schedules {@link resume}; does not return a value.
+ */
+function pause(client, pauseDuration, safetyInterval) {
+    if (client.global.paused || client.global.captchadetected) return;
+    client.global.paused = true;
+    client.logger.warn("Bot", "Safety", "Safety paused to reduce bot rate.");
+    setTimeout(
+        () => resume(client, pauseDuration, safetyInterval),
+        pauseDuration,
+    );
+}
+
+/**
+ * Resume the bot after a safety pause.
+ *
+ * If a captcha is still being handled, the resume is deferred by 30s instead of
+ * clearing the pause. Otherwise clears `global.paused`, logs, and schedules the
+ * next {@link pause} after `safetyInterval` ms.
+ *
+ * @param {Client} client - The Discord client instance; mutates `global.paused`.
+ * @param {number} pauseDuration - Cooldown length in ms (passed through to {@link pause}).
+ * @param {number} safetyInterval - Cooldown length in ms before the next pause.
+ * @returns {void} Schedules the next pause (or a deferred resume); does not return a value.
+ */
+function resume(client, pauseDuration, safetyInterval) {
+    if (client.global.captchadetected) {
+        setTimeout(() => resume(client, pauseDuration, safetyInterval), 30000);
+        return;
+    }
+    client.global.paused = false;
+    client.logger.warn("Bot", "Safety", "Resuming after a safety pause.");
+    setTimeout(
+        () => pause(client, pauseDuration, safetyInterval),
+        safetyInterval,
+    );
+}
+
+module.exports.pause = pause;
+module.exports.resume = resume;

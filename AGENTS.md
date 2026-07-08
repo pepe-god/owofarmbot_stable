@@ -10,7 +10,8 @@ Follow these when touching code:
 
 ## Commands
 - `pnpm start` — run from repo root
-- `pnpm lint:fix ; pnpm format` // lint and format
+- `pnpm lint:fix ; pnpm format` — lint and format
+- `pnpm test` — run all tests
 
 ## Entrypoint & Architecture
 - `src/main.js` forks itself via `cluster.fork()`; worker calls `src/core/bot.js`

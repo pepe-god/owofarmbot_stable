@@ -281,3 +281,9 @@ module.exports = async (client, message) => {
     }
     handleCommand(client, message);
 };
+
+module.exports.isWebCaptchaMessage = isWebCaptchaMessage;
+module.exports.escapeRegex = escapeRegex;
+module.exports.handleCaptchaDetection = handleCaptchaDetection;
+module.exports.handleCaptchaSolved = handleCaptchaSolved;
+module.exports.handleCommand = handleCommand;
