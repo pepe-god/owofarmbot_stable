@@ -27,7 +27,8 @@ const _fse = require("fs-extra");
 
 /**
  * Maps rarity names to numeric levels used for gem selection.
- * Higher numbers mean rarer gems.
+ * Higher numbers mean rarer gems. Consumed by `parseGemRarity`.
+ * @type {Object.<string, number>}
  */
 const RARITY_MAP = {
     fabled: 7,
@@ -41,6 +42,8 @@ const RARITY_MAP = {
 
 /**
  * Maps animal type names to the suffix character OwO uses in commands.
+ * Built by `parseAnimalTypes` into `client.global.temp.animaltype`.
+ * @type {Object.<string, string>}
  */
 const ANIMAL_TYPE_MAP = {
     common: " c",
@@ -62,6 +65,7 @@ const ANIMAL_TYPE_MAP = {
 /**
  * Default min/max intervals (ms) per action type.
  * Used to clamp user-configured values that are too aggressive.
+ * @type {Array<{ type: string, min: number, max: number }>}
  */
 const INTERVAL_DEFAULTS = [
     { type: "hunt", min: 12000, max: 16000 },
@@ -76,6 +80,10 @@ const INTERVAL_DEFAULTS = [
 
 /**
  * Log a config-related alert message.
+ *
+ * @param {Client} client - The Discord client instance; used for logging.
+ * @param {string} err - The human-readable conflict description.
+ * @returns {void}
  */
 const showerr = (client, err) => {
     client.logger.alert("Bot", "Config", `Config conflict: ${err}`);
@@ -125,6 +133,11 @@ const checkDuplicateChannels = (config, client) => {
 /**
  * Enforce mutual exclusion between pray and curse. Only pray is kept active
  * if both are enabled.
+ *
+ * @param {Client} client - The Discord client instance; may disable `basic.curse`.
+ * @param {Object} config - The resolved config; `main.commands.curse` may be turned off.
+ * @returns {void}
+ * @sideeffect Disables `config.main.commands.curse` and `client.basic.curse` when both are enabled, and logs a conflict.
  */
 const checkPrayCurseConflict = (client, config) => {
     if (config.main.commands.pray && config.main.commands.curse) {
@@ -222,6 +235,11 @@ const checkSellSacrificeConflict = (config, client) => {
 /**
  * Clamp configured action intervals to safe minimums defined in
  * INTERVAL_DEFAULTS. Warns and resets any out-of-range values.
+ *
+ * @param {Object} config - The resolved config; `config.interval[type]` values may be mutated.
+ * @param {Client} client - The Discord client instance; used for warnings.
+ * @returns {void}
+ * @sideeffect Resets out-of-range `config.interval[type].min`/`max` to the defaults and logs each correction.
  */
 const validateIntervals = (config, client) => {
     const intervals = ["hunt", "battle", "pray", "coinflip", "slot", "animals"];

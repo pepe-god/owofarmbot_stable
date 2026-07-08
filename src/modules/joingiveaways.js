@@ -11,9 +11,12 @@ const OWO_ID = "408785106942164992";
  * Retrieve (or initialize) the per-user list of giveaway message IDs
  * the user has already entered.
  *
- * @param {Object} enteredGiveaways - The persisted state object.
+ * Ensures the persisted state object has an array for the supplied user id,
+ * creating an empty one on first use, then returns it for in-place mutation.
+ *
+ * @param {Object.<string, string[]>} enteredGiveaways - The persisted state object keyed by user id.
  * @param {string} userId - Discord user ID.
- * @returns {string[]} Array of giveaway message IDs.
+ * @returns {string[]} The array of giveaway message IDs already entered by the user.
  */
 function getEnteredList(enteredGiveaways, userId) {
     if (!enteredGiveaways[userId]) {
@@ -26,10 +29,14 @@ function getEnteredList(enteredGiveaways, userId) {
  * Scan a giveaway message for active buttons that the user has not
  * yet clicked.
  *
+ * Iterates the message's component rows looking for enabled BUTTON components
+ * whose giveaway the user has not already joined (tracked by message id), and
+ * returns them as a clickable queue.
+ *
  * @param {Message} message - The giveaway message to inspect.
- * @param {Object} enteredGiveaways - Persisted entered state.
+ * @param {Object.<string, string[]>} enteredGiveaways - Persisted entered state keyed by user id.
  * @param {string} userId - Discord user ID.
- * @returns {Array<{customId: string, message: Message}>} Queue of clickable buttons.
+ * @returns {Array<{customId: string, message: Message}>} Queue of clickable buttons with their custom id and source message.
  */
 function findActiveButtons(message, enteredGiveaways, userId) {
     const myEntered = getEnteredList(enteredGiveaways, userId);
@@ -51,6 +58,15 @@ function findActiveButtons(message, enteredGiveaways, userId) {
 /**
  * Click each queued giveaway button sequentially with a 15s delay
  * between clicks to avoid rate limits.
+ *
+ * For every button, logs and clicks it, increments the joined counter, records
+ * the message id as entered, then waits 15s before the next click. Click
+ * failures are logged but do not abort the remaining queue.
+ *
+ * @param {Client} client - The Discord client instance; carries `global.total.giveaway` and `delay`.
+ * @param {Object.<string, string[]>} enteredGiveaways - Persisted entered state; the user's list is mutated in place.
+ * @param {Array<{customId: string, message: Message}>} buttonQueue - Buttons to click, produced by {@link findActiveButtons}.
+ * @returns {Promise<void>} Resolves after the whole queue has been processed (success or error per item).
  */
 async function pressButtonsSequentially(client, enteredGiveaways, buttonQueue) {
     const myEntered = getEnteredList(enteredGiveaways, client.user.id);
@@ -82,6 +98,13 @@ async function pressButtonsSequentially(client, enteredGiveaways, buttonQueue) {
 
 /**
  * Persist the entered-giveaways state to disk.
+ *
+ * Serializes the in-memory state to pretty-printed JSON so it survives restarts
+ * and the bot does not re-join giveaways it has already entered.
+ *
+ * @param {Object.<string, string[]>} enteredGiveaways - The state object to persist.
+ * @param {string} filePath - Absolute path of the JSON file to write.
+ * @returns {void} Writes the file synchronously; does not return a value.
  */
 function saveEnteredGiveaways(enteredGiveaways, filePath) {
     fs.writeFileSync(filePath, JSON.stringify(enteredGiveaways, null, 2));
@@ -90,6 +113,16 @@ function saveEnteredGiveaways(enteredGiveaways, filePath) {
 /**
  * Scan configured giveaway channels for active, unjoined giveaways
  * and join them.
+ *
+ * For each configured channel id it fetches the latest 100 messages, filters to
+ * OwO giveaway posts (embeds or components), queues any active un-joined buttons,
+ * and clicks them sequentially. Channels that are missing or not text channels,
+ * and any fetch errors, are logged and skipped.
+ *
+ * @param {Client} client - The Discord client instance; provides the guild cache and logging.
+ * @param {Guild} guild - The OwO support guild containing the giveaway channels.
+ * @param {Object.<string, string[]>} enteredGiveaways - Persisted entered state (mutated in place as giveaways are joined).
+ * @returns {Promise<void>} Resolves after all configured channels have been scanned.
  */
 async function scanChannelGiveaways(client, guild, enteredGiveaways) {
     for (const channelId of CHANNEL_IDS) {
@@ -170,7 +203,13 @@ async function scanChannelGiveaways(client, guild, enteredGiveaways) {
  * joins any active giveaways. Then listens for new giveaway messages
  * in real time.
  *
- * @param {Client} client - The Discord client instance.
+ * Loads (or initializes) the persisted entered-giveaways state, verifies the
+ * OwO support guild is available, performs an initial scan of recent messages,
+ * persists the state, and finally subscribes to `messageCreate` so any new
+ * giveaway posted in a watched channel is joined immediately.
+ *
+ * @param {Client} client - The Discord client instance; provides guilds, logging and `global.devmod`.
+ * @returns {Promise<void>|void} Resolves after the initial scan (and registers the live listener). Logs an alert and returns early if the guild is missing.
  */
 module.exports = async (client) => {
     let ENTERED_GIVEAWAYS_FILE = path.join(

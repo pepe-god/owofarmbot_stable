@@ -146,6 +146,9 @@ function rpc(type) {
  * Discord client instance so every module can access them via `client.X`.
  * This avoids passing the same objects through long call chains.
  */
+// Attach shared singletons/helpers onto the client so every module can use
+// them without long import/parameter chains. This is the single source of
+// truth for logger, config, delay, global state, etc.
 Object.assign(client, {
     chalk,
     fs,
@@ -158,6 +161,7 @@ Object.assign(client, {
     rpc,
     logger: require("../services/logger.js")(client),
     globalutil,
+    // Randomize between "owo" and the configured prefix to look less bot-like.
     prefix: () =>
         globalutil.commandrandomizer(["owo", client.config.settings.owoprefix]),
 });
@@ -171,9 +175,11 @@ process.title = `OwO Farm Bot Stable v${packageJson.version}`;
  * validation and login before the process continues.
  */
 (async () => {
+    // 1) Validate config shape, 2) load runtime/extra config into `client`.
     await configValidator.verifyconfig(client, config);
     await configValidator.getconfig(config, client);
 
+    // 3) Wire collections, handlers/events, then log in to Discord.
     await initializeBot();
 
     client.logger.warn(
@@ -188,8 +194,10 @@ process.title = `OwO Farm Bot Stable v${packageJson.version}`;
  * loads handlers, and logs into Discord using the configured token.
  */
 async function initializeBot() {
+    // Discord.js uses Collection maps to store registered commands/aliases.
     for (const x of ["aliases", "commands"]) client[x] = new Collection();
 
+    // Run the consolidated handler loader (anti-crash, commands, events).
     require("./index.js")(client);
 
     client.logger.warn("Bot", "Startup", "Logging in...");

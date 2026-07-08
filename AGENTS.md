@@ -13,9 +13,9 @@ Follow these when touching code:
 - `pnpm lint:fix ; pnpm format` // lint and format
 
 ## Entrypoint & Architecture
-- `src/main.js` forks itself via `cluster.fork()`; worker calls `src/bot.js`
-- `src/bot.js` attaches everything to the Discord.js `Client` via `Object.assign`, then: load handlers → login → wait for message commands
-- `src/bot.js` startup: `configValidator.verifyconfig()` → `configValidator.getconfig()` → `initializeBot()`
+- `src/main.js` forks itself via `cluster.fork()`; worker calls `src/core/bot.js`
+- `src/core/bot.js` attaches everything to the Discord.js `Client` via `Object.assign`, then: load handlers → login → wait for message commands
+- `src/core/bot.js` startup: `configValidator.verifyconfig()` → `configValidator.getconfig()` → `initializeBot()`
 - `src/core/index.js` wires: antiCrash, command registration, event binding
 - `src/core/admin.js` — pause/resume/start/restart/stats
 - `src/core/messageCreate.js` — captcha detection + command dispatch
@@ -28,7 +28,7 @@ Follow these when touching code:
   - `initPrayer` (luck — pray/curse)
   - `initHuntbot` (huntbot)
   - `initSafety` (safety)
-- Checklist subsystem lives in `src/services/checklist.js` (10 functions)
+- Checklist subsystem lives in `src/services/checklist.js` (9 functions)
 - All self-looping modules live in `src/modules/` (10 files), loaded at runtime via `require()`
 
 ## Config
@@ -46,7 +46,7 @@ Follow these when touching code:
 - `client.delay(ms)` — `() => new Promise(resolve => setTimeout(resolve, ms))`
 
 ## File Organization
-- `src/core/` — consolidated: index.js (loader), admin.js, messageCreate.js, ready.js, globalutil.js, captcha.js
+- `src/core/` — consolidated: bot.js (bootstrap), index.js (loader), admin.js, messageCreate.js, ready.js, globalutil.js, captcha.js, autovote.js
 - `src/services/` — orchestration, config validation, checklist, logging. Business logic that coordinates modules.
 - `src/modules/` — self-looping farming modules (farm, gamble, quest, etc.). Each owns a specific OwO bot feature.
 
@@ -60,7 +60,7 @@ Follow these when touching code:
 - `src/services/runtimeConfig.js` — config file loading + .env overrides + default prefix initialization
 - `src/services/configValidator.js` — startup config validation (verifyconfig, getconfig, 8 helpers)
 - `src/services/checklist.js` — checklist subsystem (smol, executeChecklistLine, handleDaily/Vote/Cookie, etc.)
-- `src/services/mainHandler.js` — orchestrator (module.exports + 7 init functions, no top-level requires)
+- `src/services/mainHandler.js` — orchestrator (module.exports + 8 init functions, no top-level requires)
 - `src/modules/` — self-looping modules: farm, gamble, quest, luck, huntbot, safety, inventory, joingiveaways, animals, captchaNotify
 
 ## Biome (lint config)
@@ -77,13 +77,3 @@ Follow these when touching code:
 
 ## Ignored Directories
 - `src/vendor/hcaptchasolver/` — 60MB Chrome extension, excluded from lint
-- `src/vendor/adblockcache/` — auto-generated Puppeteer cache
-- `.opencode/` — in .gitignore
-
-## Other Gotchas
-- `src/main.js` auto-installs missing deps via `npm install` at startup
-- Termux support removed
-- `pnpm-workspace.yaml` allows builds for puppeteer, sharp, sleep
-- autovote is a merged submodule at `src/vendor/autovote/` (was `git submodule`)
-- No test runner configured; `src/tests/` is lint-ignored and empty
-- `config.json` formatting uses 2-space indent (biome override)

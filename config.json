@@ -14,7 +14,7 @@
       "hunt": true,
       "battle": true,
       "pray": true,
-      "curse": true,
+      "curse": false,
       "huntbot": {
         "enable": false,
         "maxtime": 10,

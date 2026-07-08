@@ -3,12 +3,14 @@ const { getrand } = require("../core/globalutil.js");
 const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /**
- * Luck module entry point.
+ * Luck module entry point — starts the pray/curse loop.
  *
- * Sends pray or curse commands on a randomized interval to maintain
- * the luck buff. Only one mode (pray or curse) is active at a time.
+ * Sends either `pray` or `curse` commands (never both) to maintain the luck
+ * buff, depending on which option is enabled in config. The actual sending
+ * and rescheduling is delegated to {@link prayOrCurse}, which loops itself.
  *
- * @param {Client} client - The Discord client instance.
+ * @param {Client} client - The Discord client instance; carries config, logger and global state.
+ * @returns {void} This function only kicks off the self-looping handler.
  */
 module.exports = async (client) => {
     const channel = client.channels.cache.get(client.basic.commandschannelid);
@@ -18,11 +20,18 @@ module.exports = async (client) => {
 };
 
 /**
- * Self-looping pray or curse command sender.
+ * Self-looping pray/curse command sender.
+ *
+ * Waits for the bot to be idle (no captcha, no pause, no busy flags), then
+ * sends the chosen command to the configured channel. If `tomain` is enabled
+ * in config, the command is targeted at the main user via a mention. The total
+ * count for the action is incremented and logged, and the next run is scheduled
+ * after a randomized interval drawn from the `pray` config range.
  *
  * @param {Client} client - The Discord client instance.
- * @param {TextChannel} channel - The commands channel.
- * @param {string} type - "pray" or "curse".
+ * @param {TextChannel} channel - The text channel where commands are sent.
+ * @param {"pray"|"curse"} type - Which luck command to send.
+ * @returns {void} Self-reschedules via setTimeout; never resolves a meaningful value.
  */
 async function prayOrCurse(client, channel, type) {
     await client.globalutil.waitWhileBusy(client);

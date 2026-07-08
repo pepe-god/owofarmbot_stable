@@ -2,6 +2,11 @@ const { commandrandomizer } = require("../core/globalutil.js");
 
 const OWO_ID = "408785106942164992";
 
+/**
+ * Map of gem type -> ordered list of inventory item codes.
+ * Codes are listed weakest-first so {@link selectGemCodes} can pick the first
+ * one the user owns at or below their current rarity level.
+ */
 const GEM_ITEMS = {
     gem1: ["057", "056", "055", "054", "053", "052", "051"],
     gem3: ["071", "070", "069", "068", "067", "066", "065"],
@@ -9,6 +14,10 @@ const GEM_ITEMS = {
     star: ["085", "084", "083", "082", "081", "080", "079"],
 };
 
+/**
+ * Map of special inventory item codes -> how to consume them.
+ * `setting` toggles the item on/off via config; `cmd` builds the use command.
+ */
 const ITEM_ACTIONS = {
     "050": {
         setting: "lootbox",
@@ -19,12 +28,15 @@ const ITEM_ACTIONS = {
 };
 
 /**
- * Inventory module entry point.
+ * Inventory module entry point — runs the inventory consumption loop.
  *
- * Self-looping module that periodically reads the user's inventory,
- * consumes configured usable items, and applies selected gems.
+ * Resolves the commands channel and runs the one-shot {@link inventory}
+ * routine, which fetches the inventory, applies configured gems and consumable
+ * items. Unlike the other farm modules this is not self-rescheduling; it is
+ * invoked on demand (e.g. from the farm gem handler).
  *
- * @param {Client} client - The Discord client instance.
+ * @param {Client} client - The Discord client instance; carries config, logger and global state.
+ * @returns {Promise<void>} Resolves once the inventory routine has finished.
  */
 module.exports = async (client) => {
     const channel = client.channels.cache.get(client.basic.commandschannelid);
@@ -34,9 +46,14 @@ module.exports = async (client) => {
 /**
  * Send the inventory command and wait for OwO's inventory reply.
  *
- * @param {Client} client - The Discord client instance.
+ * Marks the global inventory flag (which pauses competing actions), sends
+ * `owo inv`, and waits for OwO's "Inventory =" embed/message newer than the
+ * command. Returns null on timeout or if the bot becomes paused/captcha'd while
+ * waiting, so the caller can abort gracefully.
+ *
+ * @param {Client} client - The Discord client instance (sets `global.inventory`).
  * @param {TextChannel} channel - The commands channel.
- * @returns {Promise<string|null>} Raw inventory message content, or null on timeout.
+ * @returns {Promise<string|null>} Raw inventory message content, or null on timeout/pause.
  */
 async function fetchInventoryData(client, channel) {
     channel.sendTyping();
@@ -73,8 +90,11 @@ async function fetchInventoryData(client, channel) {
 /**
  * Extract inline item codes from the inventory response text.
  *
+ * Scans the raw inventory message for backtick-quoted tokens (OwO uses these
+ * for item codes, e.g. `` `057` ``) and returns them in order of appearance.
+ *
  * @param {string} invContent - Raw inventory message content.
- * @returns {string[]} Array of item codes found in backticks.
+ * @returns {string[]} Array of item codes found between backticks.
  */
 function parseItemCodes(invContent) {
     const values = [];
@@ -89,8 +109,14 @@ function parseItemCodes(invContent) {
 /**
  * Mark gem item codes for use based on config and current rarity level.
  *
- * @param {Client} client - The Discord client instance.
+ * For every gem the farm loop still needs, finds the weakest owned code
+ * (`GEM_ITEMS`) that the user can use at their current `rareLevel`, and appends
+ * it to `client.global.gems.use`. No-op when gem usage is disabled or no gems
+ * are needed.
+ *
+ * @param {Client} client - The Discord client instance; reads `global.gems.need`, `global.rareLevel`, and writes `global.gems.use`.
  * @param {string[]} values - Extracted inventory item codes.
+ * @returns {void} Mutates `client.global.gems.use`; does not return a value.
  */
 function selectGemCodes(client, values) {
     if (
@@ -114,9 +140,15 @@ function selectGemCodes(client, values) {
 /**
  * Use inventory items that are enabled in config.
  *
- * @param {Client} client - The Discord client instance.
+ * Iterates the extracted codes; for each code present in `ITEM_ACTIONS` whose
+ * `setting` is enabled in config, sends the appropriate use command (quantity
+ * "all") and resets the hunt-since-inventory counter. A short delay separates
+ * each use to respect rate limits.
+ *
+ * @param {Client} client - The Discord client instance; reads `config.settings.inventory.use`.
  * @param {TextChannel} channel - The commands channel.
  * @param {string[]} values - Extracted inventory item codes.
+ * @returns {Promise<void>} Resolves after all enabled items have been used.
  */
 async function useItemsFromInventory(client, channel, values) {
     for (const code of values) {
@@ -133,8 +165,13 @@ async function useItemsFromInventory(client, channel, values) {
 /**
  * Apply the selected gem codes with a single `use` command.
  *
- * @param {Client} client - The Discord client instance.
+ * Sends one `use <gem codes>` command for everything queued by
+ * {@link selectGemCodes}, then clears the gem need/use state and the
+ * "missing handled" flag so the next shortage is treated as fresh.
+ *
+ * @param {Client} client - The Discord client instance; reads/writes `global.gems`.
  * @param {TextChannel} channel - The commands channel.
+ * @returns {Promise<void>} Resolves after the gem use command has been sent.
  */
 async function applyGems(client, channel) {
     if (client.global.gems.use.length === 0) return;
@@ -154,12 +191,16 @@ async function applyGems(client, channel) {
 }
 
 /**
- * Core inventory loop: fetch, parse, use items, apply gems.
+ * Core inventory routine: fetch, parse, use items, apply gems.
  *
- * Resets `client.global.inventory` to false when finished.
+ * Guards against concurrent/blocked runs, fetches the inventory, selects gem
+ * codes, uses enabled consumables, applies gems, then clears the global
+ * inventory flag. Always clears the flag on the failure path so the bot does
+ * not get stuck "paused".
  *
  * @param {Client} client - The Discord client instance.
  * @param {TextChannel} channel - The commands channel.
+ * @returns {Promise<void>} Resolves once the routine has completed (success or abort).
  */
 async function inventory(client, channel) {
     if (
@@ -191,13 +232,19 @@ async function inventory(client, channel) {
 }
 
 /**
- * Send a generic use/item command with rate-limit awareness.
+ * Send a generic use/item command with rate-limit and pause awareness.
  *
- * @param {Client} client - The Discord client instance.
+ * Marks the global `use` flag, sends the command, logs it, then releases the
+ * flag after a cooldown. Aborts early when a captcha is detected, or when the
+ * bot is paused (unless the caller is the inventory routine itself, which is
+ * allowed to proceed so gems can be applied while the inventory flag is held).
+ *
+ * @param {Client} client - The Discord client instance (sets `global.use`).
  * @param {TextChannel} channel - The commands channel.
- * @param {string} item - The item/command string to send.
- * @param {string} count - Quantity or "" for default.
- * @param {string} where - Caller context ("inventory" or other).
+ * @param {string} item - The item/command string to send (after the prefix).
+ * @param {string} count - Quantity such as `"all"`, or `""` for the default.
+ * @param {string} where - Caller context; `"inventory"` is exempt from the pause guard.
+ * @returns {Promise<void>} Resolves after the command is sent and the cooldown elapses.
  */
 async function use(client, channel, item, count, where) {
     if (

@@ -11,7 +11,9 @@ const OWO_SUPPORT_GUILD_ID = "420104212895105044";
  * @param {Client} client - The Discord client instance.
  */
 async function handleAutoStart(client) {
+    // Respect the `autostart` toggle in config.
     if (!client.basic.autostart) return;
+    // If already running, there is nothing to do.
     if (!client.global.paused) {
         return client.logger.warn(
             "Bot",
@@ -20,16 +22,20 @@ async function handleAutoStart(client) {
         );
     }
 
+    // Clear a stale captcha flag from a previous session, then unpause.
     if (client.global.captchadetected) {
         client.global.captchadetected = false;
     }
     client.global.paused = false;
     client.rpc("update");
 
+    // temp.started tracks whether the farming orchestrator has ever been
+    // launched. First time -> start it; later (after a pause) -> just resume.
     if (!client.global.temp.started) {
         client.global.temp.started = true;
         client.logger.info("Bot", "AutoStart", "BOT started have fun ;)");
 
+        // Small delay so the client/RPC is fully settled before orchestrating.
         setTimeout(() => {
             require("../services/mainHandler.js")(client);
         }, 1000);
@@ -58,6 +64,8 @@ module.exports = async (client) => {
 
     client.global.temp.isready = true;
     if (client.config.settings.autojoingiveaways) {
+        // Check membership of the OwO support server; giveaways are only
+        // auto-joinable if we are a member.
         const guild = client.guilds.cache.get(OWO_SUPPORT_GUILD_ID);
 
         if (guild) {
@@ -98,6 +106,7 @@ function setupSweeper(botClient) {
                     messagesArray.sort(
                         (a, b) => a.createdTimestamp - b.createdTimestamp,
                     );
+                    // Keep only the newest ~15% of cached messages to bound RAM.
                     const messagesToDelete = Math.floor(
                         messagesArray.length * 0.85,
                     );

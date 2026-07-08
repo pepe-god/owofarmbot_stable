@@ -5,6 +5,16 @@ const OWO_ID = "408785106942164992";
  * Game-specific configuration maps for coinflip and slot logic.
  * Each entry defines command construction, win/loss detection, result parsing,
  * collector filters, and display labels for its respective game type.
+ *
+ * @type {Object.<"coinflip"|"slot", {
+ *   cmd: (bet: number) => string,
+ *   checkWin: (content: string) => boolean,
+ *   checkLoss: (content: string) => boolean,
+ *   isFreshResult: (oldContent: string) => boolean,
+ *   parseWin: (content: string, currentBet: number) => number,
+ *   collectorFilter: (content: string) => boolean,
+ *   label: string
+ * }>}
  */
 const GAME_CONFIG = {
     coinflip: {
@@ -35,11 +45,13 @@ const GAME_CONFIG = {
 };
 
 /**
- * Gamble module entry point.
+ * Gamble module entry point — starts the configured gamble loops.
  *
- * Starts coinflip and/or slot loops depending on config.
+ * Launches the coinflip loop when enabled, and the slot loop after a 4s stagger
+ * when both are enabled, so the two games do not flood the channel at once.
  *
- * @param {Client} client - The Discord client instance.
+ * @param {Client} client - The Discord client instance; reads `commands.gamble` and `gamblechannelid`.
+ * @returns {void} Kicks off {@link playGame} loops; does not return a value.
  */
 module.exports = async (client) => {
     const channel = client.channels.cache.get(client.basic.gamblechannelid);
@@ -60,11 +72,11 @@ module.exports = async (client) => {
  * and returns the new bet amount for the next round (martingale-style
  * on loss, reset to default on win).
  *
- * @param {Client} client - The Discord client instance.
- * @param {Object} game - The merged game config including betting settings.
+ * @param {Client} client - The Discord client instance; carries the gamble tally state.
+ * @param {Object} game - The merged game config including betting settings (defaultBet, maxBet, multiplier).
  * @param {string} content - The raw result message content.
  * @param {number} currentBet - The wager for this round.
- * @returns {{ newBet: number }|null} The next bet amount, or null if indeterminate.
+ * @returns {{ newBet: number }|null} The next bet amount, or null if the result is indeterminate (neither win nor loss).
  */
 function processResult(client, game, content, currentBet) {
     const isWin = game.checkWin(content);
@@ -88,9 +100,12 @@ function processResult(client, game, content, currentBet) {
 /**
  * Send a bet command to the gamble channel and return the sent message ID.
  *
+ * Marks the per-game attempt counter, logs the wager, and returns the Discord
+ * message id so callers can match OwO's edited/reply result to this bet.
+ *
  * @param {Client} client - The Discord client instance.
  * @param {TextChannel} channel - The gamble commands channel.
- * @param {Object} cfg - The game command configuration.
+ * @param {Object} cfg - The game command configuration (from GAME_CONFIG), provides `cmd` and `label`.
  * @param {number} bet - The wager amount.
  * @returns {Promise<string>} The ID of the sent bet message.
  */
@@ -111,6 +126,19 @@ async function sendBet(client, channel, cfg, bet) {
  * Attach listeners to catch the game result via both message edits
  * and new message collectors. Resolves the bet state when a result
  * is detected, or cleans up after the 10s timeout.
+ *
+ * Listens on `messageUpdate` (OwO edits its in-place result) and on a
+ * 10s message collector (OwO posts a new result line). The first
+ * conclusive result updates `currentBetRef.value` to the next wager and
+ * tears down the other listener. If nothing is collected, the attempt
+ * counter is rolled back and a warning is logged.
+ *
+ * @param {Client} client - The Discord client instance (event emitter for `messageUpdate`).
+ * @param {TextChannel} channel - The gamble commands channel (source of the collector).
+ * @param {string} messageId - ID of the sent bet message, used to filter newer/edited results.
+ * @param {Object} game - The merged game config (provides `collectorFilter`, `isFreshResult`, `check*`).
+ * @param {{ value: number }} currentBetRef - Mutable reference holding the current wager; updated with the next bet.
+ * @returns {void} Registers event listeners and a timeout; does not return a value.
  */
 function setupResultListeners(client, channel, messageId, game, currentBetRef) {
     let processed = false;
@@ -178,12 +206,15 @@ function setupResultListeners(client, channel, messageId, game, currentBetRef) {
 /**
  * Self-looping game runner for a single gamble type.
  *
- * Waits for the bot to be free, sends a bet, attaches result listeners,
- * then schedules the next round after a randomized interval.
+ * Waits for the bot to be idle, sends a bet, attaches result listeners,
+ * then schedules the next round after a randomized interval. The bet amount
+ * is held in `currentBetRef` and adjusted by {@link processResult} after each
+ * resolved round (martingale on loss, reset on win).
  *
- * @param {string} type - "coinflip" or "slot".
+ * @param {"coinflip"|"slot"} type - Which game to run.
  * @param {Client} client - The Discord client instance.
  * @param {TextChannel} channel - The gamble commands channel.
+ * @returns {void} Starts the internal self-rescheduling `loop()`; does not return a value.
  */
 async function playGame(type, client, channel) {
     const cfg = GAME_CONFIG[type];

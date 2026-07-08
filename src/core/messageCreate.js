@@ -137,6 +137,8 @@ async function launchAutoSolve(client) {
  * optional auto-solve.
  */
 async function handleCaptchaDetection(client, message, msgcontent) {
+    // Only react to captchas inside channels we actively farm in (commands,
+    // huntbot, gamble, quest, and the OwO DM channel).
     const CHANNEL_IDS = [
         client.basic.commandschannelid,
         client.basic.huntbotchannelid,
@@ -145,13 +147,19 @@ async function handleCaptchaDetection(client, message, msgcontent) {
         client.basic.owodmchannelid,
     ];
 
+    // Ignore any message not sent in one of the monitored channels.
     if (!CHANNEL_IDS.includes(message.channel.id)) return;
+    // OwO must have pinged us directly; otherwise it's not a captcha prompt.
     if (!message.content.toLowerCase().includes(`<@${client.user.id}>`)) return;
+    // Don't re-trigger alerts if a captcha is already being handled.
     if (client.global.captchadetected) return;
+    // Final gate: the message text must contain a known captcha phrase.
     if (!CAPTCHA_PHRASES.some((p) => msgcontent.includes(p))) return;
 
+    // Stop all farming loops and flag the captcha so waitWhileBusy() blocks.
     client.global.paused = true;
     client.global.captchadetected = true;
+    // Count it for the runtime stats display.
     client.global.total.captcha++;
     client.logger.alert("Bot", "Captcha", "Captcha Detected!");
     client.logger.info(
@@ -163,6 +171,9 @@ async function handleCaptchaDetection(client, message, msgcontent) {
 
     let helloChristopher, canulickmymonster;
     if (message.components.length > 0 && message.components[0].components[0]) {
+        // OwO sometimes embeds a button whose URL points at owobot.com.
+        // helloChristopher: a button whose exact URL is "owobot.com".
+        // canulickmymonster: the first button whose URL merely contains it.
         helloChristopher = message.components[0].components.find(
             (button) => button.url?.toLowerCase() === "owobot.com",
         );
@@ -171,9 +182,11 @@ async function handleCaptchaDetection(client, message, msgcontent) {
             .includes("owobot.com");
     }
 
+    // Always notify the user; auto-solve (below) is optional.
     sendDesktopNotifications(client);
     sendWebhookNotification(client);
 
+    // Only auto-solve when enabled AND the message links to a web captcha.
     if (
         client.config.settings.captcha.autosolve &&
         isWebCaptchaMessage(msgcontent, helloChristopher, canulickmymonster)
@@ -221,21 +234,28 @@ function handleCaptchaSolved(client, message, msgcontent) {
  */
 function handleCommand(client, message) {
     const PREFIX = client.prefix();
+    // Accept either a mention of the bot OR the configured prefix, then any
+    // amount of whitespace, as the command trigger.
     const prefixRegex = new RegExp(
         `^(<@!?${client.user.id}>|${escapeRegex(PREFIX)})\\s*`,
     );
     if (!prefixRegex.test(message.content)) return;
 
+    // Strip the prefix off so we can read the command name + arguments.
     const [matchedPrefix] = message.content.match(prefixRegex);
     const args = message.content
         .slice(matchedPrefix.length)
         .trim()
         .split(/ +/g);
+    // First token after the prefix is the command; the rest are arguments.
     const command = args.shift().toLowerCase();
+    // Look up by exact name, falling back to an alias mapping.
     const cmd =
         client.commands.get(command) ||
         client.commands.get(client.aliases.get(command));
 
+    // Unknown command -> ignore. Security gate: only the configured owner
+    // user ID may run admin commands.
     if (!cmd) return;
     if (message.author.id !== client.basic.userid) return;
     cmd.run(client, message, args);
@@ -250,6 +270,8 @@ function handleCommand(client, message) {
  *  3. User command dispatch
  */
 module.exports = async (client, message) => {
+    // 408785106942164992 is OwO's official bot ID. Only its messages can
+    // contain captcha prompts or "solved" confirmations.
     if (message.author.id === "408785106942164992") {
         const msgcontent = client.globalutil.removeInvisibleChars(
             message.content.toLowerCase(),

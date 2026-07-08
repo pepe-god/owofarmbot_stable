@@ -3,12 +3,14 @@ const { commandrandomizer } = require("../core/globalutil.js");
 const OWO_ID = "408785106942164992";
 
 /**
- * Huntbot module entry point.
+ * Huntbot module entry point — checks/starts the huntbot.
  *
- * Checks the current huntbot status and either triggers a new hunt
- * or schedules a retry based on the remaining hunt duration.
+ * Resolves the target channel (the dedicated huntbot channel, or the main
+ * command channel as a fallback when none is configured), then fetches the
+ * current huntbot status to decide whether to start a new hunt or wait.
  *
- * @param {Client} client - The Discord client instance.
+ * @param {Client} client - The Discord client instance; reads `basic.huntbotchannelid` / `commandschannelid`.
+ * @returns {void} Delegates to {@link checkHuntbot}; does not return a value.
  */
 module.exports = async (client) => {
     let channel;
@@ -25,7 +27,15 @@ module.exports = async (client) => {
 };
 
 /**
- * Schedule a retry for the huntbot check after a delay.
+ * Re-run the huntbot status check after a delay.
+ *
+ * Used to poll back later once an in-progress hunt expires or when a previous
+ * attempt failed to locate OwO's response.
+ *
+ * @param {Client} client - The Discord client instance.
+ * @param {TextChannel} channel - The huntbot commands channel.
+ * @param {number} [delay=61000] - Milliseconds to wait before retrying.
+ * @returns {void} Schedules {@link checkHuntbot}; does not return a value.
  */
 function scheduleRetry(client, channel, delay = 61000) {
     setTimeout(() => {
@@ -36,9 +46,17 @@ function scheduleRetry(client, channel, delay = 61000) {
 /**
  * Extract huntbot status fields from the embed.
  *
- * @param {Client} client - The Discord client instance.
- * @param {Array<Object>} fields - Embed fields array.
- * @returns {Object} Parsed huntbot state.
+ * Parses the `!huntbot` embed description fields into a structured status:
+ * whether a hunt is active (and its remaining recall time), the configured max
+ * hunt duration, and whether any animal essence is available.
+ *
+ * @param {Client} client - The Discord client instance (uses `globalutil.parseDuration`).
+ * @param {Array<Object>} fields - The embed `fields` array from OwO's huntbot reply.
+ * @returns {Object} Parsed huntbot state:
+ * @returns {boolean} return.isHunting - True when a hunt is currently running.
+ * @returns {number} return.recalltime - Milliseconds until the current hunt ends (+5s slack); 0 when not hunting.
+ * @returns {?string} return.maxtime - Configured max hunt duration in hours (e.g. `"12"`), or null if unknown.
+ * @returns {boolean} return.essence - True when animal essence is available to spend.
  */
 function parseHuntbotEmbed(client, fields) {
     const result = {
@@ -67,8 +85,16 @@ function parseHuntbotEmbed(client, fields) {
 }
 
 /**
- * Fetch the huntbot status embed and decide whether to trigger a new hunt
- * or wait for the current one to finish.
+ * Fetch the huntbot status and decide whether to start a new hunt or wait.
+ *
+ * Sends `!huntbot`, waits for OwO's status reply, and parses it. When a hunt is
+ * already running it schedules a retry for the remaining duration; otherwise it
+ * triggers a new hunt. If essence is available it also queues a trait upgrade.
+ * Missing replies or embeds fall back to conservative retry/start behavior.
+ *
+ * @param {Client} client - The Discord client instance; carries huntbot temp state.
+ * @param {TextChannel} channel - The huntbot commands channel.
+ * @returns {Promise<void>} Resolves once the status is handled and the next step is scheduled.
  */
 async function checkHuntbot(client, channel) {
     client.logger.info("Farm", "Huntbot", "Getting huntbot...");
@@ -134,8 +160,17 @@ async function checkHuntbot(client, channel) {
 }
 
 /**
- * Trigger the huntbot activation sequence: send command, solve captcha,
- * and confirm the hunt started.
+ * Activate a huntbot hunt: send the command, solve the captcha, confirm start.
+ *
+ * Sends an `autohunt`/`huntbot` command for the configured duration, waits for
+ * OwO's captcha image, solves it via the bundled solver, then submits the
+ * solution. On a valid "YOU SPENT" confirmation it records the next recall time
+ * and schedules a retry; otherwise it retries after a short or long delay
+ * depending on what failed.
+ *
+ * @param {Client} client - The Discord client instance; carries huntbot temp state and uses the captcha solver.
+ * @param {TextChannel} channel - The huntbot commands channel.
+ * @returns {Promise<void>} Resolves once the hunt is started or a retry is scheduled.
  */
 async function triggerHB(client, channel) {
     const msg = await channel.send({
@@ -222,6 +257,13 @@ async function triggerHB(client, channel) {
 
 /**
  * Upgrade huntbot traits if the upgrade feature is enabled in config.
+ *
+ * When `commands.huntbot.upgrade` is true, sends an `upgrade <type> all`
+ * command for the configured trait type to spend accumulated animal essence.
+ *
+ * @param {Client} client - The Discord client instance; reads `basic.commands.huntbot.upgrade` and `upgradetype`.
+ * @param {TextChannel} channel - The huntbot commands channel.
+ * @returns {Promise<void>} Resolves after the upgrade command is sent (or immediately when disabled).
  */
 async function upgradeHuntbot(client, channel) {
     if (!client.basic.commands.huntbot.upgrade) return;

@@ -1,11 +1,13 @@
 /**
- * Safety module entry point.
+ * Safety module entry point — enforces a periodic pause cycle.
  *
- * Implements an automatic cooldown cycle: after a configured runtime
- * duration, the bot pauses itself for a shorter duration to reduce
- * the risk of rate limits or bans from OwO.
+ * Implements an automatic cooldown to lower the risk of rate limits or bans.
+ * After running for `pauseafter` minutes the bot pauses itself for `pausefor`
+ * minutes, then automatically resumes and repeats. The cycle is started by
+ * scheduling the first pause after the runtime duration.
  *
- * @param {Client} client - The Discord client instance.
+ * @param {Client} client - The Discord client instance; reads `settings.safety` and mutates `global.paused`.
+ * @returns {void} Seeds the self-rescheduling pause/resume timers; never returns a value.
  */
 module.exports = async (client) => {
     const safetyInterval = client.config.settings.safety.pauseafter * 60 * 1000;

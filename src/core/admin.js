@@ -26,6 +26,7 @@ const commands = [
     {
         config: { name: "pause" },
         run: async (client, message) => {
+            // Toggle the global pause flag and refresh the Discord RPC status.
             if (client.global.paused) {
                 await replyAndDelete(
                     client,
@@ -42,6 +43,8 @@ const commands = [
     {
         config: { name: "restart", aliases: ["reboot", "stop"] },
         run: async (client, message) => {
+            // Destroy the Discord connection and force-exit; a process manager
+            // (or the cluster fork in main.js) is expected to restart us.
             await message.channel.send("The bot is being restarted...");
             client.destroy();
             setTimeout(() => process.exit(1), 1000);
@@ -50,6 +53,7 @@ const commands = [
     {
         config: { name: "start", aliases: ["resume"] },
         run: async (client, message) => {
+            // Guard: can't resume something that isn't paused.
             if (!client.global.paused) {
                 return replyAndDelete(
                     client,
@@ -57,10 +61,12 @@ const commands = [
                     "Bot is already working!!!",
                 );
             }
+            // A captcha flag from a previous session must be cleared on resume.
             if (client.global.captchadetected)
                 client.global.captchadetected = false;
             client.global.paused = false;
             client.rpc("update");
+            // First ever start -> launch the full farming orchestrator.
             if (!client.global.temp.started) {
                 client.global.temp.started = true;
                 await replyAndDelete(
@@ -73,6 +79,7 @@ const commands = [
                     1000,
                 );
             } else {
+                // Already started before -> just unpause the existing loops.
                 await replyAndDelete(client, message, "Resuming :)");
             }
         },

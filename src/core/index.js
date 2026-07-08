@@ -63,18 +63,23 @@ const registerCommand = (client, pull) => {
  * Discover and register all commands/events from src/core/.
  */
 const registerCommands = (client) => {
+    // These files are infrastructure (loader, helpers, standalone CLIs),
+    // not commands or events, so they must be skipped during discovery.
     const EXCLUDE = new Set([
         "index.js",
         "globalutil.js",
         "captcha.js",
         "autovote.js",
     ]);
+    // Scan the core directory and keep only plain .js modules.
     const files = client.fs
         .readdirSync(__dirname)
         .filter((d) => d.endsWith(".js") && !EXCLUDE.has(d));
     for (const file of files) {
         try {
             const pull = require(`./${file}`);
+            // A module exporting a function is treated as an event handler
+            // (event name = filename). Anything else is command definitions.
             if (typeof pull === "function") {
                 bindEvent(client, file, pull);
             } else {

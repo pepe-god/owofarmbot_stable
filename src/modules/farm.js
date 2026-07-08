@@ -5,12 +5,15 @@ const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const REQUIRED_GEMS = ["gem1", "gem3", "gem4"];
 
 /**
- * Farm module entry point.
+ * Farm module entry point — boots the hunt/battle loop and optional autophrases.
  *
- * Starts optional autophrases, then begins the hunt/battle loop.
- * If hunt is enabled, battle is executed after each hunt.
+ * Resolves the command channel, optionally starts the autophrases background
+ * loop, then launches the self-looping {@link farmAction} handler. When hunt is
+ * enabled, a battle loop is started 2s later (if battle is also enabled) so the
+ * two actions alternate rather than collide on the same cooldown.
  *
- * @param {Client} client - The Discord client instance.
+ * @param {Client} client - The Discord client instance; carries config, logger and global state.
+ * @returns {void} Kicks off the looping handlers; does not return a meaningful value.
  */
 module.exports = async (client) => {
     const channel = client.channels.cache.get(client.basic.commandschannelid);
@@ -41,16 +44,20 @@ module.exports = async (client) => {
 /**
  * Generic self-looping action for hunt or battle.
  *
- * Waits for the bot to be free, sends the command, increments the
- * action counter, optionally processes the result, then schedules
- * the next run after a randomized interval.
+ * Waits for the bot to be idle, then blocks other competing actions via the
+ * `client.global[type]` flag and sends the randomized command. The global
+ * counter for the action is incremented and logged. If an `onResult` handler is
+ * supplied (hunt only) it is awaited to process the response (e.g. gem checks).
+ * The `client.global[type]` flag is always cleared in the `finally` block and
+ * the next iteration is scheduled after a randomized interval from config.
  *
  * @param {Client} client - The Discord client instance.
- * @param {TextChannel} channel - The commands channel.
+ * @param {TextChannel} channel - The text channel where commands are sent.
  * @param {Object} opts - Action configuration.
- * @param {string} opts.type - "hunt" or "battle".
- * @param {Function} opts.cmd - Returns the randomized command string.
- * @param {Function} [opts.onResult] - Optional post-result handler.
+ * @param {"hunt"|"battle"} opts.type - Which action this loop performs.
+ * @param {() => string} opts.cmd - Returns the randomized base command token (without prefix).
+ * @param {(client: Client, channel: TextChannel, msg: Object) => Promise<void>} [opts.onResult] - Optional handler run against the sent message's reply.
+ * @returns {void} Self-reschedules via setTimeout; does not return a value.
  */
 async function farmAction(client, channel, { type, cmd, onResult }) {
     await client.globalutil.waitWhileBusy(client);
@@ -96,8 +103,20 @@ async function farmAction(client, channel, { type, cmd, onResult }) {
 }
 
 /**
- * Analyze the hunt result for missing gems or event stars,
- * then trigger inventory usage if needed.
+ * Analyze a hunt result for missing gems or the active event star, then queue
+ * inventory usage if any required item is absent.
+ *
+ * Only runs when gem usage is enabled in config. Waits for OwO's hunt-result
+ * reply (a catch or "You found:" message newer than the sent command), then
+ * recomputes `client.global.gems.need`: any of the `REQUIRED_GEMS` missing from
+ * the message, plus the event `star` the first time it is expected (and clears
+ * the event flag if it never appears). When items are missing, {@link
+ * handleMissingGems} is invoked to decide how to resolve them.
+ *
+ * @param {Client} client - The Discord client instance; holds gem and event state.
+ * @param {TextChannel} channel - The text channel where the hunt was sent.
+ * @param {Object} huntmsg - The message object of the sent hunt command (used as a reply floor).
+ * @returns {Promise<void>} Resolves once gem needs are computed (or aborts on timeout/empty result).
  */
 async function huntResult(client, channel, huntmsg) {
     if (!client.config.settings.inventory.use.gems) return;
@@ -151,13 +170,21 @@ async function huntResult(client, channel, huntmsg) {
 }
 
 /**
- * Decide how to resolve missing gems:
- *  - First missing: open all lootboxes immediately.
- *  - Subsequent: wait until enough hunts have passed without inventory check.
+ * Decide how to resolve missing gems detected by {@link huntResult}.
  *
- * @param {Client} client - The Discord client instance.
- * @param {TextChannel} channel - The commands channel.
- * @param {string} huntContent - Raw hunt result message content.
+ * Policy:
+ *  - First time gems are missing: immediately open **all** lootboxes, then run
+ *    the inventory module 5s later to apply gems.
+ *  - If the current hunt dropped a lootbox: run the inventory module 2s later.
+ *  - Otherwise: once enough hunts have passed without an inventory check
+ *    (random 15–30), run the inventory module 2s later.
+ *
+ * No-op when the inventory command is disabled in config.
+ *
+ * @param {Client} client - The Discord client instance; holds gem/inventory state.
+ * @param {TextChannel} channel - The text channel where commands are sent.
+ * @param {string} huntContent - Raw content of the hunt result message.
+ * @returns {void} May schedule inventory runs via setTimeout; does not return a value.
  */
 function handleMissingGems(client, channel, huntContent) {
     client.logger.warn(
@@ -199,8 +226,16 @@ let phrasesCache = null;
 
 /**
  * Start the autophrases background loop.
- * Loads phrases from `assets/phrases.json` and sends them at
- * randomized intervals between 8s and 25s.
+ *
+ * Lazily loads phrases from `assets/phrases.json` (cached for the process
+ * lifetime), then repeatedly sends a random phrase at a randomized 8–25s
+ * interval. Consecutive phrases avoid repeating the previous one, and the loop
+ * skips a round (and reschedules) while paused/captcha'd or if the channel is
+ * lost. Exits silently when the channel is missing or the phrase list is empty.
+ *
+ * @param {Client} client - The Discord client instance; provides `fs`, logger and global state.
+ * @param {TextChannel} [channel] - The text channel where phrases are sent; undefined disables the loop.
+ * @returns {void} Runs an IIFE that self-schedules; does not return a value.
  */
 function startAutophrases(client, channel) {
     if (!channel) {

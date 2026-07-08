@@ -31,6 +31,9 @@ module.exports = async (captchaUrl) => {
         }
 
         const checks = [];
+        // Pre-load every glyph template and cache its raw dimensions + the file
+        // name (which doubles as the letter identifier). Doing this once up front
+        // avoids re-reading disk for each captcha we solve.
         for (const checkImage of checkImages) {
             const img = sharp(checkImage);
             const { width, height } = await img.metadata();
@@ -93,6 +96,9 @@ function getAllImagePaths(dir) {
  */
 async function matchLetters(largeData, largeW, largeH, checks) {
     const matches = [];
+    // Sort templates smallest-first. Smaller glyphs produce fewer candidate
+    // positions and let `addUniqueMatch` reserve space early, which keeps
+    // later (larger) glyph placements from colliding with the same region.
     const sorted = [...checks].sort(
         (a, b) => a.width - b.width || a.height - b.height,
     );
@@ -100,6 +106,8 @@ async function matchLetters(largeData, largeW, largeH, checks) {
     for (const { img, width: smallW, height: smallH, letter } of sorted) {
         const smallData = await img.raw().toBuffer();
 
+        // Guard against template metadata lying about its real byte length
+        // (e.g. an inconsistent PNG). RGBA => width * height * 4 bytes.
         if (smallData.length !== smallW * smallH * 4) continue;
 
         await scanForLetterMatches(
@@ -110,6 +118,8 @@ async function matchLetters(largeData, largeW, largeH, checks) {
         );
     }
 
+    // The captcha reads left-to-right; sort hits by x then concatenate their
+    // letters to reconstruct the solution string.
     matches.sort((a, b) => a.x - b.x);
     return matches.map((m) => m.letter).join("");
 }
@@ -126,6 +136,10 @@ async function scanForLetterMatches(large, small, letter, matches) {
     const { data: largeData, w: largeW, h: largeH } = large;
     const { data: smallData, w: smallW, h: smallH } = small;
 
+    // Brute-force sliding-window: slide the template across every (x, y)
+    // anchor where it still fits inside the captcha, and treat a near-zero
+    // per-pixel diff as a match. O((W-w)(H-h)) per glyph — fine because the
+    // canvas and glyphs are only a few hundred pixels.
     for (let y = 0; y <= largeH - smallH; y++) {
         for (let x = 0; x <= largeW - smallW; x++) {
             if (
@@ -161,6 +175,10 @@ async function scanForLetterMatches(large, small, letter, matches) {
 function addUniqueMatch(matches, candidate, size, letter) {
     const { x, y } = candidate;
     const { w, h } = size;
+    // Avoid stacking duplicate detections of the same glyph: if an existing
+    // match sits within one glyph-box of this candidate (both axes), the
+    // template already matched here, so skip it. This collapses the many
+    // near-identical sliding-window hits into a single letter.
     if (!matches.some((m) => Math.abs(m.x - x) < w && Math.abs(m.y - y) < h)) {
         matches.push({ x, y, letter });
     }
@@ -194,10 +212,15 @@ function pixelDiff({
     const threshold = 0.05;
     for (let y = 0; y < smallH; y++) {
         for (let x = 0; x < smallW; x++) {
+            // Raw RGBA buffers are flat arrays: (row * width + col) * 4, with
+            // R,G,B,A at consecutive offsets. Map template and captcha pixels
+            // to the same (x, y) anchor via startX/startY.
             const largeIdx = ((startY + y) * largeW + (startX + x)) * 4;
             const smallIdx = (y * smallW + x) * 4;
 
             if (smallData[smallIdx + 3] > 0) {
+                // Only score opaque template pixels; transparent padding would
+                // otherwise force a mismatch against the captcha background.
                 totalDiff +=
                     Math.abs(smallData[smallIdx] - largeData[largeIdx]) / 255 +
                     Math.abs(
@@ -211,9 +234,13 @@ function pixelDiff({
                 count += 3;
             }
         }
+        // Early exit: once this row's running average already exceeds the
+        // tolerance, the region cannot match — bail without scoring the rest.
         if (count > 0 && totalDiff / count > threshold)
             return totalDiff / count;
     }
+    // A fully transparent (all-padding) template can never match: treat as a
+    // maximal mismatch so the caller rejects this anchor.
     if (count === 0) return 1;
     return totalDiff / count;
 }

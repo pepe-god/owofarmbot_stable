@@ -1,11 +1,15 @@
 /**
- * Runtime config loader.
+ * Runtime config loader and environment resolver.
  *
  * Responsibilities:
  *  - Load config.json (production or developer override).
  *  - Apply .env overrides for token, user ID, and webhook URL.
  *  - Detect developer mode from env or current username.
  *  - Ensure owoprefix has a sensible default.
+ *
+ * The module executes its side effects at require time (loads config, applies
+ * overrides, resolves developer mode) and exports the resolved `config` plus the
+ * `DEVELOPER_MODE` flag for downstream consumers.
  */
 
 const dotenv = require("dotenv");
@@ -14,6 +18,12 @@ dotenv.config();
 /**
  * Detect developer mode based on environment variable or current username.
  * Developer mode loads the developer-specific config file.
+ *
+ * Order of resolution:
+ *  1. `DEV_MODE=true` env var.
+ *  2. OS username equals `"Mido"` (best-effort; ignored if `os.userInfo()` throws).
+ *
+ * @type {boolean}
  */
 let DEVELOPER_MODE = process.env.DEV_MODE === "true";
 if (!DEVELOPER_MODE) {
@@ -27,6 +37,16 @@ if (!DEVELOPER_MODE) {
     }
 }
 
+/**
+ * The resolved configuration object.
+ *
+ * Attempts the developer config first (when `DEVELOPER_MODE`), falling back to
+ * the production `config.json`. Any load failure silently falls back to the
+ * production config. `.env` overrides (token/userid/webhook) are applied after
+ * load, and `owoprefix` is defaulted to `"owo"` when empty.
+ *
+ * @type {Object} The parsed and normalized config object.
+ */
 let config;
 try {
     if (DEVELOPER_MODE) {
