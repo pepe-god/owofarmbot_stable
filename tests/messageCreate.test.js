@@ -243,8 +243,11 @@ describe("handleCaptchaDetection", () => {
         const args = spawn.mock.calls[0].arguments;
         assert.strictEqual(args[0], "node");
         assert.strictEqual(args[1][0], "./core/captcha.js");
-        assert.ok(args[1][1].startsWith("--token=test_token"));
-        assert.ok(args[1][2].startsWith("--userid=123"));
+        assert.strictEqual(args[1][1], "--userid=123");
+        // Token must be passed via the OwoToken env var, never on the argv
+        // (argv would expose it in `ps`).
+        assert.strictEqual(args[2].env.OwoToken, "test_token");
+        assert.ok(!args[1].some((a) => a.startsWith("--token=")));
     });
 });
 

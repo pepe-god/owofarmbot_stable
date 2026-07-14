@@ -50,23 +50,36 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * CLI contract
- *  --token / -t  Discord user token, injected into localStorage for the session.
+ *  --token / -t  Discord user token (fallback only; prefer the OwoToken env var).
  *  --userid/-uid Discord user ID (currently reserved; not consumed by this script).
+ *
+ * The token is normally passed via the `OwoToken` env var by messageCreate.js
+ * so it never appears in the worker's command line (visible via `ps`). The CLI
+ * arg remains as a fallback for manual/supervised runs.
  */
 const argv = yargs.options({
     token: {
         alias: "t",
-        describe: "User token",
+        describe: "User token (fallback; prefer the OwoToken env var)",
         type: "string",
-        demandOption: true,
     },
     userid: {
         alias: "uid",
         describe: "User ID",
         type: "string",
-        demandOption: true,
     },
 }).argv;
+
+// Prefer the env var (keeps the secret off the process command line); fall
+// back to the CLI arg for manual use.
+const TOKEN = process.env.OwoToken || argv.token;
+if (!TOKEN) {
+    console.error(
+        "No Discord token provided. Set the OwoToken env var (recommended) " +
+            "or pass --token for manual CLI use.",
+    );
+    process.exit(1);
+}
 
 /**
  * Absolute path to the unpacked hCaptcha solver extension shipped under vendor/.
@@ -215,7 +228,7 @@ async function waitForCaptchaResult(page) {
                  */
                 await page.evaluateOnNewDocument((token) => {
                     window.localStorage.setItem("token", `"${token}"`);
-                }, argv.token);
+                }, TOKEN);
 
                 /**
                  * Step 1: Send the user through Discord OAuth for the OwO bot.

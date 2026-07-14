@@ -92,7 +92,7 @@ function sendWebhookNotification(ctx) {
     }
 
     webhookClient.send({
-        content: `${message}\n||@everyone||`,
+        content: message,
         username: "OwO Farm Bot Stable",
     });
 }
@@ -120,11 +120,13 @@ async function launchAutoSolve(ctx) {
     );
 
     for (let spawncount = 0; spawncount < spawnthread; spawncount++) {
-        ctx.childprocess.spawn("node", [
-            "./core/captcha.js",
-            `--token=${ctx.basic.token}`,
-            `--userid=${ctx.client.user.id}`,
-        ]);
+        // Pass the token via the OwoToken env var (not argv) so it never
+        // appears in the worker's command line, which is visible via `ps`.
+        ctx.childprocess.spawn(
+            "node",
+            ["./core/captcha.js", `--userid=${ctx.client.user.id}`],
+            { env: { ...process.env, OwoToken: ctx.basic.token } },
+        );
         await ctx.delay(3000);
     }
 }

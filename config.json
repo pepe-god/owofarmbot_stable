@@ -81,7 +81,7 @@
       "autosolve_thread": 1,
       "alerttype": {
         "webhook": true,
-        "webhookurl": "xxx",
+        "webhookurl": "",
         "desktop": {
           "force": true,
           "notification": true,

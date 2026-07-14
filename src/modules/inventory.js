@@ -199,21 +199,24 @@ async function inventory(ctx, channel) {
     if (ctx.global.captchadetected || ctx.global.paused || ctx.global.inventory)
         return;
 
-    const invContent = await fetchInventoryData(ctx, channel);
-    if (invContent == null) {
+    try {
+        const invContent = await fetchInventoryData(ctx, channel);
+        if (invContent == null) return;
+
+        const codes = parseItemCodes(invContent);
+        selectGemCodes(ctx, codes);
+
+        await ctx.delay(4000);
+        await useItemsFromInventory(ctx, channel, codes);
+        await applyGems(ctx, channel);
+
+        ctx.logger.info("Farm", "Inventory", `Paused: ${ctx.global.inventory}`);
+    } finally {
+        // Always release the inventory flag so a thrown error (e.g. a failed
+        // channel.send, captcha pause, or delayed cooldown) cannot leave the
+        // bot permanently "paused"/stuck.
         ctx.global.inventory = false;
-        return;
     }
-
-    const codes = parseItemCodes(invContent);
-    selectGemCodes(ctx, codes);
-
-    await ctx.delay(4000);
-    await useItemsFromInventory(ctx, channel, codes);
-    await applyGems(ctx, channel);
-
-    ctx.global.inventory = false;
-    ctx.logger.info("Farm", "Inventory", `Paused: ${ctx.global.inventory}`);
 }
 
 /**
@@ -238,8 +241,14 @@ async function use(ctx, channel, item, count, where) {
     )
         return;
     ctx.global.use = true;
-    await channel.send({ content: `${ctx.prefix()} ${item} ${count}` });
-    ctx.logger.info("Farm", "Use", item);
-    await ctx.delay(5000);
-    ctx.global.use = false;
+    try {
+        await channel.send({ content: `${ctx.prefix()} ${item} ${count}` });
+        ctx.logger.info("Farm", "Use", item);
+        await ctx.delay(5000);
+    } finally {
+        // Guarantee the use flag is released even if send/cooldown throws or
+        // is interrupted (e.g. by a captcha pause), preventing a livelock
+        // where farm.js spins forever on a stuck `global.use`.
+        ctx.global.use = false;
+    }
 }

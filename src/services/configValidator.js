@@ -23,6 +23,11 @@
 const _path = require("node:path");
 const _fse = require("fs-extra");
 
+// Discord user tokens are three dot-separated base64url segments
+// (e.g. "<id>.<timestamp>.<secret>"). Used by checkToken to reject obviously
+// malformed values before attempting to log in.
+const TOKEN_SHAPE = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+
 // --- Constants ---
 
 /**
@@ -95,9 +100,24 @@ const showerr = (ctx, err) => {
  * @returns {boolean} True if token is valid.
  */
 const checkToken = (config, ctx) => {
-    if (config.main.token && config.main.token.length >= 10) return true;
-    showerr(ctx, "Main token is missing or invalid! Set MAIN_TOKEN in .env");
-    return false;
+    const token = config.main.token;
+    if (!token || token.length < 10) {
+        showerr(
+            ctx,
+            "Main token is missing or too short! Set MAIN_TOKEN in your .env file.",
+        );
+        return false;
+    }
+    if (!TOKEN_SHAPE.test(token)) {
+        showerr(
+            ctx,
+            "Main token is malformed! Discord tokens look like " +
+                "'<id>.<timestamp>.<secret>' (three dot-separated base64url " +
+                "segments). Set MAIN_TOKEN in your .env file.",
+        );
+        return false;
+    }
+    return true;
 };
 
 /**
@@ -277,6 +297,8 @@ const validateIntervals = (config, ctx) => {
 };
 
 // --- Exports ---
+
+exports.checkToken = checkToken;
 
 /**
  * Run all fatal and non-fatal config validation checks.

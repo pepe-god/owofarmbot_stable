@@ -24,6 +24,7 @@ const configValidator = require("../services/configValidator.js");
 const LoopManager = require("../services/loopManager.js");
 const BotContext = require("./botContext.js");
 const { initializeBootstrap } = require("./bootstrap.js");
+const { startWatchdog } = require("../services/watchdog.js");
 
 //client
 const { Client, Collection, RichPresence } = require("discord.js-selfbot-v13");
@@ -166,8 +167,9 @@ const ctx = new BotContext({
 ctx.logger = require("../services/logger.js")(ctx);
 ctx.rpc = rpc;
 
-// Centralize process-wide side effects (emitWarning override + SIGINT dump).
+// Centralize process-wide side effects (SIGINT dump + crash/flag watchdog).
 initializeBootstrap(ctx);
+startWatchdog(ctx);
 
 // Show the bot version in process listings (e.g. `ps aux`).
 process.title = `OwO Farm Bot Stable v${packageJson.version}`;

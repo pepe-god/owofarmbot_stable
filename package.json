@@ -33,6 +33,7 @@
         "run": "node src/main.js",
         "setup": "npm i",
         "test": "node --test \"tests/**/*.test.js\"",
+        "secret:scan": "gitleaks detect --source . --config .gitleaks.toml --redact",
         "lint": "biome check .",
         "format": "biome format --write .",
         "lint:fix": "biome check --write ."

@@ -1,4 +1,11 @@
 const chalk = require("chalk");
+const fse = require("fs-extra");
+const path = require("node:path");
+
+// Alerts are also mirrored to a rolling file so a hard crash still leaves a
+// post-mortem trail. `data/` is gitignored, so no secrets/state leak to git.
+const ALERT_LOG_DIR = path.join(__dirname, "../../data/logs");
+const ALERT_LOG_PATH = path.join(ALERT_LOG_DIR, "alert.log");
 
 /**
  * Lightweight, in-memory logger with colored console output and optional
@@ -83,6 +90,29 @@ class Logger {
      */
     alert(type, module, result = "") {
         this._log("🔴", type, module, result, "red");
+        this._appendAlertToFile(type, module, result);
+    }
+
+    /**
+     * Best-effort mirror of an alert line to `data/logs/alert.log`.
+     * Failures are swallowed so logging can never crash the bot.
+     *
+     * @param {string} type - High-level category.
+     * @param {string} module - Sub-system / module name.
+     * @param {string} result - The message body.
+     * @returns {void}
+     */
+    _appendAlertToFile(type, module, result) {
+        try {
+            fse.ensureDirSync(ALERT_LOG_DIR);
+            fse.appendFileSync(
+                ALERT_LOG_PATH,
+                `[${new Date().toLocaleTimeString()}] ${type} >> ` +
+                    `${this.ctx.global.type} > ${module} > ${result}\n`,
+            );
+        } catch (_err) {
+            /* logging must never crash the bot */
+        }
     }
 
     /**

@@ -1,10 +1,10 @@
 /**
  * Process-wide bootstrap for a single cluster worker.
  *
- * Centralizes two global side effects that were previously scattered across
- * bot.js (the `process.emitWarning` override) and logger.js (the SIGINT dump):
- *  - suppress Node's non-DeprecationWarning noise via a `process.emitWarning` override
- *  - on SIGINT, flush buffered logs through `ctx.logger.dumpExitLog()` then exit
+ * Centralizes one global side effect (the SIGINT log dump). Previously this
+ * module also overrode `process.emitWarning` to suppress Node's warnings;
+ * that is removed so all warnings (including DeprecationWarning) reach the
+ * operator intact — silencing them only masked real issues.
  *
  * Called exactly once per worker after the BotContext is built. The SIGINT
  * registration is guarded so repeated or accidental double calls never attach
@@ -14,13 +14,6 @@
 let bootstrapped = false;
 
 function initializeBootstrap(ctx) {
-    process.emitWarning = (warning, type) => {
-        if (type === "DeprecationWarning") {
-            return;
-        }
-        console.warn(warning);
-    };
-
     if (bootstrapped) return;
     bootstrapped = true;
 

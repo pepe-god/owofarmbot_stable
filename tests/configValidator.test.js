@@ -1,7 +1,7 @@
 const { describe, it, mock, before, after, afterEach } = require("node:test");
 const assert = require("node:assert");
 
-const { verifyconfig } = require("../src/services/configValidator");
+const { verifyconfig, checkToken } = require("../src/services/configValidator");
 
 function makeMockClient(config, overrides = {}) {
     const logs = [];
@@ -35,7 +35,7 @@ function makeMockClient(config, overrides = {}) {
 function makeValidConfig() {
     return {
         main: {
-            token: "valid_token_12345",
+            token: "valid.token.12345abc",
             commands: {
                 pray: false,
                 curse: false,
@@ -191,5 +191,47 @@ describe("verifyconfig", () => {
 
         await verifyconfig(client, config);
         assert.strictEqual(client.global.rareLevel, 7);
+    });
+});
+
+describe("checkToken", () => {
+    function makeCtx() {
+        return makeMockClient(makeValidConfig());
+    }
+
+    it("accepts a well-formed three-segment token", () => {
+        const ctx = makeCtx();
+        const config = makeValidConfig();
+        config.main.token = "MTIz.NDU2.Nzg5abc";
+        assert.strictEqual(checkToken(config, ctx), true);
+        assert.strictEqual(
+            ctx.logs.some((l) => l.level === "alert"),
+            false,
+        );
+    });
+
+    it("rejects a token without the dot-separated shape", () => {
+        const ctx = makeCtx();
+        const config = makeValidConfig();
+        config.main.token = "this_is_not_a_real_token";
+        assert.strictEqual(checkToken(config, ctx), false);
+        assert.strictEqual(
+            ctx.logs.some((l) => l.level === "alert"),
+            true,
+        );
+    });
+
+    it("rejects a token that is too short", () => {
+        const ctx = makeCtx();
+        const config = makeValidConfig();
+        config.main.token = "short";
+        assert.strictEqual(checkToken(config, ctx), false);
+    });
+
+    it("rejects an empty token", () => {
+        const ctx = makeCtx();
+        const config = makeValidConfig();
+        config.main.token = "";
+        assert.strictEqual(checkToken(config, ctx), false);
     });
 });

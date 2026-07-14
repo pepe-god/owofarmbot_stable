@@ -61,10 +61,26 @@ try {
     config = require("../../config.json");
 }
 
-if (process.env.MAIN_TOKEN) config.main.token = process.env.MAIN_TOKEN;
+// Environment variables take precedence over config.json for secrets. This
+// keeps tokens out of the git-tracked config and makes `.env` the single
+// source of truth (`.env` is gitignored).
+const tokenFromEnv = Boolean(process.env.MAIN_TOKEN);
+if (tokenFromEnv) config.main.token = process.env.MAIN_TOKEN;
 if (process.env.MAIN_USERID) config.main.userid = process.env.MAIN_USERID;
 if (process.env.WEBHOOK_URL)
     config.settings.captcha.alerttype.webhookurl = process.env.WEBHOOK_URL;
+
+// Backward-compat: a token stored directly in config.json is deprecated
+// because config.json is git-tracked. The logger is not wired yet at this
+// require-time, so we use console.warn (transient) to nudge the user toward
+// `.env`. No warning is emitted once the token comes from the env override.
+if (!tokenFromEnv && config.main.token && config.main.token.length > 0) {
+    console.warn(
+        "[DEPRECATED] Found a token in config.json. Storing tokens in " +
+            "config.json is deprecated and a security risk. Set MAIN_TOKEN in " +
+            "your .env file instead (it is gitignored).",
+    );
+}
 
 if (!config.settings.owoprefix || config.settings.owoprefix.length <= 0) {
     config.settings.owoprefix = "owo";
