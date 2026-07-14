@@ -1,6 +1,6 @@
 const { commandrandomizer, getrand } = require("../core/globalutil.js");
+const { OWO_ID } = require("../core/constants.js");
 
-const OWO_ID = "408785106942164992";
 const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const REQUIRED_GEMS = ["gem1", "gem3", "gem4"];
 
@@ -227,7 +227,7 @@ let phrasesCache = null;
 /**
  * Start the autophrases background loop.
  *
- * Lazily loads phrases from `assets/phrases.json` (cached for the process
+ * Lazily loads phrases from `src/core/phrases.json` (cached for the process
  * lifetime), then repeatedly sends a random phrase at a randomized 8–25s
  * interval. Consecutive phrases avoid repeating the previous one, and the loop
  * skips a round (and reschedules) while paused/captcha'd or if the channel is

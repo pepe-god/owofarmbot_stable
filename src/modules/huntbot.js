@@ -1,6 +1,5 @@
 const { commandrandomizer } = require("../core/globalutil.js");
-
-const OWO_ID = "408785106942164992";
+const { OWO_ID } = require("../core/constants.js");
 
 /**
  * Huntbot module entry point — checks/starts the huntbot.

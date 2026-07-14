@@ -19,6 +19,7 @@ const { connect } = require("puppeteer-real-browser");
 const yargs = require("yargs");
 const path = require("node:path");
 const fse = require("fs-extra");
+const { HCAPTCHA_EXTENSION_ID } = require("./constants.js");
 
 /**
  * Discord OAuth2 authorize endpoint for the OwO bot.
@@ -31,8 +32,7 @@ const AUTH_URL =
  * Entry page of the bundled hCaptcha solver extension.
  * Navigating here first forces Chromium to register the unpacked extension.
  */
-const EXTENSION_POPUP =
-    "chrome-extension://pnfknmgliopmihbgmclhbalafndgmjkl/popup/popup.html";
+const EXTENSION_POPUP = `chrome-extension://${HCAPTCHA_EXTENSION_ID}/popup/popup.html`;
 
 /**
  * OwO captcha challenge page. After a successful Discord OAuth, the worker

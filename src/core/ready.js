@@ -1,5 +1,5 @@
 // OwO Bot Support sunucusunun sabit guild ID'si.
-const OWO_SUPPORT_GUILD_ID = "420104212895105044";
+const { OWO_SUPPORT_GUILD_ID } = require("./constants.js");
 
 /**
  * Handle the autostart flow on ready.

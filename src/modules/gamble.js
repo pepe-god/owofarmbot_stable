@@ -1,5 +1,5 @@
 const { commandrandomizer, getrand } = require("../core/globalutil.js");
-const OWO_ID = "408785106942164992";
+const { OWO_ID } = require("../core/constants.js");
 
 /**
  * Game-specific configuration maps for coinflip and slot logic.

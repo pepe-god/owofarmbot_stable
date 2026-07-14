@@ -50,7 +50,7 @@ if (!DEVELOPER_MODE) {
 let config;
 try {
     if (DEVELOPER_MODE) {
-        config = require("../developer/config.json");
+        config = require("../../developer/config.json");
     } else {
         config = require("../../config.json");
     }

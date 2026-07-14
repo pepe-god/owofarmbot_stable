@@ -1,7 +1,6 @@
 const path = require("node:path");
 const { commandrandomizer } = require("../core/globalutil.js");
-
-const OWO_ID = "408785106942164992";
+const { OWO_ID } = require("../core/constants.js");
 
 /**
  * Checklist subsystem entry point.
@@ -126,7 +125,7 @@ async function handleVote(client) {
     client.childprocess.spawn("node", [
         path.join(__dirname, "../core/autovote.js"),
         `--token=${client.basic.token}`,
-        "--bid=408785106942164992",
+        `--bid=${OWO_ID}`,
     ]);
     client.global.total.vote++;
 }

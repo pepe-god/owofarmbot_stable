@@ -1,11 +1,10 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const CHANNEL_IDS = [
-    "1099453684691243098",
-    "1168797748343099444",
-    "1168797827464429618",
-];
-const OWO_ID = "408785106942164992";
+const {
+    OWO_ID,
+    OWO_SUPPORT_GUILD_ID,
+    GIVEAWAY_CHANNEL_IDS,
+} = require("../core/constants.js");
 
 /**
  * Retrieve (or initialize) the per-user list of giveaway message IDs
@@ -125,7 +124,7 @@ function saveEnteredGiveaways(enteredGiveaways, filePath) {
  * @returns {Promise<void>} Resolves after all configured channels have been scanned.
  */
 async function scanChannelGiveaways(client, guild, enteredGiveaways) {
-    for (const channelId of CHANNEL_IDS) {
+    for (const channelId of GIVEAWAY_CHANNEL_IDS) {
         const channel = guild.channels.cache.get(channelId);
         if (channel?.type !== "GUILD_TEXT") {
             client.logger.alert(
@@ -228,12 +227,12 @@ module.exports = async (client) => {
         enteredGiveaways = JSON.parse(fs.readFileSync(ENTERED_GIVEAWAYS_FILE));
     }
 
-    const guild = client.guilds.cache.get("420104212895105044");
+    const guild = client.guilds.cache.get(OWO_SUPPORT_GUILD_ID);
     if (!guild) {
         return client.logger.alert(
             "Farm",
             "Auto Join Giveaways",
-            "Guild (420104212895105044) not found.",
+            `Guild (${OWO_SUPPORT_GUILD_ID}) not found.`,
         );
     }
 
@@ -242,7 +241,7 @@ module.exports = async (client) => {
 
     client.on("messageCreate", async (message) => {
         if (
-            !CHANNEL_IDS.includes(message.channel.id) ||
+            !GIVEAWAY_CHANNEL_IDS.includes(message.channel.id) ||
             message.author.id !== OWO_ID ||
             message.embeds.length === 0
         )

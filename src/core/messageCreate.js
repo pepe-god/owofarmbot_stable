@@ -1,3 +1,5 @@
+const { OWO_ID } = require("./constants.js");
+
 const CAPTCHA_PHRASES = [
     "please complete your captcha",
     "verify that you are human",
@@ -75,9 +77,10 @@ function sendDesktopNotifications(client) {
  */
 function sendWebhookNotification(client) {
     if (client.config.settings.captcha.autosolve) return;
+    const webhookurl = client.config.settings.captcha.alerttype.webhookurl;
     if (
         !client.config.settings.captcha.alerttype.webhook ||
-        !client.config.settings.captcha.alerttype.webhookurl?.length > 10
+        !(webhookurl?.length > 10)
     )
         return;
 
@@ -272,7 +275,7 @@ function handleCommand(client, message) {
 module.exports = async (client, message) => {
     // 408785106942164992 is OwO's official bot ID. Only its messages can
     // contain captcha prompts or "solved" confirmations.
-    if (message.author.id === "408785106942164992") {
+    if (message.author.id === OWO_ID) {
         const msgcontent = client.globalutil.removeInvisibleChars(
             message.content.toLowerCase(),
         );

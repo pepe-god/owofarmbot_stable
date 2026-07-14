@@ -1,6 +1,5 @@
 const { commandrandomizer, getrand } = require("../core/globalutil.js");
-
-const OWO_ID = "408785106942164992";
+const { OWO_ID } = require("../core/constants.js");
 
 /**
  * Human-readable suffixes appended to a quest reward amount based on its type.
@@ -312,7 +311,7 @@ async function questGamble(client, channel, quest) {
 async function questActionOther(client, channel, quest) {
     await questLoop(client, channel, quest, {
         build: (_c, cr) =>
-            `${cr(["owo", "Owo", "owO", "OwO"])} ${cr(["cuddle", "hug", "kiss", "lick", "nom", "pat", "poke", "slap", "bite", "punch", "wave", "snuggle", "highfive"])} <@408785106942164992>`,
+            `${cr(["owo", "Owo", "owO", "OwO"])} ${cr(["cuddle", "hug", "kiss", "lick", "nom", "pat", "poke", "slap", "bite", "punch", "wave", "snuggle", "highfive"])} <@${OWO_ID}>`,
         useGetRand: true,
     });
 }
