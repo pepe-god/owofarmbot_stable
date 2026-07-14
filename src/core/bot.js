@@ -7,7 +7,6 @@
  * Responsibilities:
  *  - Load configuration and package metadata.
  *  - Build the shared global state object attached to the Discord client.
- *  - Wire Discord Rich Presence (RPC).
  *  - Validate config, then log in and register handlers/commands.
  */
 
@@ -28,7 +27,7 @@ const { initializeBootstrap } = require("./bootstrap.js");
 const { startWatchdog } = require("../services/watchdog.js");
 
 //client
-const { Client, Collection, RichPresence } = require("discord.js-selfbot-v13");
+const { Client, Collection } = require("discord.js-selfbot-v13");
 const client = new Client();
 
 /**
@@ -87,39 +86,6 @@ const notifier = require("node-notifier");
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Sets or updates the Discord Rich Presence activity shown on the
- * bot owner's profile. Presence reflects whether the bot is currently
- * paused or running.
- *
- * @param {string} type - The subsystem triggering the RPC update
- *   (e.g. "Farm", "Quest", "Huntbot").
- */
-function rpc(_type) {
-    const status = new RichPresence(client)
-        .setApplicationId("1253757665520320259173")
-        .setType("PLAYING")
-        .setName("OwO Farm Bot Stable")
-        .setDetails("Auto Farming")
-        .setState(`${ctx.global.paused ? "Paused" : "Running"}`)
-        .setStartTimestamp(Date.now())
-        .setAssetsLargeImage("1253758464816054282")
-        .setAssetsLargeText("OwO Farm Bot Stable")
-        .addButton("Farm Bot", "https://github.com/Mid0Hub/owofarmbot_stable")
-        .addButton("Discord", "https://discord.gg/WzYXVbXt6C");
-
-    if (config.settings.discordrpc) {
-        client.user.setPresence({ activities: [status] });
-        console.log(
-            chalk.blue("RPC") +
-                " > " +
-                chalk.magenta("update") +
-                " > " +
-                chalk.green(`${ctx.global.paused ? "Paused" : "Running"}`),
-        );
-    }
-}
-
-/**
  * Build the explicit dependency-injection container.
  *
  * Previously every service was monkeypatched onto the Discord client
@@ -146,9 +112,8 @@ const ctx = new BotContext({
     notifier,
     fs,
 });
-// The logger and rpc need the context itself, so wire them in after creation.
+// The logger needs the context itself, so wire it in after creation.
 ctx.logger = require("../services/logger.js")(ctx);
-ctx.rpc = rpc;
 
 // Centralize process-wide side effects (SIGINT dump + crash/flag watchdog).
 initializeBootstrap(ctx);

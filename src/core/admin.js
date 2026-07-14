@@ -26,12 +26,11 @@ const commands = [
     {
         config: { name: "pause" },
         run: async (ctx, message) => {
-            // Toggle the global pause flag and refresh the Discord RPC status.
+            // Toggle the global pause flag.
             if (ctx.global.paused) {
                 await replyAndDelete(ctx, message, "Bot is already paused!!!");
             } else {
                 ctx.state.pause();
-                ctx.rpc("update");
                 await replyAndDelete(ctx, message, "Paused :)");
             }
         },
@@ -62,7 +61,6 @@ const commands = [
             // A captcha flag from a previous session must be cleared on resume.
             if (ctx.global.captchadetected) ctx.state.captchaSolved();
             ctx.state.resume();
-            ctx.rpc("update");
             // First ever start -> launch the full farming orchestrator.
             // `loops.tryStart()` is the single atomic gate; it returns true
             // exactly once, so a duplicate start becomes a plain resume.

@@ -80,7 +80,6 @@ function createDefaultConfig() {
         },
         settings: {
             owoprefix: "owo",
-            discordrpc: false,
             chatfeedback: false,
             autophrases: true,
             autoresume: false,
@@ -222,7 +221,6 @@ function makeCtx(overrides = {}) {
             writeFileSync: mock.fn(),
             existsSync: mock.fn(() => true),
         },
-        rpc: overrides.rpc || mock.fn(),
     };
 
     const ctx = new BotContext(deps);

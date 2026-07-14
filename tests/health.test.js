@@ -16,7 +16,7 @@ describe("health", () => {
                 global: {
                     paused: true,
                     captchadetected: false,
-                    total: { hunt: 5, battle: 2, captcha: 1, solvedcaptcha: 1 }
+                    total: { hunt: 5, battle: 2, captcha: 1, solvedcaptcha: 1 },
                 },
             });
             const payload = buildHealthPayload(ctx);

@@ -26,7 +26,6 @@ function makeClient(overrides = {}) {
     return makeCtx({
         client: { destroy: mock.fn() },
         config: { settings: { chatfeedback: false } },
-        rpc: mock.fn(),
         loops,
         global,
         ...rest,
@@ -49,24 +48,22 @@ describe("admin commands", () => {
     });
 
     describe("pause", () => {
-        it("pauses and refreshes rpc when not already paused", async () => {
+        it("pauses when not already paused", async () => {
             const client = makeClient();
             const message = makeMessage();
 
             await getCommand("pause").run(client, message);
 
             assert.strictEqual(client.global.paused, true);
-            assert.strictEqual(client.rpc.mock.calls.length, 1);
         });
 
-        it("does not re-pause or refresh rpc when already paused", async () => {
+        it("does not re-pause when already paused", async () => {
             const client = makeClient({ global: { paused: true } });
             const message = makeMessage();
 
             await getCommand("pause").run(client, message);
 
             assert.strictEqual(client.global.paused, true);
-            assert.strictEqual(client.rpc.mock.calls.length, 0);
         });
     });
 
@@ -79,7 +76,6 @@ describe("admin commands", () => {
 
             assert.strictEqual(client.global.paused, false);
             assert.strictEqual(client.global.temp.started, undefined);
-            assert.strictEqual(client.rpc.mock.calls.length, 0);
         });
 
         it("resumes on first start, clears captcha and marks started", async () => {
@@ -93,7 +89,6 @@ describe("admin commands", () => {
             assert.strictEqual(client.global.paused, false);
             assert.strictEqual(client.global.captchadetected, false);
             assert.strictEqual(client.global.temp.started, true);
-            assert.strictEqual(client.rpc.mock.calls.length, 1);
         });
 
         it("resumes again without re-marking started", async () => {

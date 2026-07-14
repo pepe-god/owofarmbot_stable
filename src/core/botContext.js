@@ -9,7 +9,7 @@
  *
  * Injected services (formerly `client.logger`, `client.global`, ...):
  *   logger, config, global, loops, globalutil, delay, prefix, basic,
- *   chalk, childprocess, notifier, fs, rpc
+ *   chalk, childprocess, notifier, fs
  *
  * Discord API (formerly `client.channels`, `client.user`, `client.login`, ...):
  *   client — the underlying Discord.js client instance
@@ -31,7 +31,6 @@ class BotContext {
      * @param {Object} deps.childprocess - child_process (spawn/exec).
      * @param {Object} deps.notifier - node-notifier.
      * @param {Object} deps.fs - node:fs.
-     * @param {Function} deps.rpc - RPC status updater.
      */
     constructor(deps) {
         this.client = deps.client;
@@ -48,7 +47,6 @@ class BotContext {
         this.childprocess = deps.childprocess;
         this.notifier = deps.notifier;
         this.fs = deps.fs;
-        this.rpc = deps.rpc;
     }
 }
 

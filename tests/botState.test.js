@@ -126,7 +126,6 @@ describe("BotState", () => {
             state.endInventory();
             assert.strictEqual(state.get("inventory"), false);
         });
-
     });
 
     describe("waitUntilIdle", () => {

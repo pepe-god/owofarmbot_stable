@@ -2,7 +2,7 @@
  * Handle the autostart flow on ready.
  *
  * If `autostart` is enabled, clears any stale captcha flag, unpauses
- * the bot, updates RPC, and triggers `mainHandler` after a short delay.
+ * the bot, and triggers `mainHandler` after a short delay.
  * Distinguishes first start from resume-after-pause via `temp.started`.
  *
  * @param {Client} ctx - The Discord ctx instance.
@@ -20,7 +20,6 @@ async function handleAutoStart(ctx) {
         ctx.state.captchaSolved();
     }
     ctx.state.resume();
-    ctx.rpc("update");
 
     // loops.tryStart() is the single atomic gate for first-start vs. resume.
     // First time -> start the orchestrator; later (after a pause) -> just resume.
@@ -40,7 +39,6 @@ async function handleAutoStart(ctx) {
 /**
  * Ready event'te yapılan hazırlık adımlarını yönetir:
  *   - OwO support sunucusu üyeliği kontrolü
- *   - RPC durumu güncelleme
  *   - autostart açıksa botu ilk/tekrar başlatma
  */
 module.exports = async (ctx) => {
@@ -53,7 +51,6 @@ module.exports = async (ctx) => {
 
     ctx.global.temp.isready = true;
 
-    ctx.rpc("start");
     await handleAutoStart(ctx);
 };
 
