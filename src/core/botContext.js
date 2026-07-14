@@ -44,7 +44,7 @@ class BotContext {
         this.delay = deps.delay;
         this.prefix = deps.prefix;
         this.chalk = deps.chalk;
-        this.childprocess = deps.childprocess;
+        this.child_process = deps.child_process;
         this.notifier = deps.notifier;
         this.fs = deps.fs;
     }

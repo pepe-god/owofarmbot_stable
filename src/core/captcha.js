@@ -7,11 +7,9 @@
  * from CLI.
  *
  * Invocation example:
- *   node src/core/captcha.js --token <DISCORD_TOKEN> --userid <DISCORD_USER_ID>
+ *   node src/core/captcha.js --token <DISCORD_TOKEN>
  *
  * Notes:
- * - `userid` is accepted by CLI but currently unused by the script itself;
- *   it is retained for compatibility / future verification endpoints.
  * - Success exits with code 0; failure exits with code 1.
  */
 
@@ -51,7 +49,6 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 /**
  * CLI contract
  *  --token / -t  Discord user token (fallback only; prefer the OwoToken env var).
- *  --userid/-uid Discord user ID (currently reserved; not consumed by this script).
  *
  * The token is normally passed via the `OwoToken` env var by messageCreate.js
  * so it never appears in the worker's command line (visible via `ps`). The CLI
@@ -61,11 +58,6 @@ const argv = yargs.options({
     token: {
         alias: "t",
         describe: "User token (fallback; prefer the OwoToken env var)",
-        type: "string",
-    },
-    userid: {
-        alias: "uid",
-        describe: "User ID",
         type: "string",
     },
 }).argv;

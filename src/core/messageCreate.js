@@ -62,7 +62,7 @@ function sendDesktopNotifications(ctx) {
             "[System.Windows.MessageBox]::" +
                 `Show('${promptmessage}', 'OwO Farm Bot Stable', 'OK', 'Warning')`,
         ];
-        ctx.childprocess.exec(
+        ctx.child_process.exec(
             `powershell.exe -ExecutionPolicy Bypass -Command "${psCommands.join("; ")}"`,
         );
     }

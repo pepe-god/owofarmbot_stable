@@ -211,7 +211,7 @@ function makeCtx(overrides = {}) {
             magenta: (s) => s,
             gray: (s) => s,
         },
-        childprocess: overrides.childprocess || {
+        child_process: overrides.child_process || {
             spawn: mock.fn(),
             exec: mock.fn(),
         },
