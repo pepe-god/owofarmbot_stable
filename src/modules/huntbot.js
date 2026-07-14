@@ -37,9 +37,13 @@ module.exports = async (client) => {
  * @returns {void} Schedules {@link checkHuntbot}; does not return a value.
  */
 function scheduleRetry(client, channel, delay = 61000) {
-    setTimeout(() => {
-        checkHuntbot(client, channel);
-    }, delay);
+    client.loops.schedule(
+        () => {
+            checkHuntbot(client, channel);
+        },
+        delay,
+        "huntbot:retry",
+    );
 }
 
 /**
@@ -128,9 +132,13 @@ async function checkHuntbot(client, channel) {
         client.global.temp.huntbot.essence = true;
         client.global.temp.huntbot.maxtime =
             client.basic.commands.huntbot.maxtime;
-        setTimeout(() => {
-            triggerHB(client, channel);
-        }, 6100);
+        client.loops.schedule(
+            () => {
+                triggerHB(client, channel);
+            },
+            6100,
+            "huntbot:trigger",
+        );
     } else {
         const parsed = parseHuntbotEmbed(client, reply.embeds[0].fields);
 
@@ -146,9 +154,13 @@ async function checkHuntbot(client, channel) {
             );
             scheduleRetry(client, channel, parsed.recalltime);
         } else {
-            setTimeout(() => {
-                triggerHB(client, channel);
-            }, 6100);
+            client.loops.schedule(
+                () => {
+                    triggerHB(client, channel);
+                },
+                6100,
+                "huntbot:trigger",
+            );
         }
     }
 

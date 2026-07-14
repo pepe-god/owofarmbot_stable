@@ -1,10 +1,13 @@
 const { describe, it, mock, afterEach, beforeEach } = require("node:test");
 const assert = require("node:assert");
 
+const LoopManager = require("../src/services/loopManager.js");
+
 function makeClient(overrides = {}) {
     return {
         config: { settings: { inventory: { use: { gems: true } } } },
         basic: { commands: { inventory: true } },
+        loops: new LoopManager(),
         global: {
             gems: {
                 need: [],

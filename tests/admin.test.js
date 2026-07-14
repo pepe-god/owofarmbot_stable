@@ -2,6 +2,7 @@ const { describe, it, mock, before, after, afterEach } = require("node:test");
 const assert = require("node:assert");
 
 const admin = require("../src/core/admin.js");
+const LoopManager = require("../src/services/loopManager.js");
 
 function getCommand(name) {
     return admin.find(
@@ -19,10 +20,15 @@ function makeClient(overrides = {}) {
         ...(overrides.global || {}),
     };
     const { global: _ignored, ...rest } = overrides;
+    // Mirror the pre-existing "already started" state onto the loop manager so
+    // its atomic tryStart() gate agrees with the fixture.
+    const loops = new LoopManager();
+    if (global.temp?.started) loops.tryStart();
     return {
         config: { settings: { chatfeedback: false } },
         rpc: mock.fn(),
         destroy: mock.fn(),
+        loops,
         global,
         ...rest,
     };

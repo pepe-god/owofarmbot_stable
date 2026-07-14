@@ -17,9 +17,13 @@ const { getrand } = require("../core/globalutil.js");
  */
 module.exports = async function sell(client, channel, choose, types) {
     if (client.global.captchadetected || client.global.paused) {
-        setTimeout(() => {
-            sell(client, channel, choose, types);
-        }, 16000);
+        client.loops.schedule(
+            () => {
+                sell(client, channel, choose, types);
+            },
+            16000,
+            "animals",
+        );
         return;
     }
     try {
@@ -31,7 +35,7 @@ module.exports = async function sell(client, channel, choose, types) {
         client.logger.alert("Farm", "Sell", `Failed to sell: ${err}`);
         client.logger.debug(err);
     } finally {
-        setTimeout(
+        client.loops.schedule(
             () => {
                 sell(client, channel, choose, types);
             },
@@ -39,6 +43,7 @@ module.exports = async function sell(client, channel, choose, types) {
                 client.config.interval.animals.min,
                 client.config.interval.animals.max,
             ),
+            "animals",
         );
     }
 };

@@ -29,9 +29,9 @@ async function handleAutoStart(client) {
     client.global.paused = false;
     client.rpc("update");
 
-    // temp.started tracks whether the farming orchestrator has ever been
-    // launched. First time -> start it; later (after a pause) -> just resume.
-    if (!client.global.temp.started) {
+    // loops.tryStart() is the single atomic gate for first-start vs. resume.
+    // First time -> start the orchestrator; later (after a pause) -> just resume.
+    if (client.loops.tryStart()) {
         client.global.temp.started = true;
         client.logger.info("Bot", "AutoStart", "BOT started have fun ;)");
 

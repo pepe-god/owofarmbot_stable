@@ -67,7 +67,9 @@ const commands = [
             client.global.paused = false;
             client.rpc("update");
             // First ever start -> launch the full farming orchestrator.
-            if (!client.global.temp.started) {
+            // `loops.tryStart()` is the single atomic gate; it returns true
+            // exactly once, so a duplicate start becomes a plain resume.
+            if (client.loops.tryStart()) {
                 client.global.temp.started = true;
                 await replyAndDelete(
                     client,

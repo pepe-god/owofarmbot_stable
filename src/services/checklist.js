@@ -292,19 +292,27 @@ async function smol(client, channel) {
             "Recheck checklist after 10 minutes",
         );
         client.logger.debug(e);
-        setTimeout(() => {
-            smol(client, channel);
-        }, 610000);
+        client.loops.schedule(
+            () => {
+                smol(client, channel);
+            },
+            610000,
+            "checklist:retry",
+        );
         return;
     }
-    setTimeout(() => {
-        smol(client, channel);
-        client.logger.warn(
-            "Farm",
-            "Checklist",
-            "Rechecking checklist after interval",
-        );
-    }, client.global.temp.intervals.checklist);
+    client.loops.schedule(
+        () => {
+            smol(client, channel);
+            client.logger.warn(
+                "Farm",
+                "Checklist",
+                "Rechecking checklist after interval",
+            );
+        },
+        client.global.temp.intervals.checklist,
+        "checklist:loop",
+    );
 }
 
 module.exports.parseChecklistInterval = parseChecklistInterval;

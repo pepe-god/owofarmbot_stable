@@ -55,7 +55,11 @@ async function questHandler(client, channel) {
                 "Quest",
                 "Cannot get quest! Recheck after 61 seconds.",
             );
-            setTimeout(() => questHandler(client, channel), 61000);
+            client.loops.schedule(
+                () => questHandler(client, channel),
+                61000,
+                "quest:retry",
+            );
             return;
         }
 
@@ -79,7 +83,11 @@ async function questHandler(client, channel) {
             `Error while getting quest: ${err}\nRecheck after 61 seconds.`,
         );
         client.logger.debug(err);
-        setTimeout(() => questHandler(client, channel), 61000);
+        client.loops.schedule(
+            () => questHandler(client, channel),
+            61000,
+            "quest:retry",
+        );
     }
 }
 
@@ -259,7 +267,11 @@ async function questLoop(client, channel, quest, opts) {
     }
 
     client.global.quest.progress = "Completed!";
-    setTimeout(() => questHandler(client, channel), 16000);
+    client.loops.schedule(
+        () => questHandler(client, channel),
+        16000,
+        "quest:loop",
+    );
 }
 
 /**

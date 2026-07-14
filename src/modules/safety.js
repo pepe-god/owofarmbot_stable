@@ -13,9 +13,10 @@ module.exports = async (client) => {
     const safetyInterval = client.config.settings.safety.pauseafter * 60 * 1000;
     const pauseDuration = client.config.settings.safety.pausefor * 60 * 1000;
 
-    setTimeout(
+    client.loops.schedule(
         () => pause(client, pauseDuration, safetyInterval),
         safetyInterval,
+        "safety:pause",
     );
 };
 
@@ -35,9 +36,10 @@ function pause(client, pauseDuration, safetyInterval) {
     if (client.global.paused || client.global.captchadetected) return;
     client.global.paused = true;
     client.logger.warn("Bot", "Safety", "Safety paused to reduce bot rate.");
-    setTimeout(
+    client.loops.schedule(
         () => resume(client, pauseDuration, safetyInterval),
         pauseDuration,
+        "safety:resume",
     );
 }
 
@@ -55,14 +57,19 @@ function pause(client, pauseDuration, safetyInterval) {
  */
 function resume(client, pauseDuration, safetyInterval) {
     if (client.global.captchadetected) {
-        setTimeout(() => resume(client, pauseDuration, safetyInterval), 30000);
+        client.loops.schedule(
+            () => resume(client, pauseDuration, safetyInterval),
+            30000,
+            "safety:resume",
+        );
         return;
     }
     client.global.paused = false;
     client.logger.warn("Bot", "Safety", "Resuming after a safety pause.");
-    setTimeout(
+    client.loops.schedule(
         () => pause(client, pauseDuration, safetyInterval),
         safetyInterval,
+        "safety:pause",
     );
 }
 

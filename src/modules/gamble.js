@@ -257,9 +257,13 @@ async function playGame(type, client, channel) {
             );
             client.logger.debug(err);
         } finally {
-            setTimeout(() => {
-                loop();
-            }, interval);
+            client.loops.schedule(
+                () => {
+                    loop();
+                },
+                interval,
+                `gamble:${type}`,
+            );
         }
     }
 

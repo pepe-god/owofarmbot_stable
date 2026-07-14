@@ -29,6 +29,7 @@ const chalk = require("chalk");
 
 const globalutil = require("./globalutil.js");
 const configValidator = require("../services/configValidator.js");
+const LoopManager = require("../services/loopManager.js");
 
 //client
 const { Client, Collection, RichPresence } = require("discord.js-selfbot-v13");
@@ -161,6 +162,9 @@ Object.assign(client, {
     rpc,
     logger: require("../services/logger.js")(client),
     globalutil,
+    // Central lifecycle controller for all self-looping subsystems: owns the
+    // atomic first-start gate and the cancellable timer registry.
+    loops: new LoopManager(),
     // Randomize between "owo" and the configured prefix to look less bot-like.
     prefix: () =>
         globalutil.commandrandomizer(["owo", client.config.settings.owoprefix]),

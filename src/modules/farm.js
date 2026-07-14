@@ -96,9 +96,13 @@ async function farmAction(client, channel, { type, cmd, onResult }) {
         client.logger.debug(err);
     } finally {
         client.global[type] = false;
-        setTimeout(() => {
-            farmAction(client, channel, { type, cmd, onResult });
-        }, interval);
+        client.loops.schedule(
+            () => {
+                farmAction(client, channel, { type, cmd, onResult });
+            },
+            interval,
+            `farm:${type}`,
+        );
     }
 }
 
@@ -200,25 +204,37 @@ function handleMissingGems(client, channel, huntContent) {
         channel.send({
             content: `${client.prefix()} ${commandrandomizer(["lb", "lootbox"])} all`,
         });
-        setTimeout(() => {
-            require("./inventory.js")(client);
-        }, 5000);
+        client.loops.schedule(
+            () => {
+                require("./inventory.js")(client);
+            },
+            5000,
+            "farm:inventory",
+        );
         return;
     }
 
     if (huntContent?.includes("lootbox")) {
         client.global.gems.huntssinceinv = 0;
-        setTimeout(() => {
-            require("./inventory.js")(client);
-        }, 2000);
+        client.loops.schedule(
+            () => {
+                require("./inventory.js")(client);
+            },
+            2000,
+            "farm:inventory",
+        );
         return;
     }
 
     if (client.global.gems.huntssinceinv >= getrand(15, 30)) {
         client.global.gems.huntssinceinv = 0;
-        setTimeout(() => {
-            require("./inventory.js")(client);
-        }, 2000);
+        client.loops.schedule(
+            () => {
+                require("./inventory.js")(client);
+            },
+            2000,
+            "farm:inventory",
+        );
     }
 }
 
@@ -323,7 +339,7 @@ function startAutophrases(client, channel) {
         function scheduleNext() {
             const delay = getrand(MIN_DELAY, MAX_DELAY);
             client.logger.debug("Farm", "Phrases", `Next phrase in ${delay}ms`);
-            setTimeout(sendPhrase, delay);
+            client.loops.schedule(sendPhrase, delay, "farm:phrases");
         }
 
         client.logger.info("Farm", "Phrases", "Phrases interval started.");

@@ -60,8 +60,12 @@ async function prayOrCurse(client, channel, type) {
         );
         client.logger.debug(err);
     } finally {
-        setTimeout(() => {
-            prayOrCurse(client, channel, type);
-        }, interval);
+        client.loops.schedule(
+            () => {
+                prayOrCurse(client, channel, type);
+            },
+            interval,
+            `luck:${type}`,
+        );
     }
 }
