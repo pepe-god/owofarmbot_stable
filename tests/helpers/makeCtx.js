@@ -66,7 +66,6 @@ function createDefaultConfig() {
             token: "test_token",
             userid: "123",
             commandschannelid: "111",
-            huntbotchannelid: "222",
             autoquestchannelid: "444",
             owodmchannelid: "555",
             autostart: true,
@@ -75,12 +74,6 @@ function createDefaultConfig() {
                 battle: true,
                 pray: false,
                 curse: false,
-                huntbot: {
-                    enable: false,
-                    maxtime: 10,
-                    upgrade: false,
-                    upgradetype: "duration",
-                },
                 animals: false,
                 inventory: true,
                 checklist: false,
@@ -184,11 +177,6 @@ function createDefaultBasic(config) {
             inventory: true,
             hunt: true,
             battle: true,
-            huntbot: {
-                ...config.main.commands.huntbot,
-                upgrade: true,
-                upgradetype: "trait",
-            },
         },
     };
 }

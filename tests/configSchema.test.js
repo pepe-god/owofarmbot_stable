@@ -43,14 +43,12 @@ function makeValidConfig() {
             commands: {
                 pray: false,
                 curse: false,
-                huntbot: { enable: false },
                 animals: false,
                 inventory: false,
                 checklist: false,
                 autoquest: false,
             },
             commandschannelid: "111",
-            huntbotchannelid: "222",
             autoquestchannelid: "444",
             maximum_gem_rarity: "",
         },
@@ -136,18 +134,7 @@ describe("validateConfig", () => {
 
     it("rejects duplicate channel IDs", async () => {
         const config = makeValidConfig();
-        config.main.huntbotchannelid = "111";
-        const client = makeMockClient(config);
-
-        mock.method(process, "exit", () => {});
-        mock.method(process, "exit", () => {});
-        await verify(client, config);
-        assert.strictEqual(hasAlert(client), true);
-    });
-
-    it("rejects duplicate channel IDs", async () => {
-        const config = makeValidConfig();
-        config.main.huntbotchannelid = "111";
+        config.main.autoquestchannelid = "111";
         const client = makeMockClient(config);
 
         mock.method(process, "exit", () => {});

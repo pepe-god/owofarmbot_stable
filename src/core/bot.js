@@ -57,7 +57,6 @@ function createGlobalState(name, type) {
             battle: 0,
             pray: 0,
             curse: 0,
-            huntbot: 0,
             captcha: 0,
             solvedcaptcha: 0,
             vote: 0,
@@ -79,11 +78,6 @@ function createGlobalState(name, type) {
             usedevent: false,
             usedcookie: false,
             animaltype: "",
-            huntbot: {
-                maxtime: "",
-                recalltime: 0,
-                essence: false,
-            },
             intervals: {
                 checklist: 0,
             },

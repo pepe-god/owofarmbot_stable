@@ -119,7 +119,6 @@ const checkToken = (config, ctx) => {
 const checkDuplicateChannels = (config, ctx) => {
     const vars = [
         config.main.commandschannelid,
-        config.main.huntbotchannelid,
         config.main.autoquestchannelid,
     ];
     for (let i = 0; i < vars.length; i++) {
@@ -129,12 +128,7 @@ const checkDuplicateChannels = (config, ctx) => {
                 ctx.logger.info(
                     "Bot",
                     "Config",
-                    "Please use four different channel for one tokentype for best efficiency!",
-                );
-                ctx.logger.info(
-                    "Bot",
-                    "Config",
-                    "That mean if you use farm, huntbot, quest, you need three channel!",
+                    "Please use different channels for each feature for best efficiency!",
                 );
                 return false;
             }
@@ -354,11 +348,6 @@ Main commands:
   Battle: ${config.main.commands.battle} - type: ${typeof config.main.commands.battle}
   Pray: ${config.main.commands.pray} - type: ${typeof config.main.commands.pray}
   Curse: ${config.main.commands.curse} - type: ${typeof config.main.commands.curse}
-  Huntbot: 
-    Enable: ${config.main.commands.huntbot.enable} - type: ${typeof config.main.commands.huntbot.enable}
-    Max Time: ${config.main.commands.huntbot.maxtime} - type: ${typeof config.main.commands.huntbot.maxtime}
-    Upgrade: ${config.main.commands.huntbot.upgrade} - type: ${typeof config.main.commands.huntbot.upgrade}
-    Upgrade Type: ${config.main.commands.huntbot.upgradetype} - type: ${typeof config.main.commands.huntbot.upgradetype}
   Animals: ${config.main.commands.animals} - type: ${typeof config.main.commands.animals}
   Inventory: ${config.main.commands.inventory} - type: ${typeof config.main.commands.inventory}
   Checklist: ${config.main.commands.checklist} - type: ${typeof config.main.commands.checklist}

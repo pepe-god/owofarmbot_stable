@@ -140,10 +140,9 @@ async function launchAutoSolve(ctx) {
  */
 async function handleCaptchaDetection(ctx, message, msgcontent) {
     // Only react to captchas inside channels we actively farm in (commands,
-    // huntbot, quest, and the OwO DM channel).
+    // quest, and the OwO DM channel).
     const CHANNEL_IDS = [
         ctx.basic.commandschannelid,
-        ctx.basic.huntbotchannelid,
         ctx.basic.autoquestchannelid,
         ctx.basic.owodmchannelid,
     ];

@@ -25,10 +25,9 @@ Follow these when touching code:
   - `initQuest` (quest)
   - `initAnimals` (animals — sell/sacrifice loop)
   - `initPrayer` (luck — pray/curse)
-  - `initHuntbot` (huntbot)
   - `initSafety` (safety)
 - Checklist subsystem lives in `src/services/checklist.js` (9 functions)
-- All self-looping modules live in `src/modules/` (8 files), loaded at runtime via `require()`
+- All self-looping modules live in `src/modules/` (7 files), loaded at runtime via `require()`
 
 ## Config
 - `config.json` is primary; `.env` overrides: `MAIN_TOKEN`, `MAIN_USERID`, `WEBHOOK_URL`
@@ -60,7 +59,7 @@ Follow these when touching code:
 - `src/services/configSchema.js` — startup config validation (valibot schema + helpers)
 - `src/services/checklist.js` — checklist subsystem (smol, executeChecklistLine, handleDaily/Vote/Cookie, etc.)
 - `src/services/mainHandler.js` — orchestrator (module.exports + 6 init functions, no top-level requires)
-- `src/modules/` — self-looping modules: farm, quest, luck, huntbot, safety, inventory, animals, captchaNotify
+- `src/modules/` — self-looping modules: farm, quest, luck, safety, inventory, animals, captchaNotify
 
 ## Biome (lint config)
 - `complexity/noExcessiveCognitiveComplexity` (max 15) — error

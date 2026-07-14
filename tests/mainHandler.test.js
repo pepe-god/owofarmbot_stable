@@ -18,7 +18,6 @@ const MODULE_PATHS = [
     "../modules/quest.js",
     "../modules/animals.js",
     "../modules/luck.js",
-    "../modules/huntbot.js",
     "../modules/safety.js",
 ];
 
@@ -67,7 +66,6 @@ describe("mainHandler", () => {
                     animals: false,
                     pray: false,
                     curse: false,
-                    huntbot: { enable: false },
                 },
             },
             globalutil: { waitWhileBusy: async () => {} },
@@ -193,22 +191,6 @@ describe("mainHandler", () => {
         await mainHandler(client, {});
 
         assert.strictEqual(luckMock.mock.calls.length, 1);
-    });
-
-    it("requires huntbot when enabled", async () => {
-        const farmMock = mock.fn(async () => {});
-        const huntbotMock = mock.fn(async () => {});
-        mockModules({
-            "../modules/farm.js": farmMock,
-            "../modules/huntbot.js": huntbotMock,
-        });
-        const mainHandler = require("../src/services/mainHandler.js");
-        const client = baseClient();
-        client.basic.commands.huntbot.enable = true;
-
-        await mainHandler(client, {});
-
-        assert.strictEqual(huntbotMock.mock.calls.length, 1);
     });
 
     it("requires safety when autopause enabled", async () => {

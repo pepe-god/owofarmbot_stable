@@ -5,7 +5,6 @@
     "token": "",
     "userid": "",
     "commandschannelid": "1491785595008061480",
-    "huntbotchannelid": "1491787057209806900",
     "owodmchannelid": "1498607007282757654",
     "autoquestchannelid": "1491785893751554079",
     "autostart": true,
@@ -14,12 +13,6 @@
       "battle": true,
       "pray": true,
       "curse": false,
-      "huntbot": {
-        "enable": false,
-        "maxtime": 10,
-        "upgrade": false,
-        "upgradetype": "duration"
-      },
       "animals": false,
       "inventory": true,
       "checklist": false,

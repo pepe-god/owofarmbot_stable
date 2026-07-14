@@ -6,7 +6,6 @@
  *  - quest tracking
  *  - animal sell/sacrifice
  *  - pray/curse luck buffs
- *  - huntbot automation
  *  - safety auto-pause
  *
  * Each subsystem is a self-looping module that manages its own timers.
@@ -30,7 +29,6 @@ module.exports = async (ctx, message) => {
     await initQuest(ctx, message);
     await initAnimals(ctx, channel);
     await initPrayer(ctx, message);
-    initHuntbot(ctx);
     initSafety(ctx);
 };
 
@@ -109,19 +107,6 @@ async function initPrayer(ctx, message) {
         // Initial wait to space out luck buffs from farming actions.
         await ctx.delay(32000);
         require("../modules/luck.js")(ctx, message);
-    }
-}
-
-/**
- * Start the huntbot automation module.
- *
- * @param {Client} ctx - The Discord ctx instance; reads `basic.commands.huntbot.enable`.
- * @returns {void} Kicks off the huntbot module; does not return a value.
- * @sideeffect Starts the huntbot module loop when enabled.
- */
-function initHuntbot(ctx) {
-    if (ctx.basic.commands.huntbot.enable) {
-        require("../modules/huntbot.js")(ctx);
     }
 }
 
