@@ -4,18 +4,6 @@ const assert = require("node:assert");
 const safety = require("../src/modules/safety.js");
 const { makeCtx } = require("./helpers/makeCtx.js");
 
-function makeClient(overrides = {}) {
-    return makeCtx({
-        config: {
-            settings: {
-                safety: { pauseafter: 1, pausefor: 1 },
-            },
-        },
-        global: { paused: false, captchadetected: false },
-        ...overrides,
-    });
-}
-
 describe("safety", () => {
     before(() => mock.timers.enable({ apis: ["setTimeout"] }));
     after(() => mock.timers.reset());
@@ -23,13 +11,13 @@ describe("safety", () => {
 
     describe("pause", () => {
         it("sets paused when idle", () => {
-            const client = makeClient();
+            const client = makeCtx();
             safety.pause(client, 60000, 60000);
             assert.strictEqual(client.global.paused, true);
         });
 
         it("is a no-op when already paused", () => {
-            const client = makeClient({
+            const client = makeCtx({
                 global: { paused: true, captchadetected: false },
             });
             safety.pause(client, 60000, 60000);
@@ -37,7 +25,7 @@ describe("safety", () => {
         });
 
         it("is a no-op while a captcha is detected", () => {
-            const client = makeClient({
+            const client = makeCtx({
                 global: { paused: false, captchadetected: true },
             });
             safety.pause(client, 60000, 60000);
@@ -47,7 +35,7 @@ describe("safety", () => {
 
     describe("resume", () => {
         it("clears paused when no captcha is active", () => {
-            const client = makeClient({
+            const client = makeCtx({
                 global: { paused: true, captchadetected: false },
             });
             safety.resume(client, 60000, 60000);
@@ -55,7 +43,7 @@ describe("safety", () => {
         });
 
         it("defers resume (keeps paused) while a captcha is detected", () => {
-            const client = makeClient({
+            const client = makeCtx({
                 global: { paused: true, captchadetected: true },
             });
             safety.resume(client, 60000, 60000);
@@ -65,7 +53,7 @@ describe("safety", () => {
 
     describe("module wiring", () => {
         it("schedules the first pause after pauseafter minutes", () => {
-            const client = makeClient({
+            const client = makeCtx({
                 config: {
                     settings: { safety: { pauseafter: 1, pausefor: 1 } },
                 },

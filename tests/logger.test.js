@@ -4,23 +4,6 @@ const assert = require("node:assert");
 const createLogger = require("../src/services/logger");
 const { makeCtx } = require("./helpers/makeCtx.js");
 
-function makeClient(overrides = {}) {
-    return makeCtx({
-        config: {
-            settings: {
-                logging: {
-                    loglength: 16,
-                    showlogbeforeexit: false,
-                    newlog: false,
-                },
-            },
-        },
-        global: { type: "test" },
-        logger: { dumpExitLog: () => {} },
-        ...overrides,
-    });
-}
-
 describe("Logger", () => {
     afterEach(() => {
         mock.restoreAll();
@@ -33,7 +16,7 @@ describe("Logger", () => {
     });
 
     it("uses provided logging config", () => {
-        const client = makeClient();
+        const client = makeCtx();
         client.config.settings.logging.loglength = 5;
         client.config.settings.logging.showlogbeforeexit = true;
         client.config.settings.logging.newlog = true;
@@ -43,7 +26,7 @@ describe("Logger", () => {
     });
 
     it("info stores a log entry with correct type and module", () => {
-        const logger = createLogger(makeClient());
+        const logger = createLogger(makeCtx());
         logger.info("Bot", "Startup", "test message");
         assert.strictEqual(logger.logs.length, 1);
         const entry = logger.logs[0];
@@ -53,13 +36,13 @@ describe("Logger", () => {
     });
 
     it("warn stores a log entry", () => {
-        const logger = createLogger(makeClient());
+        const logger = createLogger(makeCtx());
         logger.warn("Bot", "Test", "warning");
         assert.strictEqual(logger.logs.length, 1);
     });
 
     it("alert stores a log entry", () => {
-        const logger = createLogger(makeClient());
+        const logger = createLogger(makeCtx());
         logger.alert("Farm", "Hunt", "error!");
         assert.strictEqual(logger.logs.length, 1);
         assert.ok(logger.logs[0].includes("Farm"));
@@ -67,13 +50,13 @@ describe("Logger", () => {
     });
 
     it("debug does NOT store a log entry", () => {
-        const logger = createLogger(makeClient());
+        const logger = createLogger(makeCtx());
         logger.debug("debug only");
         assert.strictEqual(logger.logs.length, 0);
     });
 
     it("respects logLength limit", () => {
-        const client = makeClient();
+        const client = makeCtx();
         client.config.settings.logging.loglength = 3;
         const logger = createLogger(client);
 
@@ -88,7 +71,7 @@ describe("Logger", () => {
     });
 
     it("push to fullLogs when exitLog is true", () => {
-        const client = makeClient();
+        const client = makeCtx();
         client.config.settings.logging.showlogbeforeexit = true;
         client.config.settings.logging.newlog = true;
         const logger = createLogger(client);
@@ -98,13 +81,13 @@ describe("Logger", () => {
     });
 
     it("does NOT push to fullLogs when exitLog is false", () => {
-        const logger = createLogger(makeClient());
+        const logger = createLogger(makeCtx());
         logger.info("Bot", "Test", "no full");
         assert.strictEqual(logger.fullLogs.length, 0);
     });
 
     it("getSimpleLog returns logged messages in plain format", () => {
-        const logger = createLogger(makeClient());
+        const logger = createLogger(makeCtx({ global: { type: "test" } }));
         logger.info("Bot", "Test", "simple");
         const simple = logger.getSimpleLog();
         assert.strictEqual(simple.length, 1);
@@ -114,7 +97,7 @@ describe("Logger", () => {
     it("sends IPC message when process.send is available", () => {
         const logs = [];
         process.send = (msg) => logs.push(msg);
-        const logger = createLogger(makeClient());
+        const logger = createLogger(makeCtx());
 
         logger.info("Bot", "IPC", "test");
         assert.strictEqual(logs.length, 1);
@@ -146,7 +129,7 @@ describe("bootstrap SIGINT registration", () => {
 
     it("registers SIGINT listener on first call", () => {
         const before = process.listeners("SIGINT").length;
-        initializeBootstrap(makeClient());
+        initializeBootstrap(makeCtx());
         const after = process.listeners("SIGINT");
         assert.strictEqual(after.length, before + 1);
         added = after[after.length - 1];
@@ -154,12 +137,12 @@ describe("bootstrap SIGINT registration", () => {
 
     it("does NOT add a duplicate listener on second call", () => {
         const before = process.listeners("SIGINT").length;
-        initializeBootstrap(makeClient());
+        initializeBootstrap(makeCtx());
         const afterFirst = process.listeners("SIGINT");
         assert.strictEqual(afterFirst.length, before + 1);
         added = afterFirst[afterFirst.length - 1];
 
-        initializeBootstrap(makeClient());
+        initializeBootstrap(makeCtx());
         assert.strictEqual(
             process.listeners("SIGINT").length,
             afterFirst.length,

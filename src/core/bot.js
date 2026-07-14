@@ -111,7 +111,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * @param {string} type - The subsystem triggering the RPC update
  *   (e.g. "Farm", "Quest", "Huntbot").
  */
-function rpc(type) {
+function rpc(_type) {
     const status = new RichPresence(client)
         .setApplicationId("1253757665520320259173")
         .setType("PLAYING")

@@ -66,17 +66,94 @@ describe("getIncompleteItems", () => {
 describe("executeChecklistLine", () => {
     afterEach(() => mock.restoreAll());
 
-    function makeClient(types = {}, overrides = {}) {
+    function makeChannel() {
+        return {
+            send: mock.fn(async () => {}),
+            guild: {
+                members: {
+                    cache: { filter: () => [], map: () => [] },
+                },
+            },
+        };
+    }
+
+    it("does nothing when a captcha is detected", async () => {
         const spawn = mock.fn();
-        return makeCtx({
+        const client = makeCtx({
             config: {
                 settings: {
                     checklist: {
                         types: {
-                            daily: false,
+                            daily: true,
                             vote: false,
                             cookie: false,
-                            ...types,
+                        },
+                    },
+                },
+            },
+            global: {
+                captchadetected: true,
+                paused: false,
+                temp: {},
+                total: { vote: 0 },
+            },
+            basic: { token: "tok" },
+            childprocess: { spawn },
+            delay: async () => {},
+            prefix: () => "owo",
+            logger: { info: () => {}, warn: () => {} },
+        });
+        const channel = makeChannel();
+
+        await executeChecklistLine(client, channel, "⬛ 🎁 Claim daily reward");
+
+        assert.strictEqual(channel.send.mock.calls.length, 0);
+        assert.strictEqual(client.childprocess.spawn.mock.calls.length, 0);
+    });
+
+    it("does nothing when the bot is paused", async () => {
+        const spawn = mock.fn();
+        const client = makeCtx({
+            config: {
+                settings: {
+                    checklist: {
+                        types: {
+                            daily: true,
+                            vote: false,
+                            cookie: false,
+                        },
+                    },
+                },
+            },
+            global: {
+                captchadetected: false,
+                paused: true,
+                temp: {},
+                total: { vote: 0 },
+            },
+            basic: { token: "tok" },
+            childprocess: { spawn },
+            delay: async () => {},
+            prefix: () => "owo",
+            logger: { info: () => {}, warn: () => {} },
+        });
+        const channel = makeChannel();
+
+        await executeChecklistLine(client, channel, "⬛ 🎁 Claim daily reward");
+
+        assert.strictEqual(channel.send.mock.calls.length, 0);
+    });
+
+    it("claims daily when enabled", async () => {
+        const spawn = mock.fn();
+        const client = makeCtx({
+            config: {
+                settings: {
+                    checklist: {
+                        types: {
+                            daily: true,
+                            vote: false,
+                            cookie: false,
                         },
                     },
                 },
@@ -92,48 +169,7 @@ describe("executeChecklistLine", () => {
             delay: async () => {},
             prefix: () => "owo",
             logger: { info: () => {}, warn: () => {} },
-            ...overrides,
         });
-    }
-
-    function makeChannel() {
-        return {
-            send: mock.fn(async () => {}),
-            guild: {
-                members: {
-                    cache: { filter: () => [], map: () => [] },
-                },
-            },
-        };
-    }
-
-    it("does nothing when a captcha is detected", async () => {
-        const client = makeClient(
-            { daily: true },
-            { global: { captchadetected: true } },
-        );
-        const channel = makeChannel();
-
-        await executeChecklistLine(client, channel, "⬛ 🎁 Claim daily reward");
-
-        assert.strictEqual(channel.send.mock.calls.length, 0);
-        assert.strictEqual(client.childprocess.spawn.mock.calls.length, 0);
-    });
-
-    it("does nothing when the bot is paused", async () => {
-        const client = makeClient(
-            { daily: true },
-            { global: { paused: true } },
-        );
-        const channel = makeChannel();
-
-        await executeChecklistLine(client, channel, "⬛ 🎁 Claim daily reward");
-
-        assert.strictEqual(channel.send.mock.calls.length, 0);
-    });
-
-    it("claims daily when enabled", async () => {
-        const client = makeClient({ daily: true });
         const channel = makeChannel();
 
         await executeChecklistLine(client, channel, "⬛ 🎁 Claim daily reward");
@@ -145,7 +181,31 @@ describe("executeChecklistLine", () => {
     });
 
     it("skips daily when disabled", async () => {
-        const client = makeClient({ daily: false });
+        const spawn = mock.fn();
+        const client = makeCtx({
+            config: {
+                settings: {
+                    checklist: {
+                        types: {
+                            daily: false,
+                            vote: false,
+                            cookie: false,
+                        },
+                    },
+                },
+            },
+            global: {
+                captchadetected: false,
+                paused: false,
+                temp: {},
+                total: { vote: 0 },
+            },
+            basic: { token: "tok" },
+            childprocess: { spawn },
+            delay: async () => {},
+            prefix: () => "owo",
+            logger: { info: () => {}, warn: () => {} },
+        });
         const channel = makeChannel();
 
         await executeChecklistLine(client, channel, "⬛ 🎁 Claim daily reward");
@@ -154,7 +214,31 @@ describe("executeChecklistLine", () => {
     });
 
     it("spawns the vote bot and increments tally when enabled", async () => {
-        const client = makeClient({ vote: true });
+        const spawn = mock.fn();
+        const client = makeCtx({
+            config: {
+                settings: {
+                    checklist: {
+                        types: {
+                            daily: false,
+                            vote: true,
+                            cookie: false,
+                        },
+                    },
+                },
+            },
+            global: {
+                captchadetected: false,
+                paused: false,
+                temp: {},
+                total: { vote: 0 },
+            },
+            basic: { token: "tok" },
+            childprocess: { spawn },
+            delay: async () => {},
+            prefix: () => "owo",
+            logger: { info: () => {}, warn: () => {} },
+        });
         const channel = makeChannel();
 
         await executeChecklistLine(client, channel, "⬛ 📝 Vote for OwO");
@@ -164,7 +248,31 @@ describe("executeChecklistLine", () => {
     });
 
     it("skips vote when disabled", async () => {
-        const client = makeClient({ vote: false });
+        const spawn = mock.fn();
+        const client = makeCtx({
+            config: {
+                settings: {
+                    checklist: {
+                        types: {
+                            daily: false,
+                            vote: false,
+                            cookie: false,
+                        },
+                    },
+                },
+            },
+            global: {
+                captchadetected: false,
+                paused: false,
+                temp: {},
+                total: { vote: 0 },
+            },
+            basic: { token: "tok" },
+            childprocess: { spawn },
+            delay: async () => {},
+            prefix: () => "owo",
+            logger: { info: () => {}, warn: () => {} },
+        });
         const channel = makeChannel();
 
         await executeChecklistLine(client, channel, "⬛ 📝 Vote for OwO");
@@ -174,7 +282,31 @@ describe("executeChecklistLine", () => {
     });
 
     it("sends a cookie to OwO when no members and enabled", async () => {
-        const client = makeClient({ cookie: true });
+        const spawn = mock.fn();
+        const client = makeCtx({
+            config: {
+                settings: {
+                    checklist: {
+                        types: {
+                            daily: false,
+                            vote: false,
+                            cookie: true,
+                        },
+                    },
+                },
+            },
+            global: {
+                captchadetected: false,
+                paused: false,
+                temp: {},
+                total: { vote: 0 },
+            },
+            basic: { token: "tok" },
+            childprocess: { spawn },
+            delay: async () => {},
+            prefix: () => "owo",
+            logger: { info: () => {}, warn: () => {} },
+        });
         const channel = makeChannel();
 
         await executeChecklistLine(client, channel, "⬛ 🍪 Send a cookie");
@@ -187,7 +319,31 @@ describe("executeChecklistLine", () => {
     });
 
     it("skips cookie when disabled", async () => {
-        const client = makeClient({ cookie: false });
+        const spawn = mock.fn();
+        const client = makeCtx({
+            config: {
+                settings: {
+                    checklist: {
+                        types: {
+                            daily: false,
+                            vote: false,
+                            cookie: false,
+                        },
+                    },
+                },
+            },
+            global: {
+                captchadetected: false,
+                paused: false,
+                temp: {},
+                total: { vote: 0 },
+            },
+            basic: { token: "tok" },
+            childprocess: { spawn },
+            delay: async () => {},
+            prefix: () => "owo",
+            logger: { info: () => {}, warn: () => {} },
+        });
         const channel = makeChannel();
 
         await executeChecklistLine(client, channel, "⬛ 🍪 Send a cookie");
@@ -196,7 +352,31 @@ describe("executeChecklistLine", () => {
     });
 
     it("marks cookie used for a completed cookie line", async () => {
-        const client = makeClient();
+        const spawn = mock.fn();
+        const client = makeCtx({
+            config: {
+                settings: {
+                    checklist: {
+                        types: {
+                            daily: false,
+                            vote: false,
+                            cookie: false,
+                        },
+                    },
+                },
+            },
+            global: {
+                captchadetected: false,
+                paused: false,
+                temp: {},
+                total: { vote: 0 },
+            },
+            basic: { token: "tok" },
+            childprocess: { spawn },
+            delay: async () => {},
+            prefix: () => "owo",
+            logger: { info: () => {}, warn: () => {} },
+        });
         const channel = makeChannel();
 
         await executeChecklistLine(
@@ -210,7 +390,31 @@ describe("executeChecklistLine", () => {
     });
 
     it("ignores completed gem/crate lines without side effects", async () => {
-        const client = makeClient();
+        const spawn = mock.fn();
+        const client = makeCtx({
+            config: {
+                settings: {
+                    checklist: {
+                        types: {
+                            daily: false,
+                            vote: false,
+                            cookie: false,
+                        },
+                    },
+                },
+            },
+            global: {
+                captchadetected: false,
+                paused: false,
+                temp: {},
+                total: { vote: 0 },
+            },
+            basic: { token: "tok" },
+            childprocess: { spawn },
+            delay: async () => {},
+            prefix: () => "owo",
+            logger: { info: () => {}, warn: () => {} },
+        });
         const channel = makeChannel();
 
         await executeChecklistLine(client, channel, "☑️ 💎 Daily lootbox");

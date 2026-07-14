@@ -90,7 +90,7 @@ module.exports = async (ctx) => {
 function setupSweeper(botClient) {
     setInterval(
         () => {
-            botClient.channels.cache.forEach((channel) => {
+            botClient.client.channels.cache.forEach((channel) => {
                 if (channel.messages) {
                     const messagesArray = Array.from(
                         channel.messages.cache.values(),
@@ -111,7 +111,7 @@ function setupSweeper(botClient) {
             botClient.logger.warn(
                 "Bot",
                 "Cache",
-                `Cleared oldest 85% of message cache for [${botClient.user.username}].`,
+                `Cleared oldest 85% of message cache for [${botClient.client.user.username}].`,
             );
         },
         5 * 60 * 1000,
