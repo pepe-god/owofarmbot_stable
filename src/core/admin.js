@@ -98,7 +98,6 @@ OwO Farm Bot Stable Statistics:
 - Pray: ${totals.pray}
 - Curse: ${totals.curse}
 - Vote: ${totals.vote}
-- Giveaway: ${totals.giveaway}
 ===================
 - Uptime: ${uptime}
         `;

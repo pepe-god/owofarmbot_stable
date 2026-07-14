@@ -13,7 +13,6 @@ function resolveModulePath(relative) {
 }
 
 const MODULE_PATHS = [
-    "../modules/joingiveaways.js",
     "./checklist.js",
     "../modules/farm.js",
     "../modules/quest.js",
@@ -57,11 +56,10 @@ describe("mainHandler", () => {
             config: {
                 settings: {
                     owoprefix: "owo",
-                    autojoingiveaways: false,
                     safety: { autopause: false },
                 },
             },
-            global: { owosupportserver: false, quest: {} },
+            global: { quest: {} },
             basic: {
                 commands: {
                     checklist: false,
@@ -227,40 +225,6 @@ describe("mainHandler", () => {
         await mainHandler(client, {});
 
         assert.strictEqual(safetyMock.mock.calls.length, 1);
-    });
-
-    it("requires joingiveaways when both conditions met", async () => {
-        const farmMock = mock.fn(async () => {});
-        const joinMock = mock.fn(async () => {});
-        mockModules({
-            "../modules/farm.js": farmMock,
-            "../modules/joingiveaways.js": joinMock,
-        });
-        const mainHandler = require("../src/services/mainHandler.js");
-        const client = baseClient();
-        client.config.settings.autojoingiveaways = true;
-        client.global.owosupportserver = true;
-
-        await mainHandler(client, {});
-
-        assert.strictEqual(joinMock.mock.calls.length, 1);
-    });
-
-    it("does not require joingiveaways when only one condition met", async () => {
-        const farmMock = mock.fn(async () => {});
-        const joinMock = mock.fn(async () => {});
-        mockModules({
-            "../modules/farm.js": farmMock,
-            "../modules/joingiveaways.js": joinMock,
-        });
-        const mainHandler = require("../src/services/mainHandler.js");
-        const client = baseClient();
-        client.config.settings.autojoingiveaways = true;
-        client.global.owosupportserver = false;
-
-        await mainHandler(client, {});
-
-        assert.strictEqual(joinMock.mock.calls.length, 0);
     });
 
     it("requires checklist when basic.commands.checklist enabled", async () => {

@@ -1,6 +1,3 @@
-// OwO Bot Support sunucusunun sabit guild ID'si.
-const { OWO_SUPPORT_GUILD_ID } = require("./constants.js");
-
 /**
  * Handle the autostart flow on ready.
  *
@@ -55,26 +52,6 @@ module.exports = async (ctx) => {
     setupSweeper(ctx);
 
     ctx.global.temp.isready = true;
-    if (ctx.config.settings.autojoingiveaways) {
-        // Check membership of the OwO support server; giveaways are only
-        // auto-joinable if we are a member.
-        const guild = ctx.client.guilds.cache.get(OWO_SUPPORT_GUILD_ID);
-
-        if (guild) {
-            ctx.logger.info(
-                "Bot",
-                "Startup",
-                "You are in the OwO Bot Support server. I will automatically enter the giveaways :)",
-            );
-            ctx.global.owosupportserver = true;
-        } else {
-            ctx.logger.alert(
-                "Bot",
-                "Startup",
-                "You are not in the OwO Bot Support server. Please join to the server and restart the bot to automatically enter giveaways",
-            );
-        }
-    }
 
     ctx.rpc("start");
     await handleAutoStart(ctx);

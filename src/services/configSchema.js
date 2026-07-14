@@ -366,7 +366,6 @@ Main commands:
   Gem rarity: ${config.main.maximum_gem_rarity} - type: ${typeof config.main.maximum_gem_rarity}
 
 Elaina: ${config.settings.autophrases} - type: ${typeof config.settings.autophrases}
-Join giveaways: ${config.settings.autojoingiveaways} - type: ${typeof config.settings.autojoingiveaways}
 
 Checklist:
   Daily: ${config.settings.checklist.types.daily} - type: ${typeof config.settings.checklist.types.daily}

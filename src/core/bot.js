@@ -47,7 +47,6 @@ function createGlobalState(name, type) {
         devmod: DEVELOPER_MODE,
         captchadetected: false,
         paused: true,
-        owosupportserver: false,
         use: false,
         inventory: false,
         checklist: false,
@@ -62,7 +61,6 @@ function createGlobalState(name, type) {
             captcha: 0,
             solvedcaptcha: 0,
             vote: 0,
-            giveaway: 0,
         },
         gems: {
             need: [],

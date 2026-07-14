@@ -21,7 +21,6 @@ Follow these when touching code:
 - `src/core/admin.js` — pause/resume/start/restart/stats
 - `src/core/messageCreate.js` — captcha detection + command dispatch
 - `start`/`resume` command → `src/services/mainHandler.js` → orchestrates:
-  - `initAutoJoin` (joingiveaways)
   - `initFarming` → checklist or farm
   - `initQuest` (quest)
   - `initAnimals` (animals — sell/sacrifice loop)
@@ -29,7 +28,7 @@ Follow these when touching code:
   - `initHuntbot` (huntbot)
   - `initSafety` (safety)
 - Checklist subsystem lives in `src/services/checklist.js` (9 functions)
-- All self-looping modules live in `src/modules/` (9 files), loaded at runtime via `require()`
+- All self-looping modules live in `src/modules/` (8 files), loaded at runtime via `require()`
 
 ## Config
 - `config.json` is primary; `.env` overrides: `MAIN_TOKEN`, `MAIN_USERID`, `WEBHOOK_URL`
@@ -60,8 +59,8 @@ Follow these when touching code:
 - `src/services/runtimeConfig.js` — config file loading + .env overrides + default prefix initialization
 - `src/services/configSchema.js` — startup config validation (valibot schema + helpers)
 - `src/services/checklist.js` — checklist subsystem (smol, executeChecklistLine, handleDaily/Vote/Cookie, etc.)
-- `src/services/mainHandler.js` — orchestrator (module.exports + 8 init functions, no top-level requires)
-- `src/modules/` — self-looping modules: farm, quest, luck, huntbot, safety, inventory, joingiveaways, animals, captchaNotify
+- `src/services/mainHandler.js` — orchestrator (module.exports + 6 init functions, no top-level requires)
+- `src/modules/` — self-looping modules: farm, quest, luck, huntbot, safety, inventory, animals, captchaNotify
 
 ## Biome (lint config)
 - `complexity/noExcessiveCognitiveComplexity` (max 15) — error
@@ -73,7 +72,6 @@ Follow these when touching code:
 
 ## Remaining Lint Noise (pre-existing, do NOT "fix")
 - `logger.js:3` — `useTemplate` (unsafe fix, changes runtime behavior)
-- `joingiveaways.js:66` — `noExcessiveLinesPerFunction` (105 lines, needs real refactor)
 
 ## Ignored Directories
 - `src/vendor/hcaptchasolver/` — 60MB Chrome extension, excluded from lint

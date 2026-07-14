@@ -30,7 +30,6 @@ function normalizeTotals(total = {}) {
         pray: total.pray ?? 0,
         curse: total.curse ?? 0,
         vote: total.vote ?? 0,
-        giveaway: total.giveaway ?? 0,
     };
 }
 

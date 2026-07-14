@@ -80,7 +80,6 @@ function makeValidConfig() {
                 },
             },
             autophrases: false,
-            autojoingiveaways: false,
             logging: { loglength: 16, showlogbeforeexit: false, newlog: false },
         },
         animals: {

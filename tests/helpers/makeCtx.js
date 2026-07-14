@@ -94,7 +94,6 @@ function createDefaultConfig() {
             chatfeedback: false,
             autophrases: true,
             autoresume: false,
-            autojoingiveaways: false,
             checklist: {
                 types: {
                     daily: true,

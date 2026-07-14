@@ -33,7 +33,6 @@
     "chatfeedback": true,
     "autophrases": true,
     "autoresume": false,
-    "autojoingiveaways": false,
     "checklist": {
       "types": {
         "daily": true,

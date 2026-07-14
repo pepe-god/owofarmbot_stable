@@ -2,7 +2,6 @@
  * Main orchestration entry point for the `start`/`resume` command.
  *
  * Coordinates the initialization of every bot subsystem in sequence:
- *  - auto-join giveaways
  *  - farming (hunt/battle) or checklist
  *  - quest tracking
  *  - animal sell/sacrifice
@@ -25,7 +24,6 @@ module.exports = async (ctx, message) => {
     if (!ctx.config.settings.owoprefix.length)
         ctx.config.settings.owoprefix = "owo";
 
-    initAutoJoin(ctx);
     await initFarming(ctx, channel, message);
     await ctx.delay(2000);
 
@@ -35,20 +33,6 @@ module.exports = async (ctx, message) => {
     initHuntbot(ctx);
     initSafety(ctx);
 };
-
-/**
- * Conditionally start the giveaway auto-join module.
- * Requires both the config flag and the OwO support server presence.
- *
- * @param {Client} ctx - The Discord ctx instance; reads `config.settings.autojoingiveaways` and `global.owosupportserver`.
- * @returns {void} Kicks off the `joingiveaways` module; does not return a value.
- * @sideeffect Loads and starts the giveaway auto-join loop when enabled.
- */
-function initAutoJoin(ctx) {
-    if (ctx.config.settings.autojoingiveaways && ctx.global.owosupportserver) {
-        require("../modules/joingiveaways.js")(ctx);
-    }
-}
 
 /**
  * Start either the checklist subsystem or direct farm commands.
