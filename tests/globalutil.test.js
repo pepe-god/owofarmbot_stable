@@ -6,7 +6,9 @@ const {
     parseDuration,
     getrand,
     commandrandomizer,
+    waitWhileBusy,
 } = require("../src/core/globalutil");
+const { BotState } = require("../src/services/botState.js");
 
 describe("removeInvisibleChars", () => {
     it("removes control characters (0x00-0x1F)", () => {
@@ -118,5 +120,43 @@ describe("commandrandomizer", () => {
 
     it("returns the only element for single-element array", () => {
         assert.strictEqual(commandrandomizer(["x"]), "x");
+    });
+});
+
+describe("waitWhileBusy", () => {
+    it("resolves immediately when the state is idle", async () => {
+        const ctx = { state: new BotState() };
+        await waitWhileBusy(ctx);
+        assert.ok(true);
+    });
+
+    it("resolves via state event when the last flag clears (no polling)", async () => {
+        const state = new BotState({ paused: true });
+        const ctx = {
+            state,
+            // If waitWhileBusy fell back to polling, delay would be called.
+            delay: () => {
+                throw new Error("should not poll when state is available");
+            },
+        };
+        const p = waitWhileBusy(ctx);
+        setImmediate(() => state.resume());
+        await p;
+        assert.strictEqual(state.isBusy(), false);
+    });
+
+    it("falls back to polling ctx.global when no state machine is present", async () => {
+        let calls = 0;
+        const global = { paused: true };
+        const ctx = {
+            global,
+            delay: async () => {
+                calls++;
+                // Clear the flag after the first poll so the loop exits.
+                global.paused = false;
+            },
+        };
+        await waitWhileBusy(ctx);
+        assert.strictEqual(calls, 1);
     });
 });

@@ -40,7 +40,7 @@ async function fetchChecklistEmbed(ctx, channel) {
     const msg = await channel.send({
         content: `${ctx.prefix()} ${commandrandomizer(["cl", "checklist"])}`,
     });
-    ctx.global.checklist = true;
+    ctx.state.startChecklist();
     ctx.logger.info("Farm", "Checklist", "Paused: true! Reading checklist");
 
     return await ctx.globalutil.waitForMessage(
@@ -226,7 +226,7 @@ async function executeChecklistLine(ctx, channel, line) {
 async function waitWhileCaptcha(ctx) {
     for (let i = 0; i < 1000; i++) {
         if (ctx.global.captchadetected === false) {
-            ctx.global.checklist = false;
+            ctx.state.endChecklist();
             return;
         }
         await ctx.delay(1000);
@@ -252,7 +252,7 @@ async function smol(ctx, channel) {
     try {
         const message = await fetchChecklistEmbed(ctx, channel);
         if (message == null) {
-            ctx.global.checklist = false;
+            ctx.state.endChecklist();
             ctx.logger.alert("Farm", "Checklist", "Cannot retrieve checklist.");
             return;
         }

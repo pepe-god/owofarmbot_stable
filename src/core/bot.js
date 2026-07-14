@@ -22,6 +22,7 @@ const chalk = require("chalk");
 const globalutil = require("./globalutil.js");
 const configSchema = require("../services/configSchema.js");
 const LoopManager = require("../services/loopManager.js");
+const { attachState } = require("../services/botState.js");
 const BotContext = require("./botContext.js");
 const { initializeBootstrap } = require("./bootstrap.js");
 const { startWatchdog } = require("../services/watchdog.js");
@@ -101,6 +102,11 @@ function createGlobalState(name, type) {
 
 const owofarmbot_stable = createGlobalState("owofarmbot_stable", "Main");
 
+// Bind the event-driven state machine to the busy flags. This makes the flag
+// reads/writes flow through `BotState` so `waitWhileBusy` can resolve on state
+// changes instead of polling (see globalutil.js).
+const botState = attachState(owofarmbot_stable);
+
 const notifier = require("node-notifier");
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -154,6 +160,7 @@ const ctx = new BotContext({
     config,
     basic: config.main,
     global: owofarmbot_stable,
+    state: botState,
     loops: new LoopManager(),
     globalutil,
     delay,
@@ -170,6 +177,13 @@ ctx.rpc = rpc;
 // Centralize process-wide side effects (SIGINT dump + crash/flag watchdog).
 initializeBootstrap(ctx);
 startWatchdog(ctx);
+
+// Opt-in health/metrics endpoint. Only starts when HEALTH_PORT is set so the
+// default runtime opens no ports (see src/services/health.js).
+if (process.env.HEALTH_PORT) {
+    const { startHealthServer } = require("../services/health.js");
+    startHealthServer(ctx, { port: Number(process.env.HEALTH_PORT) });
+}
 
 // Show the bot version in process listings (e.g. `ps aux`).
 process.title = `OwO Farm Bot Stable v${packageJson.version}`;

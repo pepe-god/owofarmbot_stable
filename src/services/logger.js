@@ -1,6 +1,15 @@
 const chalk = require("chalk");
 const fse = require("fs-extra");
 const path = require("node:path");
+const { isJsonFormat, formatStructured } = require("./structuredLogger.js");
+
+// Maps the chalk color used per level to a stable level name for JSON logs.
+const LEVEL_BY_COLOR = {
+    green: "info",
+    yellow: "warn",
+    red: "alert",
+    white: "debug",
+};
 
 // Alerts are also mirrored to a rolling file so a hard crash still leaves a
 // post-mortem trail. `data/` is gitignored, so no secrets/state leak to git.
@@ -146,11 +155,24 @@ class Logger {
     _log(emoji, type, module, result, colorName) {
         const color = chalk[colorName];
         const time = chalk.white(`[${new Date().toLocaleTimeString()}]`);
-        const msg =
+        const colored =
             `${time} ${chalk.white(emoji)} ` +
             `${chalk.blue(chalk.bold(type))}${chalk.white(" >> ")}` +
             `${chalk.cyan(chalk.bold(this.ctx.global.type))} > ` +
             `${chalk.magenta(module)} > ${color(result)}`;
+
+        // When LOG_FORMAT=json is set, emit a single-line JSON record instead
+        // of the colorized line; the state label is pulled from the state
+        // machine so each line carries the bot's current mode.
+        const msg = isJsonFormat()
+            ? formatStructured({
+                  level: LEVEL_BY_COLOR[colorName] || colorName,
+                  type,
+                  module: `${this.ctx.global.type} > ${module}`,
+                  message: result,
+                  state: this.ctx?.state?.status,
+              })
+            : colored;
 
         if (colorName !== "white") {
             this.logs.push(msg);

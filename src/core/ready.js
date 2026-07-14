@@ -20,9 +20,9 @@ async function handleAutoStart(ctx) {
 
     // Clear a stale captcha flag from a previous session, then unpause.
     if (ctx.global.captchadetected) {
-        ctx.global.captchadetected = false;
+        ctx.state.captchaSolved();
     }
-    ctx.global.paused = false;
+    ctx.state.resume();
     ctx.rpc("update");
 
     // loops.tryStart() is the single atomic gate for first-start vs. resume.

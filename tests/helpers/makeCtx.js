@@ -1,6 +1,7 @@
 const { mock } = require("node:test");
 const BotContext = require("../../src/core/botContext.js");
 const LoopManager = require("../../src/services/loopManager.js");
+const { attachState } = require("../../src/services/botState.js");
 
 function createMockClient() {
     return {
@@ -281,6 +282,9 @@ function makeCtx(overrides = {}) {
 
     const ctx = new BotContext(deps);
     Object.assign(ctx, overrides);
+    // Bind the state machine to the (possibly overridden) global object so
+    // `ctx.state` and the busy-flag accessors behave like the real runtime.
+    if (!ctx.state) ctx.state = attachState(ctx.global);
     return ctx;
 }
 

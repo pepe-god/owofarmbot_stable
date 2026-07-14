@@ -34,7 +34,7 @@ module.exports = async (ctx) => {
  */
 function pause(ctx, pauseDuration, safetyInterval) {
     if (ctx.global.paused || ctx.global.captchadetected) return;
-    ctx.global.paused = true;
+    ctx.state.pause();
     ctx.logger.warn("Bot", "Safety", "Safety paused to reduce bot rate.");
     ctx.loops.schedule(
         () => resume(ctx, pauseDuration, safetyInterval),
@@ -64,7 +64,7 @@ function resume(ctx, pauseDuration, safetyInterval) {
         );
         return;
     }
-    ctx.global.paused = false;
+    ctx.state.resume();
     ctx.logger.warn("Bot", "Safety", "Resuming after a safety pause.");
     ctx.loops.schedule(
         () => pause(ctx, pauseDuration, safetyInterval),

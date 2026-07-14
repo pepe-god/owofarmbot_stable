@@ -83,16 +83,22 @@ exports.getrand = (min, max) => Math.random() * (max - min) + min;
  *  - inventory: inventory module is currently running.
  *  - checklist: checklist module is currently running.
  *
- * @param {BotContext} ctx - The bot context (provides `global` state and `delay`).
+ * When the bot state machine is available (`ctx.state`), this resolves via a
+ * one-shot subscription the instant the last busy flag clears — no polling.
+ * A polling fallback (3s) is retained for contexts without a state machine.
+ *
+ * @param {BotContext} ctx - The bot context (provides `state`/`global` and `delay`).
  * @returns {Promise<void>} Resolves when all flags are clear.
  */
 exports.waitWhileBusy = async (ctx) => {
-    while (
-        ctx.global.paused ||
-        ctx.global.captchadetected ||
-        ctx.global.inventory ||
-        ctx.global.checklist
-    ) {
+    if (ctx.state && typeof ctx.state.waitUntilIdle === "function") {
+        await ctx.state.waitUntilIdle();
+        return;
+    }
+    // Fallback for contexts without a state machine: poll the same busy flags
+    // the state machine owns (imported so the two lists cannot drift apart).
+    const { BUSY_FLAGS } = require("../services/botState.js");
+    while (BUSY_FLAGS.some((flag) => ctx.global[flag])) {
         await ctx.delay(3000);
     }
 };

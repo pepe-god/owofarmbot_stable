@@ -30,7 +30,7 @@ const commands = [
             if (ctx.global.paused) {
                 await replyAndDelete(ctx, message, "Bot is already paused!!!");
             } else {
-                ctx.global.paused = true;
+                ctx.state.pause();
                 ctx.rpc("update");
                 await replyAndDelete(ctx, message, "Paused :)");
             }
@@ -39,11 +39,13 @@ const commands = [
     {
         config: { name: "restart", aliases: ["reboot", "stop"] },
         run: async (ctx, message) => {
-            // Destroy the Discord connection and force-exit; a process manager
-            // (or the cluster fork in main.js) is expected to restart us.
+            // Graceful shutdown: cancel every pending loop timer, close the
+            // Discord connection cleanly, then force-exit. The cluster primary
+            // (src/main.js) re-forks on any worker exit, so this restarts us.
             await message.channel.send("The bot is being restarted...");
-            ctx.client.destroy();
-            setTimeout(() => process.exit(1), 1000);
+            ctx.loops.stopAll();
+            await ctx.client.destroy();
+            setTimeout(() => process.exit(0), 2000);
         },
     },
     {
@@ -58,8 +60,8 @@ const commands = [
                 );
             }
             // A captcha flag from a previous session must be cleared on resume.
-            if (ctx.global.captchadetected) ctx.global.captchadetected = false;
-            ctx.global.paused = false;
+            if (ctx.global.captchadetected) ctx.state.captchaSolved();
+            ctx.state.resume();
             ctx.rpc("update");
             // First ever start -> launch the full farming orchestrator.
             // `loops.tryStart()` is the single atomic gate; it returns true
@@ -89,6 +91,7 @@ const commands = [
             const stats = `
 OwO Farm Bot Stable Statistics:
 ===================
+- State: ${ctx.state?.status ?? "unknown"}
 - Hunt: ${totals.hunt}
 - Battle: ${totals.battle}
 - Captcha: ${totals.captcha}

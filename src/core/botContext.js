@@ -22,6 +22,7 @@ class BotContext {
      * @param {Object} deps.basic - Alias of `config.main` (commands/channel ids/token/userid).
      * @param {Object} deps.logger - The application logger instance.
      * @param {Object} deps.global - Shared runtime state object (`client.global`).
+     * @param {Object} deps.state - Event-driven busy-flag state machine (`BotState`).
      * @param {Object} deps.loops - Central loop lifecycle controller.
      * @param {Object} deps.globalutil - Runtime utilities (waitForMessage, waitWhileBusy, getrand, ...).
      * @param {() => Promise<void>} deps.delay - Delay helper.
@@ -38,6 +39,7 @@ class BotContext {
         this.basic = deps.basic;
         this.logger = deps.logger;
         this.global = deps.global;
+        this.state = deps.state;
         this.loops = deps.loops;
         this.globalutil = deps.globalutil;
         this.delay = deps.delay;

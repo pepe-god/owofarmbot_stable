@@ -160,8 +160,7 @@ async function handleCaptchaDetection(ctx, message, msgcontent) {
     if (!CAPTCHA_PHRASES.some((p) => msgcontent.includes(p))) return;
 
     // Stop all farming loops and flag the captcha so waitWhileBusy() blocks.
-    ctx.global.paused = true;
-    ctx.global.captchadetected = true;
+    ctx.state.captcha();
     // Count it for the runtime stats display.
     ctx.global.total.captcha++;
     ctx.logger.alert("Bot", "Captcha", "Captcha Detected!");
@@ -210,16 +209,16 @@ function handleCaptchaSolved(ctx, message, msgcontent) {
     )
         return;
 
-    ctx.global.captchadetected = false;
     ctx.global.total.solvedcaptcha++;
     if (ctx.config.settings.autoresume) {
-        ctx.global.paused = false;
+        ctx.state.captchaSolved(true);
         ctx.logger.warn(
             "Bot",
             "Captcha",
             "Captcha solved. Resuming bot automatically...",
         );
     } else {
+        ctx.state.captchaSolved(false);
         ctx.logger.warn(
             "Bot",
             "Captcha",

@@ -56,7 +56,7 @@ module.exports = async (ctx) => {
  */
 async function fetchInventoryData(ctx, channel) {
     channel.sendTyping();
-    ctx.global.inventory = true;
+    ctx.state.startInventory();
     ctx.logger.info(
         "Farm",
         "Inventory",
@@ -215,7 +215,7 @@ async function inventory(ctx, channel) {
         // Always release the inventory flag so a thrown error (e.g. a failed
         // channel.send, captcha pause, or delayed cooldown) cannot leave the
         // bot permanently "paused"/stuck.
-        ctx.global.inventory = false;
+        ctx.state.endInventory();
     }
 }
 
