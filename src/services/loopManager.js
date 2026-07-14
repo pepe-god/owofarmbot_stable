@@ -2,7 +2,7 @@
  * LoopManager — centralized lifecycle control for the bot's self-looping
  * subsystems.
  *
- * Every farm subsystem (hunt/battle, gamble, quest, luck, animals, huntbot,
+ * Every farm subsystem (hunt/battle, quest, luck, animals, huntbot,
  * safety, checklist) runs as a self-rescheduling loop driven by `setTimeout`.
  * Previously each module owned its raw timer handles and the "have the loops
  * been started" flag was duplicated across `ready.js` and `admin.js` via

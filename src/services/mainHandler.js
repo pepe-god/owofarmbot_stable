@@ -4,7 +4,6 @@
  * Coordinates the initialization of every bot subsystem in sequence:
  *  - auto-join giveaways
  *  - farming (hunt/battle) or checklist
- *  - gambling (coinflip/slot)
  *  - quest tracking
  *  - animal sell/sacrifice
  *  - pray/curse luck buffs
@@ -29,7 +28,7 @@ module.exports = async (ctx, message) => {
     initAutoJoin(ctx);
     await initFarming(ctx, channel, message);
     await ctx.delay(2000);
-    await initGambling(ctx, message);
+
     await initQuest(ctx, message);
     await initAnimals(ctx, channel);
     await initPrayer(ctx, message);
@@ -69,23 +68,6 @@ async function initFarming(ctx, channel, message) {
         await ctx.globalutil.waitWhileBusy(ctx);
         await ctx.delay(2000);
         require("../modules/farm.js")(ctx, message);
-    }
-}
-
-/**
- * Start gambling loops if coinflip or slot is enabled.
- *
- * @param {Client} ctx - The Discord ctx instance; reads `basic.commands.gamble`.
- * @param {Message} message - The originating command message.
- * @returns {Promise<void>} Resolves after the gamble loop is launched (plus an 8s buffer).
- * @sideeffect Starts the gamble module loop(s) when enabled.
- */
-async function initGambling(ctx, message) {
-    if (ctx.basic.commands.gamble.coinflip || ctx.basic.commands.gamble.slot) {
-        await ctx.globalutil.waitWhileBusy(ctx);
-        require("../modules/gamble.js")(ctx, message);
-        // Small buffer before launching next subsystem.
-        await ctx.delay(8000);
     }
 }
 

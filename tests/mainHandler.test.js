@@ -16,7 +16,6 @@ const MODULE_PATHS = [
     "../modules/joingiveaways.js",
     "./checklist.js",
     "../modules/farm.js",
-    "../modules/gamble.js",
     "../modules/quest.js",
     "../modules/animals.js",
     "../modules/luck.js",
@@ -66,7 +65,6 @@ describe("mainHandler", () => {
             basic: {
                 commands: {
                     checklist: false,
-                    gamble: { coinflip: false, slot: false },
                     autoquest: false,
                     animals: false,
                     pray: false,
@@ -120,36 +118,6 @@ describe("mainHandler", () => {
         assert.strictEqual(farmMock.mock.calls.length, 1);
     });
 
-    it("requires gamble when coinflip enabled", async () => {
-        const farmMock = mock.fn(async () => {});
-        const gambleMock = mock.fn(async () => {});
-        mockModules({
-            "../modules/farm.js": farmMock,
-            "../modules/gamble.js": gambleMock,
-        });
-        const mainHandler = require("../src/services/mainHandler.js");
-        const client = baseClient();
-        client.basic.commands.gamble.coinflip = true;
-
-        await mainHandler(client, {});
-
-        assert.strictEqual(gambleMock.mock.calls.length, 1);
-    });
-
-    it("does not require gamble when both disabled", async () => {
-        const farmMock = mock.fn(async () => {});
-        const gambleMock = mock.fn(async () => {});
-        mockModules({
-            "../modules/farm.js": farmMock,
-            "../modules/gamble.js": gambleMock,
-        });
-        const mainHandler = require("../src/services/mainHandler.js");
-        const client = baseClient();
-
-        await mainHandler(client, {});
-
-        assert.strictEqual(gambleMock.mock.calls.length, 0);
-    });
 
     it("requires quest when autoquest enabled", async () => {
         const farmMock = mock.fn(async () => {});

@@ -14,7 +14,6 @@
  * Fatal checks (bot exits if any fail):
  *  - Token presence and length.
  *  - No duplicate channel IDs across features.
- *  - Gamble default amount > 0 for every enabled game.
  *  - Valid gem rarity.
  *  - Valid animal types.
  *  - Sell/sacrifice conflict.
@@ -64,8 +63,6 @@ const INTERVAL_DEFAULTS = [
     { type: "hunt", min: 12000, max: 16000 },
     { type: "battle", min: 12000, max: 16000 },
     { type: "pray", min: 316000, max: 332000 },
-    { type: "coinflip", min: 12000, max: 16000 },
-    { type: "slot", min: 12000, max: 16000 },
     { type: "animals", min: 610000, max: 661000 },
 ];
 
@@ -78,11 +75,6 @@ const tokenSchema = v.pipe(
     v.string(),
     v.minLength(10, "Main token is missing or too short!"),
     v.regex(TOKEN_SHAPE, "Main token is malformed!"),
-);
-
-const gambleAmountSchema = v.pipe(
-    v.number(),
-    v.minValue(1, "Invalid gamble amount!"),
 );
 
 const raritySchema = v.picklist(
@@ -120,7 +112,7 @@ const checkToken = (config, ctx) => {
 
 /**
  * Ensure the user did not reuse the same channel ID for multiple features
- * (hunt, battle, quest, gamble).
+ * (hunt, battle, quest).
  *
  * @returns {boolean} True if all channel IDs are unique.
  */
@@ -128,7 +120,6 @@ const checkDuplicateChannels = (config, ctx) => {
     const vars = [
         config.main.commandschannelid,
         config.main.huntbotchannelid,
-        config.main.gamblechannelid,
         config.main.autoquestchannelid,
     ];
     for (let i = 0; i < vars.length; i++) {
@@ -143,7 +134,7 @@ const checkDuplicateChannels = (config, ctx) => {
                 ctx.logger.info(
                     "Bot",
                     "Config",
-                    "That mean if you use farm, huntbot, quest and gamble, you need four channel!",
+                    "That mean if you use farm, huntbot, quest, you need three channel!",
                 );
                 return false;
             }
@@ -167,32 +158,6 @@ const checkPrayCurseConflict = (ctx, config) => {
             "Curse and pray cannot be turn on at the same time! By default pray will be used.",
         );
     }
-};
-
-/**
- * Validate gamble default amounts are positive numbers for every enabled game.
- *
- * @returns {boolean} True if all enabled game amounts are valid.
- */
-const checkGambleAmount = (config, ctx) => {
-    const { coinflip, slot } = config.main.commands.gamble;
-    const amounts = config.settings.gamble;
-    const checks = [];
-    if (coinflip) {
-        checks.push(
-            v.safeParse(gambleAmountSchema, amounts.coinflip.default_amount),
-        );
-    }
-    if (slot) {
-        checks.push(
-            v.safeParse(gambleAmountSchema, amounts.slot.default_amount),
-        );
-    }
-    if (checks.some((r) => !r.success)) {
-        showerr(ctx, "Invalid gamble amount!");
-        return false;
-    }
-    return true;
 };
 
 /**
@@ -270,7 +235,7 @@ const checkSellSacrificeConflict = (config, ctx) => {
  * @sideeffect Resets out-of-range `config.interval[type].min`/`max` to the defaults.
  */
 const validateIntervals = (config, ctx) => {
-    const intervals = ["hunt", "battle", "pray", "coinflip", "slot", "animals"];
+    const intervals = ["hunt", "battle", "pray", "animals"];
     const missingValue = intervals.some(
         (type) => !config.interval[type]?.min || !config.interval[type]?.max,
     );
@@ -324,7 +289,6 @@ const validateConfig = (ctx, config) => {
     const fatalChecks = [
         () => checkToken(config, ctx),
         () => checkDuplicateChannels(config, ctx),
-        () => checkGambleAmount(config, ctx),
         () => parseGemRarity(ctx),
         () => parseAnimalTypes(ctx),
         () => checkSellSacrificeConflict(config, ctx),
@@ -395,9 +359,6 @@ Main commands:
     Max Time: ${config.main.commands.huntbot.maxtime} - type: ${typeof config.main.commands.huntbot.maxtime}
     Upgrade: ${config.main.commands.huntbot.upgrade} - type: ${typeof config.main.commands.huntbot.upgrade}
     Upgrade Type: ${config.main.commands.huntbot.upgradetype} - type: ${typeof config.main.commands.huntbot.upgradetype}
-  Gamble: 
-    Coinflip: ${config.main.commands.gamble.coinflip} - type: ${typeof config.main.commands.gamble.coinflip}
-    Slot: ${config.main.commands.gamble.slot} - type: ${typeof config.main.commands.gamble.slot}
   Animals: ${config.main.commands.animals} - type: ${typeof config.main.commands.animals}
   Inventory: ${config.main.commands.inventory} - type: ${typeof config.main.commands.inventory}
   Checklist: ${config.main.commands.checklist} - type: ${typeof config.main.commands.checklist}
@@ -419,15 +380,6 @@ Inventory:
     Crate: ${config.settings.inventory.use.crate} - type: ${typeof config.settings.inventory.use.crate}
     Gems: ${config.settings.inventory.use.gems} - type: ${typeof config.settings.inventory.use.gems}
 
-Gamble:
-  Coinflip:
-    Default Amount: ${config.settings.gamble.coinflip.default_amount} - type: ${typeof config.settings.gamble.coinflip.default_amount}
-    Max Amount: ${config.settings.gamble.coinflip.max_amount} - type: ${typeof config.settings.gamble.coinflip.max_amount}
-    Multiplier: ${config.settings.gamble.coinflip.multiplier} - type: ${typeof config.settings.gamble.coinflip.multiplier}
-  Slot:
-    Default Amount: ${config.settings.gamble.slot.default_amount} - type: ${typeof config.settings.gamble.slot.default_amount}
-    Max Amount: ${config.settings.gamble.slot.max_amount} - type: ${typeof config.settings.gamble.slot.max_amount}
-    Multiplier: ${config.settings.gamble.slot.multiplier} - type: ${typeof config.settings.gamble.slot.multiplier}
 
 Safety:
   Auto Pause: ${config.settings.safety.autopause} - type: ${typeof config.settings.safety.autopause}
@@ -457,11 +409,7 @@ Interval:
   Pray: ${config.interval.pray.min} - ${config.interval.pray.max}
   Type: ${typeof config.interval.pray.min} - ${typeof config.interval.pray.max}
 
-  Coinflip: ${config.interval.coinflip.min} - ${config.interval.coinflip.max}
-  Type: ${typeof config.interval.coinflip.min} - ${typeof config.interval.coinflip.max}
 
-  Slot: ${config.interval.slot.min} - ${config.interval.slot.max}
-  Type: ${typeof config.interval.slot.min} - ${typeof config.interval.slot.max}
 
   Animals: ${config.interval.animals.min} - ${config.interval.animals.max}
   Type: ${typeof config.interval.animals.min} - ${typeof config.interval.animals.max}

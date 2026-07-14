@@ -7,7 +7,6 @@
     "commandschannelid": "1491785595008061480",
     "huntbotchannelid": "1491787057209806900",
     "owodmchannelid": "1498607007282757654",
-    "gamblechannelid": "1491785822326751252",
     "autoquestchannelid": "1491785893751554079",
     "autostart": true,
     "commands": {
@@ -20,10 +19,6 @@
         "maxtime": 10,
         "upgrade": false,
         "upgradetype": "duration"
-      },
-      "gamble": {
-        "coinflip": false,
-        "slot": false
       },
       "animals": false,
       "inventory": true,
@@ -52,18 +47,6 @@
         "fabledlootbox": false,
         "crate": true,
         "gems": true
-      }
-    },
-    "gamble": {
-      "coinflip": {
-        "default_amount": 1,
-        "max_amount": 11,
-        "multiplier": 1
-      },
-      "slot": {
-        "default_amount": 1,
-        "max_amount": 11,
-        "multiplier": 1
       }
     },
     "logging": {
@@ -124,14 +107,6 @@
     "pray": {
       "max": 332000,
       "min": 316000
-    },
-    "coinflip": {
-      "max": 32000,
-      "min": 16000
-    },
-    "slot": {
-      "max": 32000,
-      "min": 16000
     },
     "animals": {
       "max": 661000,

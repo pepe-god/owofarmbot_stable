@@ -165,7 +165,7 @@ jobs:
 
 ---
 
-## Aşama 2 — Güvenlik ve Sürdürülebilirlik
+## Aşama 2 — Güvenlik ve Sürdürülebilirlik — ✅ TAMAMLANDI
 
 ### Görev 2.1: Yapılandırma Şeması (tam detay) — ✅ TAMAMLANDI (1.2 kapsamında)
 
@@ -217,7 +217,7 @@ jobs:
 
 ---
 
-## Aşama 3 — Gözlemlenebilirlik ve Dayanıklılık
+## Aşama 3 — Gözlemlenebilirlik ve Dayanıklılık — ✅ TAMAMLANDI
 
 ### Görev 3.1: Yapılandırılmış Hata Yakalama — ✅ TAMAMLANDI
 
@@ -238,7 +238,16 @@ jobs:
 
 ---
 
-### Görev 3.2: Bot Bayrağı Durum Makinesi
+### Görev 3.2: Bot Bayrağı Durum Makinesi — ✅ TAMAMLANDI
+
+> **Uygulanan**:
+> - `src/services/botState.js` oluşturuldu: `BotState extends EventEmitter`. Dört meşgul bayrağı (`paused`, `captchadetected`, `inventory`, `checklist`) sahiplenir; her değişiklikte `change`, tüm bayraklar temizlenince `idle` olayını yayar. Türetilmiş `status` getter (`captcha > checklist > inventory > paused > running` önceliği), geçiş yardımcıları (`pause/resume/captcha/captchaSolved/startInventory/endInventory/startChecklist/endChecklist`) ve **anket yapmayan** `waitUntilIdle()` (tek seferlik `change` aboneliği) içerir.
+> - `attachState(global)` yardımcı fonksiyonu: mevcut `global` nesnesindeki dört bayrağı, durum makinesine yönlendiren accessor'lara (getter/setter) dönüştürür. Böylece **tüm mevcut `ctx.global.paused = true` okuma/yazmaları değişmeden çalışır** ama artık durum makinesinden geçer (olaylar tetiklenir, `status` doğru kalır).
+> - `src/core/bot.js`: `attachState(owofarmbot_stable)` çağrılıp `ctx.state`'e bağlandı. `src/core/botContext.js`: `state` bağımlılığı eklendi. `tests/helpers/makeCtx.js`: `ctx.state` gerçek çalışma zamanı gibi bağlanıyor.
+> - `src/core/globalutil.js` `waitWhileBusy`: `ctx.state.waitUntilIdle()` ile **olay tabanlı** (anket yok); `ctx.state` yoksa eski 3s anket geri dönüşü korundu.
+> - Geçiş çağrı yerleri `ctx.state.*` metotlarına dönüştürüldü: `admin.js` (pause/resume + stale captcha), `messageCreate.js` (`captcha()`/`captchaSolved(autoresume)`), `ready.js` (autostart resume), `safety.js` (pause/resume), `inventory.js` (start/endInventory), `checklist.js` (start/endChecklist).
+> - **Sapma**: Plandaki `idle` durum enum'u ayrı bir enum yerine, dört bağımsız boole bayrağının türevi `status` olarak modellendi (mevcut kod bayrakları bağımsız kullanıyor; captcha aynı anda `paused`+`captchadetected` kurar). `watchdog.js` dinamik bayrak erişimini (`ctx.global[flag]`, ayrıca state-makinesi dışı `use` bayrağı) koruduğu için delegasyon üzerinden çalışacak şekilde değiştirilmeden bırakıldı.
+> - `tests/botState.test.js` (23 test) + `globalutil.test.js`'e `waitWhileBusy` testleri eklendi. `pnpm test` 234/234 geçiyor.
 
 **Oluşturulacak dosya**: `src/services/botState.js` (yeni)
 
@@ -258,11 +267,16 @@ jobs:
 - `src/core/globalutil.js`: `waitWhileBusy()` → durum aboneliği olarak yeniden yaz
 - `src/modules/*.js`: `ctx.global.paused = true` → `ctx.state.pause()` gibi çağrılar
 
-**Kabul kriteri**: `waitWhileBusy()` polling yok, durum değişikliğinde hemen resolve olur.
+**Kabul kriteri**: `waitWhileBusy()` polling yok, durum değişikliğinde hemen resolve olur. ✅
 
 ---
 
-### Görev 3.3: Yapılandırılmış Kayıt
+### Görev 3.3: Yapılandırılmış Kayıt — ✅ TAMAMLANDI
+
+> **Uygulanan**:
+> - `src/services/structuredLogger.js` oluşturuldu: `isJsonFormat()` (`LOG_FORMAT=json`, büyük/küçük harf duyarsız) ve `formatStructured({level, type, module, message, state})` → tek satır JSON (`{ timestamp, level, type, module, message, state }`). `Error` mesajları `stack`/`message` ile serileştirilir.
+> - `src/services/logger.js` genişletildi: renkli `Logger` sınıfı korundu; `LOG_FORMAT=json` iken `_log` renkli satır yerine JSON satırı üretir. Renk→seviye eşlemesi (`green=info, yellow=warn, red=alert, white=debug`) ve `state` etiketi (`ctx.state.status`) her satıra eklenir. Debug satırları eskisi gibi tampon/konsol dışında tutulur.
+> - `tests/structuredLogger.test.js` (9 test) eklendi. Mevcut `logger.test.js` (LOG_FORMAT ayarsız) değişmeden geçiyor.
 
 **Oluşturulacak dosya**: `src/services/structuredLogger.js` (yeni)
 
@@ -275,7 +289,14 @@ jobs:
 
 ---
 
-### Görev 3.4: Sağlık ve Metrikler
+### Görev 3.4: Sağlık ve Metrikler — ✅ TAMAMLANDI
+
+> **Uygulanan**:
+> - `src/services/health.js` oluşturuldu: `buildHealthPayload(ctx)`, `handleRequest(ctx, req, res)`, `startHealthServer(ctx, {port})` (Node built-in `http`, ek bağımlılık yok). `GET /health` (ve `/:health` diğer adı, query string yok sayılır) → 200 JSON: `status`, `paused`, `captcha`, `uptime`, `totals`, `metrics` (captcha/saat frekansı + captcha çözüm oranı), `gamble`, `timestamp`. Bilinmeyen yol → 404.
+> - `src/core/bot.js`: yalnızca `HEALTH_PORT` ortam değişkeni ayarlıysa sunucu başlatılır (varsayılan çalışma zamanı hiçbir port açmaz).
+> - `src/core/admin.js` `stats` komutuna `- State: <status>` satırı eklendi.
+> - **Sapma**: Plandaki "döngü gecikmeleri / komut başarı oranları" tam enstrümantasyon yerine, hâlihazırda mevcut sayaçlardan türetilen captcha frekansı + çözüm oranı metrikleri ile sınırlandırıldı (modüllere geniş enstrümantasyon eklemek Aşama 3 kapsamına orantısızdı).
+> - `tests/health.test.js` (7 test, canlı HTTP 200 dahil) eklendi.
 
 **Oluşturulacak dosya**: `src/services/health.js` (yeni)
 
@@ -284,11 +305,13 @@ jobs:
 - Döngü gecikmeleri, captcha sıklığı, komut başarı oranları
 - `stats` komutunda görüntüle
 
-**Kabul kriteri**: `curl http://localhost:PORT/health` 200 döner.
+**Kabul kriteri**: `curl http://localhost:PORT/health` 200 döner. ✅
 
 ---
 
-### Görev 3.5: Nazik Kapatma
+### Görev 3.5: Nazik Kapatma — ✅ TAMAMLANDI
+
+> **Uygulanan**: `src/core/admin.js` `restart` komutu nazik kapatmaya çevrildi: `ctx.loops.stopAll()` (tüm bekleyen zamanlayıcılar iptal) → `await ctx.client.destroy()` → `setTimeout(() => process.exit(0), 2000)`. Çıkış kodu `1`→`0` değişti; `src/main.js` cluster primary'si herhangi bir worker çıkışında yeniden fork ettiği için yeniden başlatma davranışı korunur. Mevcut `admin.test.js` restart testi geçiyor.
 
 **Değiştirilecek dosya**: `src/core/admin.js`
 
@@ -300,7 +323,7 @@ await ctx.client.destroy();
 setTimeout(() => process.exit(0), 2000);
 ```
 
-**Kabul kriteri**: Tüm bekleyen zamanlayıcılar iptal edilir, Discord bağlantısı düzgün kapatılır.
+**Kabul kriteri**: Tüm bekleyen zamanlayıcılar iptal edilir, Discord bağlantısı düzgün kapatılır. ✅
 
 ---
 

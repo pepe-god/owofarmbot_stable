@@ -44,7 +44,6 @@ function makeValidConfig() {
                 pray: false,
                 curse: false,
                 huntbot: { enable: false },
-                gamble: { coinflip: false, slot: false },
                 animals: false,
                 inventory: false,
                 checklist: false,
@@ -52,15 +51,11 @@ function makeValidConfig() {
             },
             commandschannelid: "111",
             huntbotchannelid: "222",
-            gamblechannelid: "333",
             autoquestchannelid: "444",
             maximum_gem_rarity: "",
         },
         settings: {
-            gamble: {
-                coinflip: { default_amount: 100, max_amount: 1000 },
-                slot: { default_amount: 100, max_amount: 1000 },
-            },
+
             checklist: {
                 types: { daily: false, cookie: false, vote: false },
             },
@@ -96,8 +91,6 @@ function makeValidConfig() {
             hunt: { min: 12000, max: 16000 },
             battle: { min: 12000, max: 16000 },
             pray: { min: 316000, max: 332000 },
-            coinflip: { min: 12000, max: 16000 },
-            slot: { min: 12000, max: 16000 },
             animals: { min: 610000, max: 661000 },
             checklist: 3600000,
         },
@@ -148,14 +141,14 @@ describe("validateConfig", () => {
         const client = makeMockClient(config);
 
         mock.method(process, "exit", () => {});
+        mock.method(process, "exit", () => {});
         await verify(client, config);
         assert.strictEqual(hasAlert(client), true);
     });
 
-    it("rejects invalid gamble amount", async () => {
+    it("rejects duplicate channel IDs", async () => {
         const config = makeValidConfig();
-        config.main.commands.gamble.coinflip = true;
-        config.settings.gamble.coinflip.default_amount = 0;
+        config.main.huntbotchannelid = "111";
         const client = makeMockClient(config);
 
         mock.method(process, "exit", () => {});

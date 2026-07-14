@@ -72,11 +72,6 @@ function createGlobalState(name, type) {
             huntssinceinv: 0,
             missingHandled: false,
         },
-        gamble: {
-            coinflip: 0,
-            slot: 0,
-            cowoncywon: 0,
-        },
         quest: {
             title: "Waiting...",
             reward: "",

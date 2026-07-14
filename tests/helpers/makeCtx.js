@@ -67,7 +67,6 @@ function createDefaultConfig() {
             userid: "123",
             commandschannelid: "111",
             huntbotchannelid: "222",
-            gamblechannelid: "333",
             autoquestchannelid: "444",
             owodmchannelid: "555",
             autostart: true,
@@ -81,10 +80,6 @@ function createDefaultConfig() {
                     maxtime: 10,
                     upgrade: false,
                     upgradetype: "duration",
-                },
-                gamble: {
-                    coinflip: true,
-                    slot: false,
                 },
                 animals: false,
                 inventory: true,
@@ -113,18 +108,6 @@ function createDefaultConfig() {
                     fabledlootbox: false,
                     crate: true,
                     gems: true,
-                },
-            },
-            gamble: {
-                coinflip: {
-                    default_amount: 1,
-                    max_amount: 11,
-                    multiplier: 1,
-                },
-                slot: {
-                    default_amount: 1,
-                    max_amount: 11,
-                    multiplier: 1,
                 },
             },
             logging: {
@@ -186,14 +169,6 @@ function createDefaultConfig() {
                 max: 332000,
                 min: 316000,
             },
-            coinflip: {
-                max: 32000,
-                min: 16000,
-            },
-            slot: {
-                max: 32000,
-                min: 16000,
-            },
             animals: {
                 max: 661000,
                 min: 610000,
@@ -210,11 +185,6 @@ function createDefaultBasic(config) {
             inventory: true,
             hunt: true,
             battle: true,
-            gamble: {
-                ...config.main.commands.gamble,
-                coinflip: true,
-                slot: false,
-            },
             huntbot: {
                 ...config.main.commands.huntbot,
                 upgrade: true,
@@ -231,7 +201,7 @@ function createDefaultGlobal() {
         inventory: false,
         checklist: false,
         temp: { started: false, usedevent: false },
-        total: { farm: 0, hunt: 0, battle: 0, gamble: 0, quest: 0 },
+        total: { farm: 0, hunt: 0, battle: 0, quest: 0 },
         gems: {
             need: [],
             use: "",
@@ -239,7 +209,6 @@ function createDefaultGlobal() {
             isevent: false,
             missingHandled: false,
         },
-        gamble: { cowoncywon: 0 },
     };
 }
 

@@ -16,8 +16,7 @@ describe("health", () => {
                 global: {
                     paused: true,
                     captchadetected: false,
-                    total: { hunt: 5, battle: 2, captcha: 1, solvedcaptcha: 1 },
-                    gamble: { cowoncywon: 42 },
+                    total: { hunt: 5, battle: 2, captcha: 1, solvedcaptcha: 1 }
                 },
             });
             const payload = buildHealthPayload(ctx);
@@ -26,7 +25,6 @@ describe("health", () => {
             assert.strictEqual(payload.captcha, false);
             assert.strictEqual(payload.totals.hunt, 5);
             assert.strictEqual(payload.totals.captcha, 1);
-            assert.strictEqual(payload.gamble.cowoncywon, 42);
             assert.ok(typeof payload.uptime === "number");
             assert.ok(!Number.isNaN(Date.parse(payload.timestamp)));
         });

@@ -22,6 +22,7 @@ test.js
 .github/
 !.github/
 .opencode/
+.kilo/
 
 
 # OS files

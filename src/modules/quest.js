@@ -180,12 +180,11 @@ function parseQuests(embedDescription) {
  *
  * Skips locked quests and dispatches the first supported type to its handler:
  *  - "Say 'owo'" -> {@link questOwO}
- *  - "Gamble" -> {@link questGamble} (only when the bot is NOT already gambling)
  *  - "Use an action command on someone" -> {@link questActionOther}
  * Unsupported quests are skipped. On a match it records the active quest in
  * global state and returns; if none match, it records "No active quest found".
  *
- * @param {Client} ctx - The Discord ctx instance; reads `basic.commands.gamble` and writes `global.quest`.
+ * @param {Client} ctx - The Discord ctx instance; writes `global.quest`.
  * @param {TextChannel} channel - The quest commands channel.
  * @param {Array<Object>} quests - Parsed quest objects from {@link parseQuests}.
  * @returns {Promise<void>} Resolves once a quest is started or marked unavailable.
@@ -197,14 +196,6 @@ async function selectQuest(ctx, channel, quests) {
         switch (true) {
             case quest.title.includes("Say 'owo'"):
                 questOwO(ctx, channel, quest);
-                break;
-            case quest.title.includes("Gamble"):
-                if (
-                    !ctx.basic.commands.gamble.coinflip &&
-                    !ctx.basic.commands.gamble.slot
-                ) {
-                    _questGamble(ctx, channel, quest);
-                } else continue;
                 break;
             case quest.title.includes("Use an action command on someone"):
                 _questActionOther(ctx, channel, quest);
@@ -295,25 +286,6 @@ async function questOwO(ctx, channel, quest) {
     await questLoop(ctx, channel, quest, {
         build: () => commandrandomizer(["owo", "Owo", "owO", "OwO"]),
         loopMinus: -10,
-        useGetRand: true,
-    });
-}
-
-/**
- * Run the "Gamble" quest until its target is reached.
- *
- * Sends randomized coinflip commands (e.g. `owo cf head`). Only invoked when
- * the bot is not already running the gamble module (see {@link selectQuest}).
- *
- * @param {Client} ctx - The Discord ctx instance.
- * @param {TextChannel} channel - The quest commands channel.
- * @param {Object} quest - The parsed quest object.
- * @returns {Promise<void>} Resolves when the quest target is reached.
- */
-async function _questGamble(ctx, channel, quest) {
-    await questLoop(ctx, channel, quest, {
-        build: (_c, cr) =>
-            `${cr(["owo", "Owo", "owO", "OwO"])} ${cr(["cf", "coinflip"])} ${cr(["head", "h", "t", "tail"])}`,
         useGetRand: true,
     });
 }

@@ -69,7 +69,6 @@ function buildHealthPayload(ctx) {
         uptime,
         totals,
         metrics: computeMetrics(totals, uptime),
-        gamble: g.gamble ?? {},
         timestamp: new Date().toISOString(),
     };
 }
