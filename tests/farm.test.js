@@ -1,30 +1,7 @@
 const { describe, it, mock, afterEach, beforeEach } = require("node:test");
 const assert = require("node:assert");
 
-const LoopManager = require("../src/services/loopManager.js");
-
-function makeClient(overrides = {}) {
-    return {
-        config: { settings: { inventory: { use: { gems: true } } } },
-        basic: { commands: { inventory: true } },
-        loops: new LoopManager(),
-        global: {
-            gems: {
-                need: [],
-                use: "",
-                huntssinceinv: 0,
-                isevent: false,
-                missingHandled: false,
-            },
-            temp: { usedevent: false },
-            ...(overrides.global || {}),
-        },
-        globalutil: { waitForMessage: async () => ({ content: "" }) },
-        logger: { info: () => {}, warn: () => {}, alert: () => {} },
-        prefix: () => "owo",
-        ...overrides,
-    };
-}
+const { makeCtx } = require("./helpers/makeCtx.js");
 
 describe("farm", () => {
     beforeEach(() => {
@@ -65,7 +42,7 @@ describe("farm", () => {
 
         it("parses message and finds no missing gems when all present", async () => {
             const farm = require("../src/modules/farm.js");
-            const client = makeClient({
+            const client = makeCtx({
                 globalutil: {
                     waitForMessage: async () => ({
                         content: "You caught a gem1 gem3 gem4 and more!",
@@ -81,7 +58,7 @@ describe("farm", () => {
 
         it("finds missing gem3", async () => {
             const farm = require("../src/modules/farm.js");
-            const client = makeClient({
+            const client = makeCtx({
                 globalutil: {
                     waitForMessage: async () => ({
                         content: "You caught a gem1 gem4!",
@@ -96,7 +73,7 @@ describe("farm", () => {
 
         it("finds all gems missing", async () => {
             const farm = require("../src/modules/farm.js");
-            const client = makeClient({
+            const client = makeCtx({
                 globalutil: {
                     waitForMessage: async () => ({
                         content: "You found nothing interesting",
@@ -115,7 +92,7 @@ describe("farm", () => {
 
         it("returns early when message is null", async () => {
             const farm = require("../src/modules/farm.js");
-            const client = makeClient({
+            const client = makeCtx({
                 globalutil: { waitForMessage: async () => null },
             });
             client.global.gems.need = ["existing"];
@@ -128,7 +105,7 @@ describe("farm", () => {
 
         it("returns early when message content is null", async () => {
             const farm = require("../src/modules/farm.js");
-            const client = makeClient({
+            const client = makeCtx({
                 globalutil: {
                     waitForMessage: async () => ({ content: null }),
                 },
@@ -142,7 +119,7 @@ describe("farm", () => {
 
         it("returns early when inventory gems setting disabled", async () => {
             const farm = require("../src/modules/farm.js");
-            const client = makeClient();
+            const client = makeCtx();
             client.config.settings.inventory.use.gems = false;
             // waitForMessage should not be called
             let waitCalled = false;
@@ -158,7 +135,7 @@ describe("farm", () => {
 
         it("handles event with star found", async () => {
             const farm = require("../src/modules/farm.js");
-            const client = makeClient({
+            const client = makeCtx({
                 global: {
                     gems: {
                         need: [],
@@ -184,7 +161,7 @@ describe("farm", () => {
 
         it("handles event without star and not yet used", async () => {
             const farm = require("../src/modules/farm.js");
-            const client = makeClient({
+            const client = makeCtx({
                 global: {
                     gems: {
                         need: [],
@@ -210,7 +187,7 @@ describe("farm", () => {
 
         it("disables event flag when star not found and already used", async () => {
             const farm = require("../src/modules/farm.js");
-            const client = makeClient({
+            const client = makeCtx({
                 global: {
                     gems: {
                         need: [],
@@ -238,7 +215,7 @@ describe("farm", () => {
     describe("handleMissingGems", () => {
         it("returns early when inventory disabled", () => {
             const farm = require("../src/modules/farm.js");
-            const client = makeClient({
+            const client = makeCtx({
                 basic: { commands: { inventory: false } },
             });
             const channel = { send: mock.fn() };
@@ -252,7 +229,7 @@ describe("farm", () => {
 
         it("sets missingHandled and sends lootbox on first call", () => {
             const farm = require("../src/modules/farm.js");
-            const client = makeClient();
+            const client = makeCtx();
             const channel = { send: mock.fn() };
             client.logger = { warn: () => {}, info: () => {}, alert: () => {} };
 
@@ -271,7 +248,7 @@ describe("farm", () => {
 
         it("resets huntssinceinv when content includes lootbox", () => {
             const farm = require("../src/modules/farm.js");
-            const client = makeClient();
+            const client = makeCtx();
             client.global.gems.missingHandled = true;
             client.global.gems.huntssinceinv = 10;
             const channel = { send: mock.fn() };
@@ -284,7 +261,7 @@ describe("farm", () => {
 
         it("resets huntssinceinv when threshold met", () => {
             const farm = require("../src/modules/farm.js");
-            const client = makeClient();
+            const client = makeCtx();
             client.global.gems.missingHandled = true;
             client.global.gems.huntssinceinv = 30;
             const channel = { send: mock.fn() };
@@ -300,7 +277,7 @@ describe("farm", () => {
 
         it("does not reset huntssinceinv when threshold not met", () => {
             const farm = require("../src/modules/farm.js");
-            const client = makeClient();
+            const client = makeCtx();
             client.global.gems.missingHandled = true;
             client.global.gems.huntssinceinv = 5;
             const channel = { send: mock.fn() };

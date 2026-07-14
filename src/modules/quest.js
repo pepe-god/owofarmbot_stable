@@ -19,14 +19,14 @@ const REWARD_KINDS = {
  * fetches the quest log and drives execution. Logs a brief "Waiting"/"Ready!"
  * status around startup.
  *
- * @param {Client} client - The Discord client instance; reads `basic.autoquestchannelid` and global quest state.
+ * @param {Client} ctx - The Discord ctx instance; reads `basic.autoquestchannelid` and global quest state.
  * @returns {void} Delegates to {@link questHandler}; does not return a value.
  */
-module.exports = async (client) => {
-    client.logger.warn("Farm", "Quest", "Waiting");
-    const channel = client.channels.cache.get(client.basic.autoquestchannelid);
-    client.logger.info("Farm", "Quest", "Ready!");
-    questHandler(client, channel);
+module.exports = async (ctx) => {
+    ctx.logger.warn("Farm", "Quest", "Waiting");
+    const channel = ctx.client.channels.cache.get(ctx.basic.autoquestchannelid);
+    ctx.logger.info("Farm", "Quest", "Ready!");
+    questHandler(ctx, channel);
 };
 
 /**
@@ -37,26 +37,26 @@ module.exports = async (client) => {
  * the quest list is parsed, {@link selectQuest} picks an executable quest and
  * starts its loop. Any error retries the whole cycle after 61s.
  *
- * @param {Client} client - The Discord client instance; carries the quest state.
+ * @param {Client} ctx - The Discord ctx instance; carries the quest state.
  * @param {TextChannel} channel - The quest commands channel.
  * @returns {Promise<void>} Resolves when the current cycle finishes or is deferred to a retry timer.
  */
-async function questHandler(client, channel) {
-    await client.globalutil.waitWhileBusy(client);
+async function questHandler(ctx, channel) {
+    await ctx.globalutil.waitWhileBusy(ctx);
 
     try {
-        client.logger.info("Farm", "Questing", "Getting quest...");
-        const embed = await fetchQuestEmbed(client, channel);
+        ctx.logger.info("Farm", "Questing", "Getting quest...");
+        const embed = await fetchQuestEmbed(ctx, channel);
 
         if (embed == null) {
-            await client.globalutil.waitWhileBusy(client);
-            client.logger.alert(
+            await ctx.globalutil.waitWhileBusy(ctx);
+            ctx.logger.alert(
                 "Farm",
                 "Quest",
                 "Cannot get quest! Recheck after 61 seconds.",
             );
-            client.loops.schedule(
-                () => questHandler(client, channel),
+            ctx.loops.schedule(
+                () => questHandler(ctx, channel),
                 61000,
                 "quest:retry",
             );
@@ -64,27 +64,27 @@ async function questHandler(client, channel) {
         }
 
         const embedContent = embed.embeds[0].description;
-        await client.delay(1600);
+        await ctx.delay(1600);
 
         if (embedContent.includes("You finished all of your quests!")) {
-            client.logger.info("Farm", "Quest", "All quests completed!");
-            client.global.quest.title = "All quests completed!";
-            client.global.quest.reward = "";
-            client.global.quest.progress = "";
+            ctx.logger.info("Farm", "Quest", "All quests completed!");
+            ctx.global.quest.title = "All quests completed!";
+            ctx.global.quest.reward = "";
+            ctx.global.quest.progress = "";
             return;
         }
 
         const quests = parseQuests(embedContent);
-        await selectQuest(client, channel, quests);
+        await selectQuest(ctx, channel, quests);
     } catch (err) {
-        client.logger.alert(
+        ctx.logger.alert(
             "Farm",
             "Quest",
             `Error while getting quest: ${err}\nRecheck after 61 seconds.`,
         );
-        client.logger.debug(err);
-        client.loops.schedule(
-            () => questHandler(client, channel),
+        ctx.logger.debug(err);
+        ctx.loops.schedule(
+            () => questHandler(ctx, channel),
             61000,
             "quest:retry",
         );
@@ -97,18 +97,18 @@ async function questHandler(client, channel) {
  * Sends `owo quest` and waits up to 16s for OwO's "Quest Log" embed that is
  * newer than the command. Returns null if no embed arrives in time.
  *
- * @param {Client} client - The Discord client instance.
+ * @param {Client} ctx - The Discord ctx instance.
  * @param {TextChannel} channel - The quest commands channel.
  * @returns {Promise<Message|null>} The quest log message, or null on timeout.
  */
-async function fetchQuestEmbed(client, channel) {
+async function fetchQuestEmbed(ctx, channel) {
     channel.sendTyping();
     const questmsg = await channel.send({
-        content: `${client.prefix()} ${commandrandomizer(["q", "quest"])}`,
+        content: `${ctx.prefix()} ${commandrandomizer(["q", "quest"])}`,
     });
 
-    const message = await client.globalutil.waitForMessage(
-        client,
+    const message = await ctx.globalutil.waitForMessage(
+        ctx,
         channel,
         (msg) =>
             msg.embeds[0]?.author?.name.includes("Quest Log") &&
@@ -169,46 +169,46 @@ function parseQuests(embedDescription) {
  * Unsupported quests are skipped. On a match it records the active quest in
  * global state and returns; if none match, it records "No active quest found".
  *
- * @param {Client} client - The Discord client instance; reads `basic.commands.gamble` and writes `global.quest`.
+ * @param {Client} ctx - The Discord ctx instance; reads `basic.commands.gamble` and writes `global.quest`.
  * @param {TextChannel} channel - The quest commands channel.
  * @param {Array<Object>} quests - Parsed quest objects from {@link parseQuests}.
  * @returns {Promise<void>} Resolves once a quest is started or marked unavailable.
  */
-async function selectQuest(client, channel, quests) {
+async function selectQuest(ctx, channel, quests) {
     for (const quest of quests) {
         if (quest.isLocked) continue;
 
         switch (true) {
             case quest.title.includes("Say 'owo'"):
-                questOwO(client, channel, quest);
+                questOwO(ctx, channel, quest);
                 break;
             case quest.title.includes("Gamble"):
                 if (
-                    !client.basic.commands.gamble.coinflip &&
-                    !client.basic.commands.gamble.slot
+                    !ctx.basic.commands.gamble.coinflip &&
+                    !ctx.basic.commands.gamble.slot
                 ) {
-                    questGamble(client, channel, quest);
+                    _questGamble(ctx, channel, quest);
                 } else continue;
                 break;
             case quest.title.includes("Use an action command on someone"):
-                questActionOther(client, channel, quest);
+                _questActionOther(ctx, channel, quest);
                 break;
             default:
                 continue;
         }
 
         const rwKind = REWARD_KINDS[quest.type] ?? "";
-        client.global.quest.title = quest.title;
-        client.global.quest.reward = quest.reward + rwKind;
-        client.global.quest.progress = `${quest.pro1} / ${quest.pro2}`;
-        client.logger.info("Farm", "Quest", `Quest found: ${quest.title}`);
+        ctx.global.quest.title = quest.title;
+        ctx.global.quest.reward = quest.reward + rwKind;
+        ctx.global.quest.progress = `${quest.pro1} / ${quest.pro2}`;
+        ctx.logger.info("Farm", "Quest", `Quest found: ${quest.title}`);
         return;
     }
 
-    client.logger.info("Farm", "Quest", "No active quest found!");
-    client.global.quest.title = "No active quest found";
-    client.global.quest.reward = "";
-    client.global.quest.progress = "Recheck after 61 seconds";
+    ctx.logger.info("Farm", "Quest", "No active quest found!");
+    ctx.global.quest.title = "No active quest found";
+    ctx.global.quest.reward = "";
+    ctx.global.quest.progress = "Recheck after 61 seconds";
 }
 
 /**
@@ -221,7 +221,7 @@ async function selectQuest(client, channel, quests) {
  * differ (e.g. "say owo" counts in batches). On send error the progress is
  * rolled back by one and retried.
  *
- * @param {Client} client - The Discord client instance; updates `global.quest.progress`.
+ * @param {Client} ctx - The Discord ctx instance; updates `global.quest.progress`.
  * @param {TextChannel} channel - The quest commands channel.
  * @param {Object} quest - The parsed quest object; `pro1`/`pro2` are mutated as progress is made.
  * @param {Object} opts - Loop configuration.
@@ -229,13 +229,13 @@ async function selectQuest(client, channel, quests) {
  * @param {number} [opts.delayBefore] - Optional delay (ms) before the first action.
  * @param {number} [opts.loopMinus] - Offset subtracted from `pro1` when evaluating completion (target = pro1 + loopMinus < pro2).
  * @param {boolean} [opts.useGetRand] - Use a randomized 12–16s delay instead of the fixed `delay`.
- * @param {(client: Client, cr: typeof commandrandomizer) => string} opts.build - Returns the command string to send (receives client and the command randomizer).
+ * @param {(ctx: Client, cr: typeof commandrandomizer) => string} opts.build - Returns the command string to send (receives ctx and the command randomizer).
  * @returns {Promise<void>} Resolves when the quest target is reached and the re-fetch timer is set.
  */
-async function questLoop(client, channel, quest, opts) {
+async function questLoop(ctx, channel, quest, opts) {
     const delayMs = opts.delay || 16000;
 
-    if (opts.delayBefore) await client.delay(opts.delayBefore);
+    if (opts.delayBefore) await ctx.delay(opts.delayBefore);
 
     const condition = () =>
         opts.loopMinus != null
@@ -243,47 +243,41 @@ async function questLoop(client, channel, quest, opts) {
             : quest.pro1 < quest.pro2;
 
     while (condition()) {
-        await client.globalutil.waitWhileBusy(client);
+        await ctx.globalutil.waitWhileBusy(ctx);
         try {
             channel.sendTyping();
             await channel.send({
-                content: opts.build(client, commandrandomizer),
+                content: opts.build(ctx, commandrandomizer),
             });
             quest.pro1++;
-            client.global.quest.progress = `${quest.pro1} / ${quest.pro2}`;
-            await client.delay(
-                opts.useGetRand ? getrand(12000, 16000) : delayMs,
-            );
+            ctx.global.quest.progress = `${quest.pro1} / ${quest.pro2}`;
+            await ctx.delay(opts.useGetRand ? getrand(12000, 16000) : delayMs);
         } catch (err) {
-            client.logger.alert(
+            ctx.logger.alert(
                 "Farm",
                 "Quest",
                 `Error while doing quest: ${err}`,
             );
-            client.logger.debug(err);
+            ctx.logger.debug(err);
             quest.pro1--;
-            client.global.quest.progress = `${quest.pro1} / ${quest.pro2}`;
+            ctx.global.quest.progress = `${quest.pro1} / ${quest.pro2}`;
         }
     }
 
-    client.global.quest.progress = "Completed!";
-    client.loops.schedule(
-        () => questHandler(client, channel),
-        16000,
-        "quest:loop",
-    );
+    ctx.global.quest.progress = "Completed!";
+    ctx.loops.schedule(() => questHandler(ctx, channel), 16000, "quest:loop");
 }
 
 /**
  * Run the "Say 'owo'" quest until its target is reached.
  *
- * @param {Client} client - The Discord client instance.
+ * @param {Client} ctx - The Discord ctx instance.
  * @param {TextChannel} channel - The quest commands channel.
  * @param {Object} quest - The parsed quest object.
  * @returns {Promise<void>} Resolves when the quest target is reached.
  */
-async function questOwO(client, channel, quest) {
-    await questLoop(client, channel, quest, {
+async function questOwO(ctx, channel, quest) {
+    await questLoop(ctx, channel, quest, {
         build: () => commandrandomizer(["owo", "Owo", "owO", "OwO"]),
         loopMinus: -10,
         useGetRand: true,
@@ -296,13 +290,13 @@ async function questOwO(client, channel, quest) {
  * Sends randomized coinflip commands (e.g. `owo cf head`). Only invoked when
  * the bot is not already running the gamble module (see {@link selectQuest}).
  *
- * @param {Client} client - The Discord client instance.
+ * @param {Client} ctx - The Discord ctx instance.
  * @param {TextChannel} channel - The quest commands channel.
  * @param {Object} quest - The parsed quest object.
  * @returns {Promise<void>} Resolves when the quest target is reached.
  */
-async function questGamble(client, channel, quest) {
-    await questLoop(client, channel, quest, {
+async function _questGamble(ctx, channel, quest) {
+    await questLoop(ctx, channel, quest, {
         build: (_c, cr) =>
             `${cr(["owo", "Owo", "owO", "OwO"])} ${cr(["cf", "coinflip"])} ${cr(["head", "h", "t", "tail"])}`,
         useGetRand: true,
@@ -315,13 +309,13 @@ async function questGamble(client, channel, quest) {
  * Sends randomized social action commands (cuddle, hug, kiss, ...) targeted at
  * OwO's official bot user id.
  *
- * @param {Client} client - The Discord client instance.
+ * @param {Client} ctx - The Discord ctx instance.
  * @param {TextChannel} channel - The quest commands channel.
  * @param {Object} quest - The parsed quest object.
  * @returns {Promise<void>} Resolves when the quest target is reached.
  */
-async function questActionOther(client, channel, quest) {
-    await questLoop(client, channel, quest, {
+async function _questActionOther(ctx, channel, quest) {
+    await questLoop(ctx, channel, quest, {
         build: (_c, cr) =>
             `${cr(["owo", "Owo", "owO", "OwO"])} ${cr(["cuddle", "hug", "kiss", "lick", "nom", "pat", "poke", "slap", "bite", "punch", "wave", "snuggle", "highfive"])} <@${OWO_ID}>`,
         useGetRand: true,

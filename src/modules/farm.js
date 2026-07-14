@@ -12,30 +12,30 @@ const REQUIRED_GEMS = ["gem1", "gem3", "gem4"];
  * enabled, a battle loop is started 2s later (if battle is also enabled) so the
  * two actions alternate rather than collide on the same cooldown.
  *
- * @param {Client} client - The Discord client instance; carries config, logger and global state.
+ * @param {Client} ctx - The Discord ctx instance; carries config, logger and global state.
  * @returns {void} Kicks off the looping handlers; does not return a meaningful value.
  */
-module.exports = async (client) => {
-    const channel = client.channels.cache.get(client.basic.commandschannelid);
+module.exports = async (ctx) => {
+    const channel = ctx.client.channels.cache.get(ctx.basic.commandschannelid);
 
-    if (client.config.settings.autophrases) {
-        startAutophrases(client, channel);
+    if (ctx.config.settings.autophrases) {
+        startAutophrases(ctx, channel);
     }
 
-    if (client.basic.commands.hunt) {
-        await farmAction(client, channel, {
+    if (ctx.basic.commands.hunt) {
+        await farmAction(ctx, channel, {
             type: "hunt",
             cmd: () => commandrandomizer(["h", "hunt"]),
             onResult: huntResult,
         });
-        await client.delay(2000);
-        if (client.basic.commands.battle)
-            await farmAction(client, channel, {
+        await ctx.delay(2000);
+        if (ctx.basic.commands.battle)
+            await farmAction(ctx, channel, {
                 type: "battle",
                 cmd: () => commandrandomizer(["b", "battle"]),
             });
-    } else if (client.basic.commands.battle)
-        await farmAction(client, channel, {
+    } else if (ctx.basic.commands.battle)
+        await farmAction(ctx, channel, {
             type: "battle",
             cmd: () => commandrandomizer(["b", "battle"]),
         });
@@ -45,60 +45,60 @@ module.exports = async (client) => {
  * Generic self-looping action for hunt or battle.
  *
  * Waits for the bot to be idle, then blocks other competing actions via the
- * `client.global[type]` flag and sends the randomized command. The global
+ * `ctx.global[type]` flag and sends the randomized command. The global
  * counter for the action is incremented and logged. If an `onResult` handler is
  * supplied (hunt only) it is awaited to process the response (e.g. gem checks).
- * The `client.global[type]` flag is always cleared in the `finally` block and
+ * The `ctx.global[type]` flag is always cleared in the `finally` block and
  * the next iteration is scheduled after a randomized interval from config.
  *
- * @param {Client} client - The Discord client instance.
+ * @param {Client} ctx - The Discord ctx instance.
  * @param {TextChannel} channel - The text channel where commands are sent.
  * @param {Object} opts - Action configuration.
  * @param {"hunt"|"battle"} opts.type - Which action this loop performs.
  * @param {() => string} opts.cmd - Returns the randomized base command token (without prefix).
- * @param {(client: Client, channel: TextChannel, msg: Object) => Promise<void>} [opts.onResult] - Optional handler run against the sent message's reply.
+ * @param {(ctx: Client, channel: TextChannel, msg: Object) => Promise<void>} [opts.onResult] - Optional handler run against the sent message's reply.
  * @returns {void} Self-reschedules via setTimeout; does not return a value.
  */
-async function farmAction(client, channel, { type, cmd, onResult }) {
-    await client.globalutil.waitWhileBusy(client);
-    while (client.global.use || client.global[type]) {
-        await client.delay(16000);
+async function farmAction(ctx, channel, { type, cmd, onResult }) {
+    await ctx.globalutil.waitWhileBusy(ctx);
+    while (ctx.global.use || ctx.global[type]) {
+        await ctx.delay(16000);
     }
 
     const interval = getrand(
-        client.config.interval[type].min,
-        client.config.interval[type].max,
+        ctx.config.interval[type].min,
+        ctx.config.interval[type].max,
     );
 
     try {
         channel.sendTyping();
-        if (client.global[type === "hunt" ? "battle" : "hunt"])
-            await client.delay(1500);
-        client.global[type] = true;
+        if (ctx.global[type === "hunt" ? "battle" : "hunt"])
+            await ctx.delay(1500);
+        ctx.global[type] = true;
         const msg = await channel.send({
-            content: `${client.prefix()} ${cmd()}`,
+            content: `${ctx.prefix()} ${cmd()}`,
         });
-        client.global.total[type]++;
-        client.logger.info(
+        ctx.global.total[type]++;
+        ctx.logger.info(
             "Farm",
             capitalize(type),
-            `Total ${type}: ${client.global.total[type]}`,
+            `Total ${type}: ${ctx.global.total[type]}`,
         );
 
-        if (onResult) await onResult(client, channel, msg);
-        await client.delay(1000);
+        if (onResult) await onResult(ctx, channel, msg);
+        await ctx.delay(1000);
     } catch (err) {
-        client.logger.alert(
+        ctx.logger.alert(
             "Farm",
             capitalize(type),
             `Error while ${type}ing: ${err}`,
         );
-        client.logger.debug(err);
+        ctx.logger.debug(err);
     } finally {
-        client.global[type] = false;
-        client.loops.schedule(
+        ctx.global[type] = false;
+        ctx.loops.schedule(
             () => {
-                farmAction(client, channel, { type, cmd, onResult });
+                farmAction(ctx, channel, { type, cmd, onResult });
             },
             interval,
             `farm:${type}`,
@@ -112,21 +112,21 @@ async function farmAction(client, channel, { type, cmd, onResult }) {
  *
  * Only runs when gem usage is enabled in config. Waits for OwO's hunt-result
  * reply (a catch or "You found:" message newer than the sent command), then
- * recomputes `client.global.gems.need`: any of the `REQUIRED_GEMS` missing from
+ * recomputes `ctx.global.gems.need`: any of the `REQUIRED_GEMS` missing from
  * the message, plus the event `star` the first time it is expected (and clears
  * the event flag if it never appears). When items are missing, {@link
  * handleMissingGems} is invoked to decide how to resolve them.
  *
- * @param {Client} client - The Discord client instance; holds gem and event state.
+ * @param {Client} ctx - The Discord ctx instance; holds gem and event state.
  * @param {TextChannel} channel - The text channel where the hunt was sent.
  * @param {Object} huntmsg - The message object of the sent hunt command (used as a reply floor).
  * @returns {Promise<void>} Resolves once gem needs are computed (or aborts on timeout/empty result).
  */
-async function huntResult(client, channel, huntmsg) {
-    if (!client.config.settings.inventory.use.gems) return;
+async function huntResult(ctx, channel, huntmsg) {
+    if (!ctx.config.settings.inventory.use.gems) return;
 
-    const message = await client.globalutil.waitForMessage(
-        client,
+    const message = await ctx.globalutil.waitForMessage(
+        ctx,
         channel,
         (msg) =>
             (msg.content.includes("and caught a") ||
@@ -137,39 +137,35 @@ async function huntResult(client, channel, huntmsg) {
     );
 
     if (message == null) {
-        client.logger.alert(
-            "Farm",
-            "Hunt",
-            "Couldn't retrieve hunting result!",
-        );
+        ctx.logger.alert("Farm", "Hunt", "Couldn't retrieve hunting result!");
         return;
     }
 
     const huntmsgcontent = message.content;
-    client.global.gems.need = [];
-    client.global.gems.use = "";
-    client.global.gems.huntssinceinv++;
+    ctx.global.gems.need = [];
+    ctx.global.gems.use = "";
+    ctx.global.gems.huntssinceinv++;
 
     if (!huntmsgcontent) return;
 
     for (const gem of REQUIRED_GEMS) {
-        if (!huntmsgcontent.includes(gem)) client.global.gems.need.push(gem);
+        if (!huntmsgcontent.includes(gem)) ctx.global.gems.need.push(gem);
     }
 
-    if (client.global.gems.isevent) {
+    if (ctx.global.gems.isevent) {
         if (!huntmsgcontent.includes("star")) {
-            if (!client.global.temp.usedevent) {
-                client.global.gems.need.push("star");
-                client.global.temp.usedevent = true;
+            if (!ctx.global.temp.usedevent) {
+                ctx.global.gems.need.push("star");
+                ctx.global.temp.usedevent = true;
             } else {
-                client.global.gems.isevent = false;
-                client.logger.info("Farm", "Hunt", "Event not found");
+                ctx.global.gems.isevent = false;
+                ctx.logger.info("Farm", "Hunt", "Event not found");
             }
-        } else client.global.temp.usedevent = false;
+        } else ctx.global.temp.usedevent = false;
     }
 
-    if (client.global.gems.need.length > 0) {
-        handleMissingGems(client, channel, message.content);
+    if (ctx.global.gems.need.length > 0) {
+        handleMissingGems(ctx, channel, message.content);
     }
 }
 
@@ -185,28 +181,24 @@ async function huntResult(client, channel, huntmsg) {
  *
  * No-op when the inventory command is disabled in config.
  *
- * @param {Client} client - The Discord client instance; holds gem/inventory state.
+ * @param {Client} ctx - The Discord ctx instance; holds gem/inventory state.
  * @param {TextChannel} channel - The text channel where commands are sent.
  * @param {string} huntContent - Raw content of the hunt result message.
  * @returns {void} May schedule inventory runs via setTimeout; does not return a value.
  */
-function handleMissingGems(client, channel, huntContent) {
-    client.logger.warn(
-        "Farm",
-        "Hunt",
-        `Missing gems: ${client.global.gems.need}`,
-    );
-    if (!client.basic.commands.inventory) return;
+function handleMissingGems(ctx, channel, huntContent) {
+    ctx.logger.warn("Farm", "Hunt", `Missing gems: ${ctx.global.gems.need}`);
+    if (!ctx.basic.commands.inventory) return;
 
-    if (!client.global.gems.missingHandled) {
-        client.global.gems.missingHandled = true;
-        client.global.gems.huntssinceinv = 0;
+    if (!ctx.global.gems.missingHandled) {
+        ctx.global.gems.missingHandled = true;
+        ctx.global.gems.huntssinceinv = 0;
         channel.send({
-            content: `${client.prefix()} ${commandrandomizer(["lb", "lootbox"])} all`,
+            content: `${ctx.prefix()} ${commandrandomizer(["lb", "lootbox"])} all`,
         });
-        client.loops.schedule(
+        ctx.loops.schedule(
             () => {
-                require("./inventory.js")(client);
+                require("./inventory.js")(ctx);
             },
             5000,
             "farm:inventory",
@@ -215,10 +207,10 @@ function handleMissingGems(client, channel, huntContent) {
     }
 
     if (huntContent?.includes("lootbox")) {
-        client.global.gems.huntssinceinv = 0;
-        client.loops.schedule(
+        ctx.global.gems.huntssinceinv = 0;
+        ctx.loops.schedule(
             () => {
-                require("./inventory.js")(client);
+                require("./inventory.js")(ctx);
             },
             2000,
             "farm:inventory",
@@ -226,11 +218,11 @@ function handleMissingGems(client, channel, huntContent) {
         return;
     }
 
-    if (client.global.gems.huntssinceinv >= getrand(15, 30)) {
-        client.global.gems.huntssinceinv = 0;
-        client.loops.schedule(
+    if (ctx.global.gems.huntssinceinv >= getrand(15, 30)) {
+        ctx.global.gems.huntssinceinv = 0;
+        ctx.loops.schedule(
             () => {
-                require("./inventory.js")(client);
+                require("./inventory.js")(ctx);
             },
             2000,
             "farm:inventory",
@@ -249,13 +241,13 @@ let phrasesCache = null;
  * skips a round (and reschedules) while paused/captcha'd or if the channel is
  * lost. Exits silently when the channel is missing or the phrase list is empty.
  *
- * @param {Client} client - The Discord client instance; provides `fs`, logger and global state.
+ * @param {Client} ctx - The Discord ctx instance; provides `fs`, logger and global state.
  * @param {TextChannel} [channel] - The text channel where phrases are sent; undefined disables the loop.
  * @returns {void} Runs an IIFE that self-schedules; does not return a value.
  */
-function startAutophrases(client, channel) {
+function startAutophrases(ctx, channel) {
     if (!channel) {
-        client.logger.debug(
+        ctx.logger.debug(
             "Farm",
             "Phrases",
             "Commands channel not found, autophrases disabled.",
@@ -266,14 +258,14 @@ function startAutophrases(client, channel) {
     (async () => {
         if (!phrasesCache) {
             try {
-                const data = await client.fs.promises.readFile(
+                const data = await ctx.fs.promises.readFile(
                     `${__dirname}/../core/phrases.json`,
                     "utf8",
                 );
                 const phrasesObject = JSON.parse(data);
                 phrasesCache = phrasesObject.phrases || [];
                 if (!phrasesCache.length) {
-                    client.logger.alert(
+                    ctx.logger.alert(
                         "Farm",
                         "Phrases",
                         "Phrases array is empty.",
@@ -281,7 +273,7 @@ function startAutophrases(client, channel) {
                     return;
                 }
             } catch (err) {
-                client.logger.alert(
+                ctx.logger.alert(
                     "Farm",
                     "Phrases",
                     `Failed to load phrases.json: ${err}`,
@@ -294,13 +286,13 @@ function startAutophrases(client, channel) {
         const MAX_DELAY = 25000;
 
         async function sendPhrase() {
-            if (client.global.captchadetected || client.global.paused) {
+            if (ctx.global.captchadetected || ctx.global.paused) {
                 scheduleNext();
                 return;
             }
 
             if (!channel) {
-                client.logger.debug(
+                ctx.logger.debug(
                     "Farm",
                     "Phrases",
                     "Channel lost, stopping autophrases.",
@@ -309,24 +301,24 @@ function startAutophrases(client, channel) {
             }
 
             try {
-                await client.globalutil.waitWhileBusy(client);
+                await ctx.globalutil.waitWhileBusy(ctx);
 
                 let idx = Math.floor(Math.random() * phrasesCache.length);
                 if (
                     phrasesCache.length > 1 &&
-                    idx === client.global.temp.lastPhraseIndex
+                    idx === ctx.global.temp.lastPhraseIndex
                 ) {
                     idx = (idx + 1) % phrasesCache.length;
                 }
                 const text = phrasesCache[idx];
 
                 await channel.sendTyping();
-                await client.delay(800);
+                await ctx.delay(800);
                 await channel.send({ content: text });
-                client.global.temp.lastPhraseIndex = idx;
-                client.logger.info("Farm", "Phrases", "Successfully sent.");
+                ctx.global.temp.lastPhraseIndex = idx;
+                ctx.logger.info("Farm", "Phrases", "Successfully sent.");
             } catch (err) {
-                client.logger.alert(
+                ctx.logger.alert(
                     "Farm",
                     "Phrases",
                     `Error sending phrase: ${err}`,
@@ -338,11 +330,11 @@ function startAutophrases(client, channel) {
 
         function scheduleNext() {
             const delay = getrand(MIN_DELAY, MAX_DELAY);
-            client.logger.debug("Farm", "Phrases", `Next phrase in ${delay}ms`);
-            client.loops.schedule(sendPhrase, delay, "farm:phrases");
+            ctx.logger.debug("Farm", "Phrases", `Next phrase in ${delay}ms`);
+            ctx.loops.schedule(sendPhrase, delay, "farm:phrases");
         }
 
-        client.logger.info("Farm", "Phrases", "Phrases interval started.");
+        ctx.logger.info("Farm", "Phrases", "Phrases interval started.");
         scheduleNext();
     })();
 }

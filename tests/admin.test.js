@@ -3,6 +3,7 @@ const assert = require("node:assert");
 
 const admin = require("../src/core/admin.js");
 const LoopManager = require("../src/services/loopManager.js");
+const { makeCtx } = require("./helpers/makeCtx.js");
 
 function getCommand(name) {
     return admin.find(
@@ -20,18 +21,16 @@ function makeClient(overrides = {}) {
         ...(overrides.global || {}),
     };
     const { global: _ignored, ...rest } = overrides;
-    // Mirror the pre-existing "already started" state onto the loop manager so
-    // its atomic tryStart() gate agrees with the fixture.
     const loops = new LoopManager();
     if (global.temp?.started) loops.tryStart();
-    return {
+    return makeCtx({
+        client: { destroy: mock.fn() },
         config: { settings: { chatfeedback: false } },
         rpc: mock.fn(),
-        destroy: mock.fn(),
         loops,
         global,
         ...rest,
-    };
+    });
 }
 
 function makeMessage() {
@@ -122,7 +121,7 @@ describe("admin commands", () => {
 
             await getCommand("restart").run(client, message);
 
-            assert.strictEqual(client.destroy.mock.calls.length, 1);
+            assert.strictEqual(client.client.destroy.mock.calls.length, 1);
             assert.strictEqual(message.channel.send.mock.calls.length, 1);
         });
     });

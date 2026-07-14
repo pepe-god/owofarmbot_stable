@@ -8,13 +8,13 @@ const notifier = require("node-notifier");
  * until the user manually dismisses it, prompting them to solve the captcha
  * and resume the bot with the `resume` command in the farm channel.
  *
- * @param {Client} client - The Discord client instance; used to read the active command prefix.
+ * @param {Client} ctx - The Discord ctx instance; used to read the active command prefix.
  * @returns {void} Does not return a value.
  */
-module.exports = (client) => {
+module.exports = (ctx) => {
     notifier.notify({
         title: "Captcha Detected!",
-        message: `Solve the captcha and type ${client.prefix()}resume in farm channel`,
+        message: `Solve the captcha and type ${ctx.prefix()}resume in farm channel`,
         icon: "./assets/captcha.png",
         sound: true,
         wait: true,

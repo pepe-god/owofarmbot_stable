@@ -1,12 +1,11 @@
 const { describe, it, mock, afterEach, beforeEach } = require("node:test");
 const assert = require("node:assert");
 
-// Reset sigintRegistered between test runs by requiring a fresh copy
-delete require.cache[require.resolve("../src/services/logger")];
 const createLogger = require("../src/services/logger");
+const { makeCtx } = require("./helpers/makeCtx.js");
 
 function makeClient(overrides = {}) {
-    return {
+    return makeCtx({
         config: {
             settings: {
                 logging: {
@@ -17,8 +16,9 @@ function makeClient(overrides = {}) {
             },
         },
         global: { type: "test" },
+        logger: { dumpExitLog: () => {} },
         ...overrides,
-    };
+    });
 }
 
 describe("Logger", () => {
@@ -26,8 +26,8 @@ describe("Logger", () => {
         mock.restoreAll();
     });
 
-    it("uses default logLength when client has no logging config", () => {
-        const logger = createLogger({ global: { type: "test" } });
+    it("uses default logLength when ctx has no logging config", () => {
+        const logger = createLogger(makeCtx({ global: { type: "test" } }));
         assert.strictEqual(logger.logLength, 16);
         assert.ok(!logger.exitLog);
     });
@@ -125,25 +125,44 @@ describe("Logger", () => {
     });
 });
 
-describe("Logger SIGINT registration", () => {
-    // Fresh module to test SIGINT registration in isolation
+describe("bootstrap SIGINT registration", () => {
+    let initializeBootstrap;
+    let added;
+
     beforeEach(() => {
-        delete require.cache[require.resolve("../src/services/logger")];
+        delete require.cache[require.resolve("../src/core/bootstrap.js")];
+        initializeBootstrap =
+            require("../src/core/bootstrap.js").initializeBootstrap;
+        added = null;
     });
 
-    it("registers SIGINT listener on first instance", () => {
-        const createLogger = require("../src/services/logger");
+    afterEach(() => {
+        if (added) {
+            process.removeListener("SIGINT", added);
+            added = null;
+        }
+        mock.restoreAll();
+    });
+
+    it("registers SIGINT listener on first call", () => {
         const before = process.listeners("SIGINT").length;
-        createLogger(makeClient());
-        assert.strictEqual(process.listeners("SIGINT").length, before + 1);
+        initializeBootstrap(makeClient());
+        const after = process.listeners("SIGINT");
+        assert.strictEqual(after.length, before + 1);
+        added = after[after.length - 1];
     });
 
-    it("does NOT add duplicate listener on second instance", () => {
-        const createLogger = require("../src/services/logger");
-        createLogger(makeClient());
-        const afterFirst = process.listeners("SIGINT").length;
+    it("does NOT add a duplicate listener on second call", () => {
+        const before = process.listeners("SIGINT").length;
+        initializeBootstrap(makeClient());
+        const afterFirst = process.listeners("SIGINT");
+        assert.strictEqual(afterFirst.length, before + 1);
+        added = afterFirst[afterFirst.length - 1];
 
-        createLogger(makeClient());
-        assert.strictEqual(process.listeners("SIGINT").length, afterFirst);
+        initializeBootstrap(makeClient());
+        assert.strictEqual(
+            process.listeners("SIGINT").length,
+            afterFirst.length,
+        );
     });
 });

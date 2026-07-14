@@ -4,18 +4,18 @@
  * Loads and wires the three core runtime subsystems in order:
  *  1. Anti-crash — global process error listeners
  *  2. Command registration — discovers and registers text/slash commands
- *  3. Event binding — attaches Discord event handlers to the client
+ *  3. Event binding — attaches Discord event handlers to the ctx
  *
- * @param {Client} client - The Discord client instance.
+ * @param {Client} ctx - The Discord ctx instance.
  */
 
 /**
  * Install global process-level error listeners.
  *
  * Catches unhandled promise rejections and uncaught exceptions,
- * logging them through the client's logger before the process exits.
+ * logging them through the ctx's logger before the process exits.
  */
-const setupAntiCrash = (client) => {
+const setupAntiCrash = (ctx) => {
     const logError = (type, err, origin = null) => {
         const errMessage = `--------------------------------------
 Error: ${err?.message || err}
@@ -23,7 +23,7 @@ Stack: ${err?.stack || "No stack trace available"}
 Origin: ${origin || "N/A"}
 --------------------------------------`;
 
-        client.logger.alert(
+        ctx.logger.alert(
             "Bot",
             "Anticrash",
             `An crash happened! ${type}\n${errMessage}`,
@@ -45,24 +45,24 @@ Origin: ${origin || "N/A"}
  * Supports both single-command and multi-command exports (arrays).
  * Registers aliases if present.
  *
- * @param {Client} client - The Discord client instance.
+ * @param {Client} ctx - The Discord ctx instance.
  * @param {Function|Function[]} pull - Exported command(s) from file.
  */
-const registerCommand = (client, pull) => {
+const registerCommand = (ctx, pull) => {
     const list = Array.isArray(pull) ? pull : [pull];
     for (const cmd of list) {
         if (!cmd.config?.name) continue;
-        client.commands.set(cmd.config.name, cmd);
+        ctx.client.commands.set(cmd.config.name, cmd);
         if (cmd.config.aliases)
             for (const a of cmd.config.aliases)
-                client.aliases.set(a, cmd.config.name);
+                ctx.client.aliases.set(a, cmd.config.name);
     }
 };
 
 /**
  * Discover and register all commands/events from src/core/.
  */
-const registerCommands = (client) => {
+const registerCommands = (ctx) => {
     // These files are infrastructure (loader, helpers, standalone CLIs),
     // not commands or events, so they must be skipped during discovery.
     const EXCLUDE = new Set([
@@ -72,7 +72,7 @@ const registerCommands = (client) => {
         "autovote.js",
     ]);
     // Scan the core directory and keep only plain .js modules.
-    const files = client.fs
+    const files = ctx.fs
         .readdirSync(__dirname)
         .filter((d) => d.endsWith(".js") && !EXCLUDE.has(d));
     for (const file of files) {
@@ -81,12 +81,12 @@ const registerCommands = (client) => {
             // A module exporting a function is treated as an event handler
             // (event name = filename). Anything else is command definitions.
             if (typeof pull === "function") {
-                bindEvent(client, file, pull);
+                bindEvent(ctx, file, pull);
             } else {
-                registerCommand(client, pull);
+                registerCommand(ctx, pull);
             }
         } catch (err) {
-            client.logger.alert(
+            ctx.logger.alert(
                 "Handler",
                 "Discovery",
                 `Failed to load ${file}: ${err.message}`,
@@ -96,16 +96,16 @@ const registerCommands = (client) => {
 };
 
 /**
- * Bind a single event file to the client.
+ * Bind a single event file to the ctx.
  * The event name is derived from the filename (without .js).
  *
- * @param {Client} client - The Discord client instance.
+ * @param {Client} ctx - The Discord ctx instance.
  * @param {string} file - Event filename (e.g. "messageCreate.js").
  * @param {Function} evt - Exported handler function from the event module.
  */
-const bindEvent = (client, file, evt) => {
+const bindEvent = (ctx, file, evt) => {
     const eName = file.split(".")[0];
-    client.on(eName, evt.bind(null, client));
+    ctx.client.on(eName, evt.bind(null, ctx));
 };
 
 /**
@@ -116,7 +116,7 @@ const bindEvent = (client, file, evt) => {
  *  2. Command registration
  *  3. Event binding
  */
-module.exports = (client) => {
-    setupAntiCrash(client);
-    registerCommands(client);
+module.exports = (ctx) => {
+    setupAntiCrash(ctx);
+    registerCommands(ctx);
 };

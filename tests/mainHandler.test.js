@@ -2,6 +2,8 @@ const { describe, it, mock, afterEach, beforeEach } = require("node:test");
 const assert = require("node:assert");
 const path = require("node:path");
 
+const { makeCtx } = require("./helpers/makeCtx.js");
+
 const MAIN_HANDLER_DIR = path.dirname(
     require.resolve("../src/services/mainHandler.js"),
 );
@@ -52,7 +54,7 @@ describe("mainHandler", () => {
     }
 
     function baseClient() {
-        return {
+        return makeCtx({
             config: {
                 settings: {
                     owoprefix: "owo",
@@ -74,9 +76,9 @@ describe("mainHandler", () => {
             },
             globalutil: { waitWhileBusy: async () => {} },
             delay: async () => {},
-            channels: { cache: { get: () => null } },
+            client: { channels: { cache: { get: () => null } } },
             logger: { info: () => {}, warn: () => {}, alert: () => {} },
-        };
+        });
     }
 
     it("sets default owoprefix when empty", async () => {

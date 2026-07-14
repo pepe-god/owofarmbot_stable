@@ -2,6 +2,7 @@ const { describe, it, mock } = require("node:test");
 const assert = require("node:assert");
 
 const messageCreate = require("../src/core/messageCreate.js");
+const { makeCtx } = require("./helpers/makeCtx.js");
 
 const {
     isWebCaptchaMessage,
@@ -14,7 +15,7 @@ const {
 // --- Mock factories ---
 
 function makeClient(overrides = {}) {
-    const client = {
+    const obj = {
         config: {
             settings: {
                 autoresume: false,
@@ -47,7 +48,6 @@ function makeClient(overrides = {}) {
             total: { captcha: 0, solvedcaptcha: 0 },
             temp: {},
         },
-        user: { id: "123" },
         prefix: () => "owo",
         logger: {
             info: () => {},
@@ -57,9 +57,10 @@ function makeClient(overrides = {}) {
         },
         delay: async () => {},
         childprocess: { spawn: () => {}, exec: () => {} },
+        client: { user: { id: "123" } },
         ...overrides,
     };
-    return client;
+    return makeCtx(obj);
 }
 
 function makeMessage({
@@ -348,14 +349,16 @@ describe("handleCommand", () => {
         const run = mock.fn();
         commands.set("hunt", { run });
         aliases.set("h", "hunt");
-        return {
-            user: { id: "123" },
+        return makeCtx({
             basic: { userid: "123" },
             prefix: () => "owo",
-            commands,
-            aliases,
+            client: {
+                user: { id: "123" },
+                commands,
+                aliases,
+            },
             ...overrides,
-        };
+        });
     }
 
     it("runs a known command with the prefix", () => {
@@ -365,7 +368,7 @@ describe("handleCommand", () => {
             author: { id: "123" },
         });
         assert.strictEqual(
-            client.commands.get("hunt").run.mock.calls.length,
+            client.client.commands.get("hunt").run.mock.calls.length,
             1,
         );
     });
@@ -377,7 +380,7 @@ describe("handleCommand", () => {
             author: { id: "123" },
         });
         assert.strictEqual(
-            client.commands.get("hunt").run.mock.calls.length,
+            client.client.commands.get("hunt").run.mock.calls.length,
             1,
         );
     });
@@ -389,7 +392,7 @@ describe("handleCommand", () => {
             author: { id: "123" },
         });
         assert.strictEqual(
-            client.commands.get("hunt").run.mock.calls.length,
+            client.client.commands.get("hunt").run.mock.calls.length,
             1,
         );
     });
@@ -401,7 +404,7 @@ describe("handleCommand", () => {
             author: { id: "123" },
         });
         assert.strictEqual(
-            client.commands.get("hunt").run.mock.calls.length,
+            client.client.commands.get("hunt").run.mock.calls.length,
             0,
         );
     });
@@ -413,7 +416,7 @@ describe("handleCommand", () => {
             author: { id: "999" },
         });
         assert.strictEqual(
-            client.commands.get("hunt").run.mock.calls.length,
+            client.client.commands.get("hunt").run.mock.calls.length,
             0,
         );
     });

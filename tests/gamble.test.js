@@ -1,12 +1,7 @@
 const { describe, it, mock, afterEach } = require("node:test");
 const assert = require("node:assert");
 
-function makeClient() {
-    return {
-        global: { gamble: { cowoncywon: 0 } },
-        logger: { info: () => {}, warn: () => {}, alert: () => {} },
-    };
-}
+const { makeCtx } = require("./helpers/makeCtx.js");
 
 function makeGame(overrides = {}) {
     return {
@@ -29,7 +24,7 @@ describe("gamble", () => {
     describe("processResult", () => {
         it("returns default bet on coinflip win", () => {
             const gamble = require("../src/modules/gamble.js");
-            const client = makeClient();
+            const client = makeCtx();
             const game = makeGame();
             const logs = [];
             client.logger.info = (_, __, msg) => logs.push(msg);
@@ -48,7 +43,7 @@ describe("gamble", () => {
 
         it("returns multiplied bet on coinflip loss", () => {
             const gamble = require("../src/modules/gamble.js");
-            const client = makeClient();
+            const client = makeCtx();
             client.global.gamble.cowoncywon = 500;
             const game = makeGame();
             const logs = [];
@@ -68,7 +63,7 @@ describe("gamble", () => {
 
         it("caps loss bet at maxBet", () => {
             const gamble = require("../src/modules/gamble.js");
-            const client = makeClient();
+            const client = makeCtx();
             const game = makeGame({ maxBet: 150 });
 
             const result = gamble.processResult(
@@ -84,7 +79,7 @@ describe("gamble", () => {
 
         it("returns default bet on slot win", () => {
             const gamble = require("../src/modules/gamble.js");
-            const client = makeClient();
+            const client = makeCtx();
             const game = makeGame({
                 defaultBet: 50,
                 maxBet: 500,
@@ -115,7 +110,7 @@ describe("gamble", () => {
 
         it("returns multiplied bet on slot loss", () => {
             const gamble = require("../src/modules/gamble.js");
-            const client = makeClient();
+            const client = makeCtx();
             const game = makeGame({
                 defaultBet: 50,
                 maxBet: 500,
@@ -141,7 +136,7 @@ describe("gamble", () => {
 
         it("returns null when no win or loss detected", () => {
             const gamble = require("../src/modules/gamble.js");
-            const client = makeClient();
+            const client = makeCtx();
             const game = makeGame();
 
             const result = gamble.processResult(

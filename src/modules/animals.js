@@ -9,17 +9,17 @@ const { getrand } = require("../core/globalutil.js");
  * On completion (success or error) it reschedules the next run using the
  * randomized `animals` interval defined in config.
  *
- * @param {Client} client - The Discord client instance (carries config, logger and global state).
+ * @param {Client} ctx - The Discord ctx instance (carries config, logger and global state).
  * @param {TextChannel} channel - The text channel where commands are sent.
  * @param {string} choose - The action to perform, either `"sell"` or `"sacrifice"`.
  * @param {string} types - Space-separated animal type suffixes (e.g. `"cow duck"`).
  * @returns {void} This function does not return a value; it self-reschedules via setTimeout.
  */
-module.exports = async function sell(client, channel, choose, types) {
-    if (client.global.captchadetected || client.global.paused) {
-        client.loops.schedule(
+module.exports = async function sell(ctx, channel, choose, types) {
+    if (ctx.global.captchadetected || ctx.global.paused) {
+        ctx.loops.schedule(
             () => {
-                sell(client, channel, choose, types);
+                sell(ctx, channel, choose, types);
             },
             16000,
             "animals",
@@ -29,19 +29,19 @@ module.exports = async function sell(client, channel, choose, types) {
     try {
         channel.sendTyping();
         await channel.send({
-            content: `${client.prefix()} ${choose} ${types}`,
+            content: `${ctx.prefix()} ${choose} ${types}`,
         });
     } catch (err) {
-        client.logger.alert("Farm", "Sell", `Failed to sell: ${err}`);
-        client.logger.debug(err);
+        ctx.logger.alert("Farm", "Sell", `Failed to sell: ${err}`);
+        ctx.logger.debug(err);
     } finally {
-        client.loops.schedule(
+        ctx.loops.schedule(
             () => {
-                sell(client, channel, choose, types);
+                sell(ctx, channel, choose, types);
             },
             getrand(
-                client.config.interval.animals.min,
-                client.config.interval.animals.max,
+                ctx.config.interval.animals.min,
+                ctx.config.interval.animals.max,
             ),
             "animals",
         );

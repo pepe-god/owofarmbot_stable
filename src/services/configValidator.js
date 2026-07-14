@@ -42,7 +42,7 @@ const RARITY_MAP = {
 
 /**
  * Maps animal type names to the suffix character OwO uses in commands.
- * Built by `parseAnimalTypes` into `client.global.temp.animaltype`.
+ * Built by `parseAnimalTypes` into `ctx.global.temp.animaltype`.
  * @type {Object.<string, string>}
  */
 const ANIMAL_TYPE_MAP = {
@@ -81,12 +81,12 @@ const INTERVAL_DEFAULTS = [
 /**
  * Log a config-related alert message.
  *
- * @param {Client} client - The Discord client instance; used for logging.
+ * @param {Client} ctx - The Discord ctx instance; used for logging.
  * @param {string} err - The human-readable conflict description.
  * @returns {void}
  */
-const showerr = (client, err) => {
-    client.logger.alert("Bot", "Config", `Config conflict: ${err}`);
+const showerr = (ctx, err) => {
+    ctx.logger.alert("Bot", "Config", `Config conflict: ${err}`);
 };
 
 /**
@@ -94,9 +94,9 @@ const showerr = (client, err) => {
  *
  * @returns {boolean} True if token is valid.
  */
-const checkToken = (config, client) => {
+const checkToken = (config, ctx) => {
     if (config.main.token && config.main.token.length >= 10) return true;
-    showerr(client, "Main token is missing or invalid! Set MAIN_TOKEN in .env");
+    showerr(ctx, "Main token is missing or invalid! Set MAIN_TOKEN in .env");
     return false;
 };
 
@@ -106,7 +106,7 @@ const checkToken = (config, client) => {
  *
  * @returns {boolean} True if all channel IDs are unique.
  */
-const checkDuplicateChannels = (config, client) => {
+const checkDuplicateChannels = (config, ctx) => {
     const vars = [
         config.main.commandschannelid,
         config.main.huntbotchannelid,
@@ -116,7 +116,7 @@ const checkDuplicateChannels = (config, client) => {
     for (let i = 0; i < vars.length; i++) {
         for (let j = i + 1; j < vars.length; j++) {
             if (vars[i] === vars[j] && vars[i].length > 0) {
-                showerr(client, "There are some duplicate channel id!");
+                showerr(ctx, "There are some duplicate channel id!");
                 console.log(
                     "Please use four different channel for one tokentype for best efficiency!",
                 );
@@ -134,17 +134,17 @@ const checkDuplicateChannels = (config, client) => {
  * Enforce mutual exclusion between pray and curse. Only pray is kept active
  * if both are enabled.
  *
- * @param {Client} client - The Discord client instance; may disable `basic.curse`.
+ * @param {Client} ctx - The Discord ctx instance; may disable `basic.curse`.
  * @param {Object} config - The resolved config; `main.commands.curse` may be turned off.
  * @returns {void}
- * @sideeffect Disables `config.main.commands.curse` and `client.basic.curse` when both are enabled, and logs a conflict.
+ * @sideeffect Disables `config.main.commands.curse` and `ctx.basic.curse` when both are enabled, and logs a conflict.
  */
-const checkPrayCurseConflict = (client, config) => {
+const checkPrayCurseConflict = (ctx, config) => {
     if (config.main.commands.pray && config.main.commands.curse) {
         config.main.commands.curse = false;
-        client.basic.curse = false;
+        ctx.basic.curse = false;
         showerr(
-            client,
+            ctx,
             "Curse and pray cannot be turn on at the same time! By default pray will be used.",
         );
     }
@@ -155,14 +155,14 @@ const checkPrayCurseConflict = (client, config) => {
  *
  * @returns {boolean} True if all enabled game amounts are valid.
  */
-const checkGambleAmount = (config, client) => {
+const checkGambleAmount = (config, ctx) => {
     const { coinflip, slot } = config.main.commands.gamble;
     const amounts = config.settings.gamble;
     if (
         (coinflip && amounts.coinflip.default_amount <= 0) ||
         (slot && amounts.slot.default_amount <= 0)
     ) {
-        showerr(client, "Invalid gamble amount!");
+        showerr(ctx, "Invalid gamble amount!");
         return false;
     }
     return true;
@@ -174,41 +174,41 @@ const checkGambleAmount = (config, client) => {
  *
  * @returns {boolean} True if the rarity string was valid.
  */
-const parseGemRarity = (client) => {
-    if (!client.basic.maximum_gem_rarity?.length) return true;
-    const rarity = client.basic.maximum_gem_rarity.toLowerCase();
+const parseGemRarity = (ctx) => {
+    if (!ctx.basic.maximum_gem_rarity?.length) return true;
+    const rarity = ctx.basic.maximum_gem_rarity.toLowerCase();
     const level = RARITY_MAP[rarity];
     if (level !== undefined) {
-        client.global.rareLevel = level;
+        ctx.global.rareLevel = level;
         return true;
     }
-    client.logger.warn(
-        `Bot${client.chalk.white(" >> ")}${client.global.type}`,
+    ctx.logger.warn(
+        `Bot${ctx.chalk.white(" >> ")}${ctx.global.type}`,
         "Config",
         "Gem rarity: Invalid value. Valid value is: \n\tfabled, legendary, mythical, epic, rare, uncommon, common",
     );
-    client.global.rareLevel = 7;
+    ctx.global.rareLevel = 7;
     return false;
 };
 
 /**
  * Build a concatenated string of enabled animal type suffixes from config.
- * The resulting string is stored in `client.global.temp.animaltype` and
+ * The resulting string is stored in `ctx.global.temp.animaltype` and
  * appended to animal sell/sacrifice commands.
  *
  * @returns {boolean} True if at least one animal type is enabled.
  */
-const parseAnimalTypes = (client) => {
-    if (!client.basic.commands.animals) return true;
-    const animaltypes = client.config.animals.animaltype;
+const parseAnimalTypes = (ctx) => {
+    if (!ctx.basic.commands.animals) return true;
+    const animaltypes = ctx.config.animals.animaltype;
     for (const [type, isEnabled] of Object.entries(animaltypes)) {
         if (!isEnabled) continue;
         const suffix = ANIMAL_TYPE_MAP[type];
-        if (suffix) client.global.temp.animaltype += suffix;
+        if (suffix) ctx.global.temp.animaltype += suffix;
     }
-    if (client.global.temp.animaltype.length > 0) return true;
-    client.logger.warn(
-        `Bot${client.chalk.white(" >> ")}${client.global.type}`,
+    if (ctx.global.temp.animaltype.length > 0) return true;
+    ctx.logger.warn(
+        `Bot${ctx.chalk.white(" >> ")}${ctx.global.type}`,
         "Config",
         "Animals: no active animaltype found!?",
     );
@@ -220,13 +220,10 @@ const parseAnimalTypes = (client) => {
  *
  * @returns {boolean} True if the conflict does not exist.
  */
-const checkSellSacrificeConflict = (config, client) => {
-    if (!client.basic.commands.animals) return true;
+const checkSellSacrificeConflict = (config, ctx) => {
+    if (!ctx.basic.commands.animals) return true;
     if (config.animals.type.sell && config.animals.type.sacrifice) {
-        showerr(
-            client,
-            "Sell and sacrifice cannot be turn on at the same time!",
-        );
+        showerr(ctx, "Sell and sacrifice cannot be turn on at the same time!");
         return false;
     }
     return true;
@@ -237,18 +234,18 @@ const checkSellSacrificeConflict = (config, client) => {
  * INTERVAL_DEFAULTS. Warns and resets any out-of-range values.
  *
  * @param {Object} config - The resolved config; `config.interval[type]` values may be mutated.
- * @param {Client} client - The Discord client instance; used for warnings.
+ * @param {Client} ctx - The Discord ctx instance; used for warnings.
  * @returns {void}
  * @sideeffect Resets out-of-range `config.interval[type].min`/`max` to the defaults and logs each correction.
  */
-const validateIntervals = (config, client) => {
+const validateIntervals = (config, ctx) => {
     const intervals = ["hunt", "battle", "pray", "coinflip", "slot", "animals"];
     const missingValue = intervals.some(
         (type) => !config.interval[type]?.min || !config.interval[type]?.max,
     );
 
     if (missingValue) {
-        showerr(client, "Interval cannot be null!");
+        showerr(ctx, "Interval cannot be null!");
         return;
     }
 
@@ -258,7 +255,7 @@ const validateIntervals = (config, client) => {
         max: maxDefault,
     } of INTERVAL_DEFAULTS) {
         if (config.interval[type].min < minDefault) {
-            client.logger.warn(
+            ctx.logger.warn(
                 "Bot",
                 "Config",
                 `${type} min interval is too low, resetting to default!`,
@@ -269,7 +266,7 @@ const validateIntervals = (config, client) => {
             config.interval[type].max < minDefault ||
             config.interval[type].max < config.interval[type].min
         ) {
-            client.logger.warn(
+            ctx.logger.warn(
                 "Bot",
                 "Config",
                 `${type} max interval is too low or less than min, resetting to default!`,
@@ -287,16 +284,16 @@ const validateIntervals = (config, client) => {
  * Fatal failures log an alert and terminate the process after a short delay.
  * Non-fatal issues are logged as warnings and auto-corrected where possible.
  */
-exports.verifyconfig = async (client, config) => {
-    client.logger.info("Bot", "Config", "Verifying Config... Please wait...");
+exports.verifyconfig = async (ctx, config) => {
+    ctx.logger.info("Bot", "Config", "Verifying Config... Please wait...");
 
     const fatalChecks = [
-        () => checkToken(config, client),
-        () => checkDuplicateChannels(config, client),
-        () => checkGambleAmount(config, client),
-        () => parseGemRarity(client),
-        () => parseAnimalTypes(client),
-        () => checkSellSacrificeConflict(config, client),
+        () => checkToken(config, ctx),
+        () => checkDuplicateChannels(config, ctx),
+        () => checkGambleAmount(config, ctx),
+        () => parseGemRarity(ctx),
+        () => parseAnimalTypes(ctx),
+        () => checkSellSacrificeConflict(config, ctx),
     ];
 
     let ok = true;
@@ -304,23 +301,23 @@ exports.verifyconfig = async (client, config) => {
         if (!check()) ok = false;
     }
 
-    checkPrayCurseConflict(client, config);
-    validateIntervals(config, client);
+    checkPrayCurseConflict(ctx, config);
+    validateIntervals(config, ctx);
 
     if (ok) {
-        client.logger.info(
+        ctx.logger.info(
             "Bot",
             "Config",
             "Config verified, things seem to be okey :3",
         );
     } else {
-        client.logger.alert(
+        ctx.logger.alert(
             "Bot",
             "Config",
             "Config is not verified or contains errors, please check the logs and fix the errors!",
         );
         setTimeout(() => {
-            client.logger.warn("Bot", "Config", "Exiting...");
+            ctx.logger.warn("Bot", "Config", "Exiting...");
             process.exit(1);
         }, 1600);
     }
@@ -330,10 +327,10 @@ exports.verifyconfig = async (client, config) => {
  * Log the full resolved configuration for debugging purposes.
  * Output is sent at debug level so it does not clutter normal startup.
  */
-exports.getconfig = (config, client) => {
+exports.getconfig = (config, ctx) => {
     const packageJson = require("../../package.json");
 
-    client.logger.debug(`OwO Farm Bot Stable - Debug log
+    ctx.logger.debug(`OwO Farm Bot Stable - Debug log
 Basic information
 -------------------------
 Version: ${packageJson.version}

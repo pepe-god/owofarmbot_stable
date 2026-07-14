@@ -9,14 +9,14 @@ const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
  * buff, depending on which option is enabled in config. The actual sending
  * and rescheduling is delegated to {@link prayOrCurse}, which loops itself.
  *
- * @param {Client} client - The Discord client instance; carries config, logger and global state.
+ * @param {Client} ctx - The Discord ctx instance; carries config, logger and global state.
  * @returns {void} This function only kicks off the self-looping handler.
  */
-module.exports = async (client) => {
-    const channel = client.channels.cache.get(client.basic.commandschannelid);
+module.exports = async (ctx) => {
+    const channel = ctx.client.channels.cache.get(ctx.basic.commandschannelid);
 
-    if (client.basic.commands.pray) prayOrCurse(client, channel, "pray");
-    else if (client.basic.commands.curse) prayOrCurse(client, channel, "curse");
+    if (ctx.basic.commands.pray) prayOrCurse(ctx, channel, "pray");
+    else if (ctx.basic.commands.curse) prayOrCurse(ctx, channel, "curse");
 };
 
 /**
@@ -28,41 +28,41 @@ module.exports = async (client) => {
  * count for the action is incremented and logged, and the next run is scheduled
  * after a randomized interval drawn from the `pray` config range.
  *
- * @param {Client} client - The Discord client instance.
+ * @param {Client} ctx - The Discord ctx instance.
  * @param {TextChannel} channel - The text channel where commands are sent.
  * @param {"pray"|"curse"} type - Which luck command to send.
  * @returns {void} Self-reschedules via setTimeout; never resolves a meaningful value.
  */
-async function prayOrCurse(client, channel, type) {
-    await client.globalutil.waitWhileBusy(client);
+async function prayOrCurse(ctx, channel, type) {
+    await ctx.globalutil.waitWhileBusy(ctx);
     const interval = getrand(
-        client.config.interval.pray.min,
-        client.config.interval.pray.max,
+        ctx.config.interval.pray.min,
+        ctx.config.interval.pray.max,
     );
     try {
         channel.sendTyping();
-        const target = client.basic.commands.tomain
-            ? ` <@${client.config.main.userid}>`
+        const target = ctx.basic.commands.tomain
+            ? ` <@${ctx.config.main.userid}>`
             : "";
-        const content = `${client.prefix()}${type}${target}`;
+        const content = `${ctx.prefix()}${type}${target}`;
         await channel.send({ content });
-        client.global.total[type]++;
-        client.logger.info(
+        ctx.global.total[type]++;
+        ctx.logger.info(
             "Farm",
             capitalize(type),
-            `Total ${type}ed time: ${client.global.total[type]}`,
+            `Total ${type}ed time: ${ctx.global.total[type]}`,
         );
     } catch (err) {
-        client.logger.alert(
+        ctx.logger.alert(
             "Farm",
             capitalize(type),
             `Error while ${type}ing: ${err}`,
         );
-        client.logger.debug(err);
+        ctx.logger.debug(err);
     } finally {
-        client.loops.schedule(
+        ctx.loops.schedule(
             () => {
-                prayOrCurse(client, channel, type);
+                prayOrCurse(ctx, channel, type);
             },
             interval,
             `luck:${type}`,

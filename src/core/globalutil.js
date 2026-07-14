@@ -21,24 +21,25 @@ exports.removeInvisibleChars = (str) => {
  * Uses an immediate `messageCreate` listener first, then falls back to a
  * `MessageCollector` after `timeout` ms if no matching message arrives.
  *
- * @param {Client} client - The Discord client.
+ * @param {BotContext} ctx - The bot context (provides the Discord `client` for event listeners).
  * @param {TextChannel} channel - The channel to collect from.
  * @param {Function} filter - Predicate that returns true for the wanted message.
  * @param {number} [timeout=6100] - Milliseconds before collector fallback.
  * @returns {Promise<Message|null>} The matched message or null.
  */
-exports.waitForMessage = (client, channel, filter, timeout = 6100) => {
+exports.waitForMessage = (ctx, channel, filter, timeout = 6100) => {
+    const discord = ctx.client;
     return new Promise((resolve) => {
         const listener = (msg) => {
             if (filter(msg)) {
                 clearTimeout(timer);
-                client.off("messageCreate", listener);
+                discord.off("messageCreate", listener);
                 resolve(msg);
             }
         };
 
         const timer = setTimeout(() => {
-            client.off("messageCreate", listener);
+            discord.off("messageCreate", listener);
             const collector = channel.createMessageCollector({
                 filter,
                 time: timeout,
@@ -50,7 +51,7 @@ exports.waitForMessage = (client, channel, filter, timeout = 6100) => {
             collector.on("end", () => resolve(null));
         }, timeout);
 
-        client.on("messageCreate", listener);
+        discord.on("messageCreate", listener);
     });
 };
 
@@ -82,17 +83,17 @@ exports.getrand = (min, max) => Math.random() * (max - min) + min;
  *  - inventory: inventory module is currently running.
  *  - checklist: checklist module is currently running.
  *
- * @param {Client} client - The Discord client with `client.global` state.
+ * @param {BotContext} ctx - The bot context (provides `global` state and `delay`).
  * @returns {Promise<void>} Resolves when all flags are clear.
  */
-exports.waitWhileBusy = async (client) => {
+exports.waitWhileBusy = async (ctx) => {
     while (
-        client.global.paused ||
-        client.global.captchadetected ||
-        client.global.inventory ||
-        client.global.checklist
+        ctx.global.paused ||
+        ctx.global.captchadetected ||
+        ctx.global.inventory ||
+        ctx.global.checklist
     ) {
-        await client.delay(3000);
+        await ctx.delay(3000);
     }
 };
 

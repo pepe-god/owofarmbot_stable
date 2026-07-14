@@ -50,17 +50,17 @@ const GAME_CONFIG = {
  * Launches the coinflip loop when enabled, and the slot loop after a 4s stagger
  * when both are enabled, so the two games do not flood the channel at once.
  *
- * @param {Client} client - The Discord client instance; reads `commands.gamble` and `gamblechannelid`.
+ * @param {Client} ctx - The Discord ctx instance; reads `commands.gamble` and `gamblechannelid`.
  * @returns {void} Kicks off {@link playGame} loops; does not return a value.
  */
-module.exports = async (client) => {
-    const channel = client.channels.cache.get(client.basic.gamblechannelid);
+module.exports = async (ctx) => {
+    const channel = ctx.client.channels.cache.get(ctx.basic.gamblechannelid);
 
-    if (client.basic.commands.gamble.coinflip) {
-        playGame("coinflip", client, channel);
-        if (client.basic.commands.gamble.slot) {
-            await client.delay(4000);
-            playGame("slot", client, channel);
+    if (ctx.basic.commands.gamble.coinflip) {
+        playGame("coinflip", ctx, channel);
+        if (ctx.basic.commands.gamble.slot) {
+            await ctx.delay(4000);
+            playGame("slot", ctx, channel);
         }
     }
 };
@@ -72,26 +72,26 @@ module.exports = async (client) => {
  * and returns the new bet amount for the next round (martingale-style
  * on loss, reset to default on win).
  *
- * @param {Client} client - The Discord client instance; carries the gamble tally state.
+ * @param {Client} ctx - The Discord ctx instance; carries the gamble tally state.
  * @param {Object} game - The merged game config including betting settings (defaultBet, maxBet, multiplier).
  * @param {string} content - The raw result message content.
  * @param {number} currentBet - The wager for this round.
  * @returns {{ newBet: number }|null} The next bet amount, or null if the result is indeterminate (neither win nor loss).
  */
-function processResult(client, game, content, currentBet) {
+function processResult(ctx, game, content, currentBet) {
     const isWin = game.checkWin(content);
     const isLoss = !isWin && game.checkLoss(content);
     if (!isWin && !isLoss) return null;
 
     if (isWin) {
         const won = game.parseWin(content, currentBet);
-        client.global.gamble.cowoncywon += won;
-        client.logger.info("Farm", game.label, `Won ${won}!`);
+        ctx.global.gamble.cowoncywon += won;
+        ctx.logger.info("Farm", game.label, `Won ${won}!`);
         return { newBet: game.defaultBet };
     }
 
-    client.global.gamble.cowoncywon -= currentBet;
-    client.logger.info("Farm", game.label, `Lost ${currentBet}!`);
+    ctx.global.gamble.cowoncywon -= currentBet;
+    ctx.logger.info("Farm", game.label, `Lost ${currentBet}!`);
     return {
         newBet: Math.min(Math.round(currentBet * game.multiplier), game.maxBet),
     };
@@ -103,21 +103,21 @@ function processResult(client, game, content, currentBet) {
  * Marks the per-game attempt counter, logs the wager, and returns the Discord
  * message id so callers can match OwO's edited/reply result to this bet.
  *
- * @param {Client} client - The Discord client instance.
+ * @param {Client} ctx - The Discord ctx instance.
  * @param {TextChannel} channel - The gamble commands channel.
  * @param {Object} cfg - The game command configuration (from GAME_CONFIG), provides `cmd` and `label`.
  * @param {number} bet - The wager amount.
  * @returns {Promise<string>} The ID of the sent bet message.
  */
-async function sendBet(client, channel, cfg, bet) {
+async function sendBet(ctx, channel, cfg, bet) {
     channel.sendTyping();
-    const content = `${client.prefix()} ${cfg.cmd(bet)}`;
+    const content = `${ctx.prefix()} ${cfg.cmd(bet)}`;
     const msg = await channel.send({ content });
-    client.global.gamble[cfg.label.toLowerCase()]++;
-    client.logger.info(
+    ctx.global.gamble[cfg.label.toLowerCase()]++;
+    ctx.logger.info(
         "Farm",
         cfg.label,
-        `Betting: ${bet}. Total time: ${client.global.gamble[cfg.label.toLowerCase()]}`,
+        `Betting: ${bet}. Total time: ${ctx.global.gamble[cfg.label.toLowerCase()]}`,
     );
     return msg.id;
 }
@@ -133,27 +133,22 @@ async function sendBet(client, channel, cfg, bet) {
  * tears down the other listener. If nothing is collected, the attempt
  * counter is rolled back and a warning is logged.
  *
- * @param {Client} client - The Discord client instance (event emitter for `messageUpdate`).
+ * @param {Client} ctx - The Discord ctx instance (event emitter for `messageUpdate`).
  * @param {TextChannel} channel - The gamble commands channel (source of the collector).
  * @param {string} messageId - ID of the sent bet message, used to filter newer/edited results.
  * @param {Object} game - The merged game config (provides `collectorFilter`, `isFreshResult`, `check*`).
  * @param {{ value: number }} currentBetRef - Mutable reference holding the current wager; updated with the next bet.
  * @returns {void} Registers event listeners and a timeout; does not return a value.
  */
-function setupResultListeners(client, channel, messageId, game, currentBetRef) {
+function setupResultListeners(ctx, channel, messageId, game, currentBetRef) {
     let processed = false;
 
     const handleResult = (content) => {
-        const result = processResult(
-            client,
-            game,
-            content,
-            currentBetRef.value,
-        );
+        const result = processResult(ctx, game, content, currentBetRef.value);
         if (!result) return;
         processed = true;
         currentBetRef.value = result.newBet;
-        client.off("messageUpdate", onUpdate);
+        ctx.client.off("messageUpdate", onUpdate);
         clearTimeout(doublecheck);
     };
 
@@ -184,8 +179,8 @@ function setupResultListeners(client, channel, messageId, game, currentBetRef) {
 
     collector.on("end", (collected) => {
         if (collected.size === 0) {
-            client.global.gamble[game.label.toLowerCase()]--;
-            client.logger.warn(
+            ctx.global.gamble[game.label.toLowerCase()]--;
+            ctx.logger.warn(
                 "Farm",
                 game.label,
                 `Failed to ${game.label.toLowerCase()}!`,
@@ -194,13 +189,13 @@ function setupResultListeners(client, channel, messageId, game, currentBetRef) {
     });
 
     const doublecheck = setTimeout(() => {
-        client.off("messageUpdate", onUpdate);
+        ctx.client.off("messageUpdate", onUpdate);
         if (!processed) {
             collector.stop();
         }
     }, 10000);
 
-    client.on("messageUpdate", onUpdate);
+    ctx.client.on("messageUpdate", onUpdate);
 }
 
 /**
@@ -212,13 +207,13 @@ function setupResultListeners(client, channel, messageId, game, currentBetRef) {
  * resolved round (martingale on loss, reset on win).
  *
  * @param {"coinflip"|"slot"} type - Which game to run.
- * @param {Client} client - The Discord client instance.
+ * @param {Client} ctx - The Discord ctx instance.
  * @param {TextChannel} channel - The gamble commands channel.
  * @returns {void} Starts the internal self-rescheduling `loop()`; does not return a value.
  */
-async function playGame(type, client, channel) {
+async function playGame(type, ctx, channel) {
     const cfg = GAME_CONFIG[type];
-    const settings = client.config.settings.gamble[type];
+    const settings = ctx.config.settings.gamble[type];
     const game = {
         ...cfg,
         defaultBet: settings.default_amount,
@@ -228,36 +223,30 @@ async function playGame(type, client, channel) {
     const currentBetRef = { value: game.defaultBet };
 
     async function loop() {
-        await client.globalutil.waitWhileBusy(client);
+        await ctx.globalutil.waitWhileBusy(ctx);
 
         const interval = getrand(
-            client.config.interval[type].min,
-            client.config.interval[type].max,
+            ctx.config.interval[type].min,
+            ctx.config.interval[type].max,
         );
 
         try {
             const messageId = await sendBet(
-                client,
+                ctx,
                 channel,
                 cfg,
                 currentBetRef.value,
             );
-            setupResultListeners(
-                client,
-                channel,
-                messageId,
-                game,
-                currentBetRef,
-            );
+            setupResultListeners(ctx, channel, messageId, game, currentBetRef);
         } catch (err) {
-            client.logger.alert(
+            ctx.logger.alert(
                 "Farm",
                 game.label,
                 `Error while ${game.label.toLowerCase()}ing: ${err}`,
             );
-            client.logger.debug(err);
+            ctx.logger.debug(err);
         } finally {
-            client.loops.schedule(
+            ctx.loops.schedule(
                 () => {
                     loop();
                 },

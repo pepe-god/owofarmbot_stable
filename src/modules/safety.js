@@ -6,15 +6,15 @@
  * minutes, then automatically resumes and repeats. The cycle is started by
  * scheduling the first pause after the runtime duration.
  *
- * @param {Client} client - The Discord client instance; reads `settings.safety` and mutates `global.paused`.
+ * @param {Client} ctx - The Discord ctx instance; reads `settings.safety` and mutates `global.paused`.
  * @returns {void} Seeds the self-rescheduling pause/resume timers; never returns a value.
  */
-module.exports = async (client) => {
-    const safetyInterval = client.config.settings.safety.pauseafter * 60 * 1000;
-    const pauseDuration = client.config.settings.safety.pausefor * 60 * 1000;
+module.exports = async (ctx) => {
+    const safetyInterval = ctx.config.settings.safety.pauseafter * 60 * 1000;
+    const pauseDuration = ctx.config.settings.safety.pausefor * 60 * 1000;
 
-    client.loops.schedule(
-        () => pause(client, pauseDuration, safetyInterval),
+    ctx.loops.schedule(
+        () => pause(ctx, pauseDuration, safetyInterval),
         safetyInterval,
         "safety:pause",
     );
@@ -27,17 +27,17 @@ module.exports = async (client) => {
  * sets `global.paused`, logs the action, and schedules {@link resume} after
  * `pauseDuration` ms.
  *
- * @param {Client} client - The Discord client instance; mutates `global.paused`.
+ * @param {Client} ctx - The Discord ctx instance; mutates `global.paused`.
  * @param {number} pauseDuration - Cooldown length in ms before resuming.
  * @param {number} safetyInterval - Cooldown length in ms before the next pause.
  * @returns {void} Schedules {@link resume}; does not return a value.
  */
-function pause(client, pauseDuration, safetyInterval) {
-    if (client.global.paused || client.global.captchadetected) return;
-    client.global.paused = true;
-    client.logger.warn("Bot", "Safety", "Safety paused to reduce bot rate.");
-    client.loops.schedule(
-        () => resume(client, pauseDuration, safetyInterval),
+function pause(ctx, pauseDuration, safetyInterval) {
+    if (ctx.global.paused || ctx.global.captchadetected) return;
+    ctx.global.paused = true;
+    ctx.logger.warn("Bot", "Safety", "Safety paused to reduce bot rate.");
+    ctx.loops.schedule(
+        () => resume(ctx, pauseDuration, safetyInterval),
         pauseDuration,
         "safety:resume",
     );
@@ -50,24 +50,24 @@ function pause(client, pauseDuration, safetyInterval) {
  * clearing the pause. Otherwise clears `global.paused`, logs, and schedules the
  * next {@link pause} after `safetyInterval` ms.
  *
- * @param {Client} client - The Discord client instance; mutates `global.paused`.
+ * @param {Client} ctx - The Discord ctx instance; mutates `global.paused`.
  * @param {number} pauseDuration - Cooldown length in ms (passed through to {@link pause}).
  * @param {number} safetyInterval - Cooldown length in ms before the next pause.
  * @returns {void} Schedules the next pause (or a deferred resume); does not return a value.
  */
-function resume(client, pauseDuration, safetyInterval) {
-    if (client.global.captchadetected) {
-        client.loops.schedule(
-            () => resume(client, pauseDuration, safetyInterval),
+function resume(ctx, pauseDuration, safetyInterval) {
+    if (ctx.global.captchadetected) {
+        ctx.loops.schedule(
+            () => resume(ctx, pauseDuration, safetyInterval),
             30000,
             "safety:resume",
         );
         return;
     }
-    client.global.paused = false;
-    client.logger.warn("Bot", "Safety", "Resuming after a safety pause.");
-    client.loops.schedule(
-        () => pause(client, pauseDuration, safetyInterval),
+    ctx.global.paused = false;
+    ctx.logger.warn("Bot", "Safety", "Resuming after a safety pause.");
+    ctx.loops.schedule(
+        () => pause(ctx, pauseDuration, safetyInterval),
         safetyInterval,
         "safety:pause",
     );

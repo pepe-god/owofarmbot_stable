@@ -1,7 +1,5 @@
 const chalk = require("chalk");
 
-let sigintRegistered = false;
-
 /**
  * Lightweight, in-memory logger with colored console output and optional
  * shutdown dump.
@@ -11,42 +9,43 @@ let sigintRegistered = false;
  * and `simpleLogs` (the same lines without color, forwarded to the parent cluster
  * process via `process.send` when running as a worker).
  *
- * A single SIGINT handler is registered process-wide (guarded by the module-level
- * `sigintRegistered` flag) so that, on Ctrl+C, the collected `fullLogs` are
- * flushed to stdout before the process exits — but only when `exitLog` is on.
+ * The buffered `fullLogs` are flushed on shutdown by `dumpExitLog()`, which the
+ * process-wide SIGINT handler (registered in `src/core/bootstrap.js`) calls before
+ * the process exits — but only when `exitLog` is on.
  */
 class Logger {
     /**
-     * Construct a logger bound to a client.
+     * Construct a logger bound to a context.
      *
-     * Reads logging options from `client.config.settings.logging`:
+     * Reads logging options from `ctx.config.settings.logging`:
      *  - `loglength` — max number of recent lines retained in `logs` (default 16).
-     *  - `showlogbeforeexit` + `newlog` — enable the SIGINT shutdown dump.
-     * Registers the process SIGINT handler exactly once for the whole process.
+     *  - `showlogbeforeexit` + `newlog` — enable the shutdown dump.
      *
-     * @param {Client} client - The Discord client instance; provides `config` and `global.type` (used in log formatting).
-     * @sideeffect Lazily registers a process-wide SIGINT handler on first construction.
+     * @param {BotContext} ctx - The bot context; provides `config` and `global.type` (used in log formatting).
      */
-    constructor(client) {
-        this.client = client;
+    constructor(ctx) {
+        this.ctx = ctx;
         this.logs = [];
         this.fullLogs = [];
         this.simpleLogs = [];
 
-        const cfg = client?.config?.settings?.logging || {};
+        const cfg = ctx?.config?.settings?.logging || {};
         this.logLength = cfg.loglength ?? 16;
         this.exitLog = cfg.showlogbeforeexit && cfg.newlog;
+    }
 
-        if (!sigintRegistered) {
-            sigintRegistered = true;
-            process.on("SIGINT", () => {
-                if (this.exitLog && this.fullLogs.length > 0) {
-                    console.log("//START OF LOG//");
-                    for (const log of this.fullLogs) console.log(log);
-                    console.log("//END OF LOG//");
-                }
-                process.exit(0);
-            });
+    /**
+     * Flush the buffered `fullLogs` to stdout, wrapped in marker lines.
+     * No-op unless `exitLog` is enabled and at least one line was captured.
+     * Called by the process-wide SIGINT handler in `src/core/bootstrap.js`.
+     *
+     * @returns {void}
+     */
+    dumpExitLog() {
+        if (this.exitLog && this.fullLogs.length > 0) {
+            console.log("//START OF LOG//");
+            for (const log of this.fullLogs) console.log(log);
+            console.log("//END OF LOG//");
         }
     }
 
@@ -120,7 +119,7 @@ class Logger {
         const msg =
             `${time} ${chalk.white(emoji)} ` +
             `${chalk.blue(chalk.bold(type))}${chalk.white(" >> ")}` +
-            `${chalk.cyan(chalk.bold(this.client.global.type))} > ` +
+            `${chalk.cyan(chalk.bold(this.ctx.global.type))} > ` +
             `${chalk.magenta(module)} > ${color(result)}`;
 
         if (colorName !== "white") {
@@ -131,7 +130,7 @@ class Logger {
 
             const plain =
                 `[${new Date().toLocaleTimeString()}] ${emoji} ${type} >> ` +
-                `${this.client.global.type} > ${module} > ${result}`;
+                `${this.ctx.global.type} > ${module} > ${result}`;
             this.simpleLogs.push(plain);
 
             if (process.send) {
@@ -161,4 +160,4 @@ class Logger {
     }
 }
 
-module.exports = (client) => new Logger(client);
+module.exports = (ctx) => new Logger(ctx);

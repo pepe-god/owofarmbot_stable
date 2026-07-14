@@ -7,6 +7,8 @@ const {
     executeChecklistLine,
 } = require("../src/services/checklist");
 
+const { makeCtx } = require("./helpers/makeCtx.js");
+
 describe("parseChecklistInterval", () => {
     it("parses hours and minutes", () => {
         assert.strictEqual(
@@ -66,7 +68,7 @@ describe("executeChecklistLine", () => {
 
     function makeClient(types = {}, overrides = {}) {
         const spawn = mock.fn();
-        return {
+        return makeCtx({
             config: {
                 settings: {
                     checklist: {
@@ -91,7 +93,7 @@ describe("executeChecklistLine", () => {
             prefix: () => "owo",
             logger: { info: () => {}, warn: () => {} },
             ...overrides,
-        };
+        });
     }
 
     function makeChannel() {

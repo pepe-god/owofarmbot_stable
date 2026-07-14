@@ -85,6 +85,16 @@
             }
         },
         {
+            "includes": ["tests/helpers/makeCtx.js"],
+            "linter": {
+                "rules": {
+                    "suspicious": {
+                        "noControlCharactersInRegex": "off"
+                    }
+                }
+            }
+        },
+        {
             "includes": ["src/services/logger.js"],
             "linter": {
                 "rules": {

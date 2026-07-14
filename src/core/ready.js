@@ -8,43 +8,35 @@ const { OWO_SUPPORT_GUILD_ID } = require("./constants.js");
  * the bot, updates RPC, and triggers `mainHandler` after a short delay.
  * Distinguishes first start from resume-after-pause via `temp.started`.
  *
- * @param {Client} client - The Discord client instance.
+ * @param {Client} ctx - The Discord ctx instance.
  */
-async function handleAutoStart(client) {
+async function handleAutoStart(ctx) {
     // Respect the `autostart` toggle in config.
-    if (!client.basic.autostart) return;
+    if (!ctx.basic.autostart) return;
     // If already running, there is nothing to do.
-    if (!client.global.paused) {
-        return client.logger.warn(
-            "Bot",
-            "AutoStart",
-            "Bot is already working!!!",
-        );
+    if (!ctx.global.paused) {
+        return ctx.logger.warn("Bot", "AutoStart", "Bot is already working!!!");
     }
 
     // Clear a stale captcha flag from a previous session, then unpause.
-    if (client.global.captchadetected) {
-        client.global.captchadetected = false;
+    if (ctx.global.captchadetected) {
+        ctx.global.captchadetected = false;
     }
-    client.global.paused = false;
-    client.rpc("update");
+    ctx.global.paused = false;
+    ctx.rpc("update");
 
     // loops.tryStart() is the single atomic gate for first-start vs. resume.
     // First time -> start the orchestrator; later (after a pause) -> just resume.
-    if (client.loops.tryStart()) {
-        client.global.temp.started = true;
-        client.logger.info("Bot", "AutoStart", "BOT started have fun ;)");
+    if (ctx.loops.tryStart()) {
+        ctx.global.temp.started = true;
+        ctx.logger.info("Bot", "AutoStart", "BOT started have fun ;)");
 
-        // Small delay so the client/RPC is fully settled before orchestrating.
+        // Small delay so the ctx/RPC is fully settled before orchestrating.
         setTimeout(() => {
-            require("../services/mainHandler.js")(client);
+            require("../services/mainHandler.js")(ctx);
         }, 1000);
     } else {
-        client.logger.info(
-            "Bot",
-            "AutoStart",
-            "Restarted BOT after a pause :3",
-        );
+        ctx.logger.info("Bot", "AutoStart", "Restarted BOT after a pause :3");
     }
 }
 
@@ -54,29 +46,29 @@ async function handleAutoStart(client) {
  *   - RPC durumu güncelleme
  *   - autostart açıksa botu ilk/tekrar başlatma
  */
-module.exports = async (client) => {
-    client.logger.info(
+module.exports = async (ctx) => {
+    ctx.logger.info(
         "Bot",
         "Startup",
-        `${client.chalk.red(`${client.user.username}`)} is ready!`,
+        `${ctx.chalk.red(`${ctx.client.user.username}`)} is ready!`,
     );
-    setupSweeper(client);
+    setupSweeper(ctx);
 
-    client.global.temp.isready = true;
-    if (client.config.settings.autojoingiveaways) {
+    ctx.global.temp.isready = true;
+    if (ctx.config.settings.autojoingiveaways) {
         // Check membership of the OwO support server; giveaways are only
         // auto-joinable if we are a member.
-        const guild = client.guilds.cache.get(OWO_SUPPORT_GUILD_ID);
+        const guild = ctx.client.guilds.cache.get(OWO_SUPPORT_GUILD_ID);
 
         if (guild) {
-            client.logger.info(
+            ctx.logger.info(
                 "Bot",
                 "Startup",
                 "You are in the OwO Bot Support server. I will automatically enter the giveaways :)",
             );
-            client.global.owosupportserver = true;
+            ctx.global.owosupportserver = true;
         } else {
-            client.logger.alert(
+            ctx.logger.alert(
                 "Bot",
                 "Startup",
                 "You are not in the OwO Bot Support server. Please join to the server and restart the bot to automatically enter giveaways",
@@ -84,8 +76,8 @@ module.exports = async (client) => {
         }
     }
 
-    client.rpc("start");
-    await handleAutoStart(client);
+    ctx.rpc("start");
+    await handleAutoStart(ctx);
 };
 
 /**
@@ -93,7 +85,7 @@ module.exports = async (client) => {
  * growth. Runs every 5 minutes and deletes the oldest ~85% of cached
  * messages across all visible channels.
  *
- * @param {Client} botClient - The Discord client instance.
+ * @param {Client} botClient - The Discord ctx instance.
  */
 function setupSweeper(botClient) {
     setInterval(

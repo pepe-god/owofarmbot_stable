@@ -5,19 +5,11 @@
  * Bot runtime bootstrap.
  *
  * Responsibilities:
- *  - Suppress Node deprecation warnings.
  *  - Load configuration and package metadata.
  *  - Build the shared global state object attached to the Discord client.
  *  - Wire Discord Rich Presence (RPC).
  *  - Validate config, then log in and register handlers/commands.
  */
-
-process.emitWarning = (warning, type) => {
-    if (type === "DeprecationWarning") {
-        return;
-    }
-    console.warn(warning);
-};
 
 const cp = require("node:child_process");
 
@@ -30,6 +22,8 @@ const chalk = require("chalk");
 const globalutil = require("./globalutil.js");
 const configValidator = require("../services/configValidator.js");
 const LoopManager = require("../services/loopManager.js");
+const BotContext = require("./botContext.js");
+const { initializeBootstrap } = require("./bootstrap.js");
 
 //client
 const { Client, Collection, RichPresence } = require("discord.js-selfbot-v13");
@@ -119,11 +113,11 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  */
 function rpc(type) {
     const status = new RichPresence(client)
-        .setApplicationId("1253757665520259173")
+        .setApplicationId("1253757665520320259173")
         .setType("PLAYING")
         .setName("OwO Farm Bot Stable")
         .setDetails("Auto Farming")
-        .setState(`${client.global.paused ? "Paused" : "Running"}`)
+        .setState(`${ctx.global.paused ? "Paused" : "Running"}`)
         .setStartTimestamp(Date.now())
         .setAssetsLargeImage("1253758464816054282")
         .setAssetsLargeText("OwO Farm Bot Stable")
@@ -135,40 +129,45 @@ function rpc(type) {
         console.log(
             chalk.blue("RPC") +
                 " > " +
-                chalk.magenta(type) +
+                chalk.magenta("update") +
                 " > " +
-                chalk.green(`${client.global.paused ? "Paused" : "Running"}`),
+                chalk.green(`${ctx.global.paused ? "Paused" : "Running"}`),
         );
     }
 }
 
 /**
- * Attach shared utilities, config, and helpers directly onto the
- * Discord client instance so every module can access them via `client.X`.
- * This avoids passing the same objects through long call chains.
+ * Build the explicit dependency-injection container.
+ *
+ * Previously every service was monkeypatched onto the Discord client
+ * (`Object.assign(client, {...})`), turning `client` into a god object.
+ * Now the dependencies are grouped in a `BotContext` so modules receive an
+ * explicit `ctx` and the Discord client is only used as the Discord API
+ * (`ctx.client`).
  */
-// Attach shared singletons/helpers onto the client so every module can use
-// them without long import/parameter chains. This is the single source of
-// truth for logger, config, delay, global state, etc.
-Object.assign(client, {
-    chalk,
-    fs,
-    notifier,
-    childprocess: cp,
+const prefix = () =>
+    globalutil.commandrandomizer(["owo", config.settings.owoprefix]);
+
+const ctx = new BotContext({
+    client,
     config,
     basic: config.main,
-    delay,
     global: owofarmbot_stable,
-    rpc,
-    logger: require("../services/logger.js")(client),
-    globalutil,
-    // Central lifecycle controller for all self-looping subsystems: owns the
-    // atomic first-start gate and the cancellable timer registry.
     loops: new LoopManager(),
-    // Randomize between "owo" and the configured prefix to look less bot-like.
-    prefix: () =>
-        globalutil.commandrandomizer(["owo", client.config.settings.owoprefix]),
+    globalutil,
+    delay,
+    prefix,
+    chalk,
+    childprocess: cp,
+    notifier,
+    fs,
 });
+// The logger and rpc need the context itself, so wire them in after creation.
+ctx.logger = require("../services/logger.js")(ctx);
+ctx.rpc = rpc;
+
+// Centralize process-wide side effects (emitWarning override + SIGINT dump).
+initializeBootstrap(ctx);
 
 // Show the bot version in process listings (e.g. `ps aux`).
 process.title = `OwO Farm Bot Stable v${packageJson.version}`;
@@ -179,17 +178,17 @@ process.title = `OwO Farm Bot Stable v${packageJson.version}`;
  * validation and login before the process continues.
  */
 (async () => {
-    // 1) Validate config shape, 2) load runtime/extra config into `client`.
-    await configValidator.verifyconfig(client, config);
-    await configValidator.getconfig(config, client);
+    // 1) Validate config shape, 2) load runtime/extra config into `ctx`.
+    await configValidator.verifyconfig(ctx, config);
+    await configValidator.getconfig(config, ctx);
 
     // 3) Wire collections, handlers/events, then log in to Discord.
     await initializeBot();
 
-    client.logger.warn(
+    ctx.logger.warn(
         "Bot",
         "Help",
-        `Use "${client.prefix()}start" to start the bot, "${client.prefix()}resume" to resume, and "${client.prefix()}pause" to pause.`,
+        `Use "${ctx.prefix()}start" to start the bot, "${ctx.prefix()}resume" to resume, and "${ctx.prefix()}pause" to pause.`,
     );
 })();
 
@@ -202,8 +201,8 @@ async function initializeBot() {
     for (const x of ["aliases", "commands"]) client[x] = new Collection();
 
     // Run the consolidated handler loader (anti-crash, commands, events).
-    require("./index.js")(client);
+    require("./index.js")(ctx);
 
-    client.logger.warn("Bot", "Startup", "Logging in...");
-    await client.login(config.main.token);
+    ctx.logger.warn("Bot", "Startup", "Logging in...");
+    await ctx.client.login(config.main.token);
 }

@@ -62,31 +62,31 @@ function findActiveButtons(message, enteredGiveaways, userId) {
  * the message id as entered, then waits 15s before the next click. Click
  * failures are logged but do not abort the remaining queue.
  *
- * @param {Client} client - The Discord client instance; carries `global.total.giveaway` and `delay`.
+ * @param {Client} ctx - The Discord ctx instance; carries `global.total.giveaway` and `delay`.
  * @param {Object.<string, string[]>} enteredGiveaways - Persisted entered state; the user's list is mutated in place.
  * @param {Array<{customId: string, message: Message}>} buttonQueue - Buttons to click, produced by {@link findActiveButtons}.
  * @returns {Promise<void>} Resolves after the whole queue has been processed (success or error per item).
  */
-async function pressButtonsSequentially(client, enteredGiveaways, buttonQueue) {
-    const myEntered = getEnteredList(enteredGiveaways, client.user.id);
+async function pressButtonsSequentially(ctx, enteredGiveaways, buttonQueue) {
+    const myEntered = getEnteredList(enteredGiveaways, ctx.client.user.id);
     for (const { customId, message } of buttonQueue) {
         try {
-            client.logger.info(
+            ctx.logger.info(
                 "Farm",
                 "Auto Join Giveaways",
                 "Joining the giveaway...",
             );
             await message.clickButton(customId);
-            client.logger.info(
+            ctx.logger.info(
                 "Farm",
                 "Auto Join Giveaways",
                 "Successfully joined the giveaway.",
             );
-            client.global.total.giveaway++;
+            ctx.global.total.giveaway++;
             myEntered.push(message.id);
-            await client.delay(15000);
+            await ctx.delay(15000);
         } catch (error) {
-            client.logger.alert(
+            ctx.logger.alert(
                 "Farm",
                 "Auto Join Giveaways",
                 `Error joining giveaway: ${error}`,
@@ -118,23 +118,23 @@ function saveEnteredGiveaways(enteredGiveaways, filePath) {
  * and clicks them sequentially. Channels that are missing or not text channels,
  * and any fetch errors, are logged and skipped.
  *
- * @param {Client} client - The Discord client instance; provides the guild cache and logging.
+ * @param {Client} ctx - The Discord ctx instance; provides the guild cache and logging.
  * @param {Guild} guild - The OwO support guild containing the giveaway channels.
  * @param {Object.<string, string[]>} enteredGiveaways - Persisted entered state (mutated in place as giveaways are joined).
  * @returns {Promise<void>} Resolves after all configured channels have been scanned.
  */
-async function scanChannelGiveaways(client, guild, enteredGiveaways) {
+async function scanChannelGiveaways(ctx, guild, enteredGiveaways) {
     for (const channelId of GIVEAWAY_CHANNEL_IDS) {
         const channel = guild.channels.cache.get(channelId);
         if (channel?.type !== "GUILD_TEXT") {
-            client.logger.alert(
+            ctx.logger.alert(
                 "Farm",
                 "Auto Join Giveaways",
                 `Channel (${channelId}) not found or is not a text channel.`,
             );
             continue;
         }
-        client.logger.info(
+        ctx.logger.info(
             "Farm",
             "Auto Join Giveaways",
             `Searching for messages in channel ${channel.name}...`,
@@ -155,38 +155,38 @@ async function scanChannelGiveaways(client, guild, enteredGiveaways) {
                         ...findActiveButtons(
                             msg,
                             enteredGiveaways,
-                            client.user.id,
+                            ctx.client.user.id,
                         ),
                     );
                 });
 
                 if (buttonQueue.length > 0) {
-                    client.logger.info(
+                    ctx.logger.info(
                         "Farm",
                         "Auto Join Giveaways",
                         `${buttonQueue.length} active and not joined giveaway queued.`,
                     );
                     await pressButtonsSequentially(
-                        client,
+                        ctx,
                         enteredGiveaways,
                         buttonQueue,
                     );
                 } else {
-                    client.logger.warn(
+                    ctx.logger.warn(
                         "Farm",
                         "Auto Join Giveaways",
                         `You have joined all the giveaways in the channel ${channel.name}`,
                     );
                 }
             } else {
-                client.logger.warn(
+                ctx.logger.warn(
                     "Farm",
                     "Auto Join Giveaways",
                     "No giveaways found.",
                 );
             }
         } catch (error) {
-            client.logger.alert(
+            ctx.logger.alert(
                 "Farm",
                 "Auto Join Giveaways",
                 `Error retrieving giveaway messages from ${channel.name}: ${error}`,
@@ -207,15 +207,15 @@ async function scanChannelGiveaways(client, guild, enteredGiveaways) {
  * persists the state, and finally subscribes to `messageCreate` so any new
  * giveaway posted in a watched channel is joined immediately.
  *
- * @param {Client} client - The Discord client instance; provides guilds, logging and `global.devmod`.
+ * @param {Client} ctx - The Discord ctx instance; provides guilds, logging and `global.devmod`.
  * @returns {Promise<void>|void} Resolves after the initial scan (and registers the live listener). Logs an alert and returns early if the guild is missing.
  */
-module.exports = async (client) => {
+module.exports = async (ctx) => {
     let ENTERED_GIVEAWAYS_FILE = path.join(
         __dirname,
         "../../../data/enteredGiveaways.json",
     );
-    if (client.global.devmod) {
+    if (ctx.global.devmod) {
         ENTERED_GIVEAWAYS_FILE = path.join(
             __dirname,
             "../../../developer/enteredGiveaways.json",
@@ -227,19 +227,19 @@ module.exports = async (client) => {
         enteredGiveaways = JSON.parse(fs.readFileSync(ENTERED_GIVEAWAYS_FILE));
     }
 
-    const guild = client.guilds.cache.get(OWO_SUPPORT_GUILD_ID);
+    const guild = ctx.client.guilds.cache.get(OWO_SUPPORT_GUILD_ID);
     if (!guild) {
-        return client.logger.alert(
+        return ctx.logger.alert(
             "Farm",
             "Auto Join Giveaways",
             `Guild (${OWO_SUPPORT_GUILD_ID}) not found.`,
         );
     }
 
-    await scanChannelGiveaways(client, guild, enteredGiveaways);
+    await scanChannelGiveaways(ctx, guild, enteredGiveaways);
     saveEnteredGiveaways(enteredGiveaways, ENTERED_GIVEAWAYS_FILE);
 
-    client.on("messageCreate", async (message) => {
+    ctx.client.on("messageCreate", async (message) => {
         if (
             !GIVEAWAY_CHANNEL_IDS.includes(message.channel.id) ||
             message.author.id !== OWO_ID ||
@@ -250,15 +250,15 @@ module.exports = async (client) => {
         const buttons = findActiveButtons(
             message,
             enteredGiveaways,
-            client.user.id,
+            ctx.client.user.id,
         );
         if (buttons.length > 0) {
-            client.logger.info(
+            ctx.logger.info(
                 "Farm",
                 "Auto Join Giveaways",
                 `New giveaway detected in ${message.channel.name}, joining...`,
             );
-            await pressButtonsSequentially(client, enteredGiveaways, buttons);
+            await pressButtonsSequentially(ctx, enteredGiveaways, buttons);
             saveEnteredGiveaways(enteredGiveaways, ENTERED_GIVEAWAYS_FILE);
         }
     });

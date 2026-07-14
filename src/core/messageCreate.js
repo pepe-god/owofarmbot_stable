@@ -44,28 +44,25 @@ function escapeRegex(str) {
  * Triggers system toast notifications and/or a native OS prompt
  * depending on the alert configuration.
  */
-function sendDesktopNotifications(client) {
+function sendDesktopNotifications(ctx) {
     const showDesktop =
-        !client.config.settings.captcha.autosolve ||
-        client.config.settings.captcha.alerttype.desktop.force;
+        !ctx.config.settings.captcha.autosolve ||
+        ctx.config.settings.captcha.alerttype.desktop.force;
 
     if (
         showDesktop &&
-        client.config.settings.captcha.alerttype.desktop.notification
+        ctx.config.settings.captcha.alerttype.desktop.notification
     ) {
-        require("../modules/captchaNotify.js")(client);
+        require("../modules/captchaNotify.js")(ctx);
     }
-    if (
-        showDesktop &&
-        client.config.settings.captcha.alerttype.desktop.prompt
-    ) {
-        const promptmessage = `Captcha detected! Solve the captcha and type ${client.prefix()}resume in farm channel`;
+    if (showDesktop && ctx.config.settings.captcha.alerttype.desktop.prompt) {
+        const promptmessage = `Captcha detected! Solve the captcha and type ${ctx.prefix()}resume in farm channel`;
         const psCommands = [
             "Add-Type -AssemblyName PresentationFramework",
             "[System.Windows.MessageBox]::" +
                 `Show('${promptmessage}', 'OwO Farm Bot Stable', 'OK', 'Warning')`,
         ];
-        client.childprocess.exec(
+        ctx.childprocess.exec(
             `powershell.exe -ExecutionPolicy Bypass -Command "${psCommands.join("; ")}"`,
         );
     }
@@ -75,23 +72,23 @@ function sendDesktopNotifications(client) {
  * Send a Discord webhook alert when a captcha is detected.
  * Skipped if auto-solve is enabled or webhook URL is not configured.
  */
-function sendWebhookNotification(client) {
-    if (client.config.settings.captcha.autosolve) return;
-    const webhookurl = client.config.settings.captcha.alerttype.webhookurl;
+function sendWebhookNotification(ctx) {
+    if (ctx.config.settings.captcha.autosolve) return;
+    const webhookurl = ctx.config.settings.captcha.alerttype.webhookurl;
     if (
-        !client.config.settings.captcha.alerttype.webhook ||
+        !ctx.config.settings.captcha.alerttype.webhook ||
         !(webhookurl?.length > 10)
     )
         return;
 
     const { WebhookClient } = require("discord.js-selfbot-v13");
     const webhookClient = new WebhookClient({
-        url: client.config.settings.captcha.alerttype.webhookurl,
+        url: ctx.config.settings.captcha.alerttype.webhookurl,
     });
-    let message = `#Token Type: ${client.global.type}\n**🚨Captcha detected!🚨 Solve the captcha**`;
+    let message = `#Token Type: ${ctx.global.type}\n**🚨Captcha detected!🚨 Solve the captcha**`;
 
-    if (!client.config.settings.autoresume) {
-        message += `and type ${client.prefix()}resume in farm channel`;
+    if (!ctx.config.settings.autoresume) {
+        message += `and type ${ctx.prefix()}resume in farm channel`;
     }
 
     webhookClient.send({
@@ -106,29 +103,29 @@ function sendWebhookNotification(client) {
  * Spawns `src/core/captcha.js` for each configured thread, with
  * a 3s stagger between spawns.
  */
-async function launchAutoSolve(client) {
+async function launchAutoSolve(ctx) {
     if (process.platform === "android") {
-        client.logger.warn("Bot", "Captcha", "Unsupported platform!");
+        ctx.logger.warn("Bot", "Captcha", "Unsupported platform!");
         return;
     }
 
-    let spawnthread = client.config.settings.captcha.autosolve_thread;
+    let spawnthread = ctx.config.settings.captcha.autosolve_thread;
     if (Number.isNaN(spawnthread) || spawnthread < 1) {
         spawnthread = 1;
     }
-    client.logger.info(
+    ctx.logger.info(
         "Bot",
         "Captcha",
         `Opening automated Chromium browser... Thread Count: ${spawnthread}`,
     );
 
     for (let spawncount = 0; spawncount < spawnthread; spawncount++) {
-        client.childprocess.spawn("node", [
+        ctx.childprocess.spawn("node", [
             "./core/captcha.js",
-            `--token=${client.basic.token}`,
-            `--userid=${client.user.id}`,
+            `--token=${ctx.basic.token}`,
+            `--userid=${ctx.client.user.id}`,
         ]);
-        await client.delay(3000);
+        await ctx.delay(3000);
     }
 }
 
@@ -139,38 +136,39 @@ async function launchAutoSolve(client) {
  * contains captcha-related phrases before triggering alerts and
  * optional auto-solve.
  */
-async function handleCaptchaDetection(client, message, msgcontent) {
+async function handleCaptchaDetection(ctx, message, msgcontent) {
     // Only react to captchas inside channels we actively farm in (commands,
     // huntbot, gamble, quest, and the OwO DM channel).
     const CHANNEL_IDS = [
-        client.basic.commandschannelid,
-        client.basic.huntbotchannelid,
-        client.basic.gamblechannelid,
-        client.basic.autoquestchannelid,
-        client.basic.owodmchannelid,
+        ctx.basic.commandschannelid,
+        ctx.basic.huntbotchannelid,
+        ctx.basic.gamblechannelid,
+        ctx.basic.autoquestchannelid,
+        ctx.basic.owodmchannelid,
     ];
 
     // Ignore any message not sent in one of the monitored channels.
     if (!CHANNEL_IDS.includes(message.channel.id)) return;
     // OwO must have pinged us directly; otherwise it's not a captcha prompt.
-    if (!message.content.toLowerCase().includes(`<@${client.user.id}>`)) return;
+    if (!message.content.toLowerCase().includes(`<@${ctx.client.user.id}>`))
+        return;
     // Don't re-trigger alerts if a captcha is already being handled.
-    if (client.global.captchadetected) return;
+    if (ctx.global.captchadetected) return;
     // Final gate: the message text must contain a known captcha phrase.
     if (!CAPTCHA_PHRASES.some((p) => msgcontent.includes(p))) return;
 
     // Stop all farming loops and flag the captcha so waitWhileBusy() blocks.
-    client.global.paused = true;
-    client.global.captchadetected = true;
+    ctx.global.paused = true;
+    ctx.global.captchadetected = true;
     // Count it for the runtime stats display.
-    client.global.total.captcha++;
-    client.logger.alert("Bot", "Captcha", "Captcha Detected!");
-    client.logger.info(
+    ctx.global.total.captcha++;
+    ctx.logger.alert("Bot", "Captcha", "Captcha Detected!");
+    ctx.logger.info(
         "Bot",
         "Captcha",
-        `Total Captcha: ${client.global.total.captcha}`,
+        `Total Captcha: ${ctx.global.total.captcha}`,
     );
-    client.logger.warn("Bot", "Captcha", `Bot Paused: ${client.global.paused}`);
+    ctx.logger.warn("Bot", "Captcha", `Bot Paused: ${ctx.global.paused}`);
 
     let helloChristopher, canulickmymonster;
     if (message.components.length > 0 && message.components[0].components[0]) {
@@ -186,15 +184,15 @@ async function handleCaptchaDetection(client, message, msgcontent) {
     }
 
     // Always notify the user; auto-solve (below) is optional.
-    sendDesktopNotifications(client);
-    sendWebhookNotification(client);
+    sendDesktopNotifications(ctx);
+    sendWebhookNotification(ctx);
 
     // Only auto-solve when enabled AND the message links to a web captcha.
     if (
-        client.config.settings.captcha.autosolve &&
+        ctx.config.settings.captcha.autosolve &&
         isWebCaptchaMessage(msgcontent, helloChristopher, canulickmymonster)
     ) {
-        await launchAutoSolve(client);
+        await launchAutoSolve(ctx);
     }
 }
 
@@ -203,27 +201,27 @@ async function handleCaptchaDetection(client, message, msgcontent) {
  *
  * Resets the captcha flag and resumes the bot if autoresume is enabled.
  */
-function handleCaptchaSolved(client, message, msgcontent) {
+function handleCaptchaSolved(ctx, message, msgcontent) {
     if (
         !msgcontent.includes("i have verified") ||
         message.channel.type !== "DM"
     )
         return;
 
-    client.global.captchadetected = false;
-    client.global.total.solvedcaptcha++;
-    if (client.config.settings.autoresume) {
-        client.global.paused = false;
-        client.logger.warn(
+    ctx.global.captchadetected = false;
+    ctx.global.total.solvedcaptcha++;
+    if (ctx.config.settings.autoresume) {
+        ctx.global.paused = false;
+        ctx.logger.warn(
             "Bot",
             "Captcha",
             "Captcha solved. Resuming bot automatically...",
         );
     } else {
-        client.logger.warn(
+        ctx.logger.warn(
             "Bot",
             "Captcha",
-            `Captcha Solved, please resume by using the command "${client.prefix()}resume" to resume`,
+            `Captcha Solved, please resume by using the command "${ctx.prefix()}resume" to resume`,
         );
     }
 }
@@ -235,12 +233,12 @@ function handleCaptchaSolved(client, message, msgcontent) {
  * looks up the registered command, and executes it if the author
  * matches the configured user ID.
  */
-function handleCommand(client, message) {
-    const PREFIX = client.prefix();
+function handleCommand(ctx, message) {
+    const PREFIX = ctx.prefix();
     // Accept either a mention of the bot OR the configured prefix, then any
     // amount of whitespace, as the command trigger.
     const prefixRegex = new RegExp(
-        `^(<@!?${client.user.id}>|${escapeRegex(PREFIX)})\\s*`,
+        `^(<@!?${ctx.client.user.id}>|${escapeRegex(PREFIX)})\\s*`,
     );
     if (!prefixRegex.test(message.content)) return;
 
@@ -254,14 +252,14 @@ function handleCommand(client, message) {
     const command = args.shift().toLowerCase();
     // Look up by exact name, falling back to an alias mapping.
     const cmd =
-        client.commands.get(command) ||
-        client.commands.get(client.aliases.get(command));
+        ctx.client.commands.get(command) ||
+        ctx.client.commands.get(ctx.client.aliases.get(command));
 
     // Unknown command -> ignore. Security gate: only the configured owner
     // user ID may run admin commands.
     if (!cmd) return;
-    if (message.author.id !== client.basic.userid) return;
-    cmd.run(client, message, args);
+    if (message.author.id !== ctx.basic.userid) return;
+    cmd.run(ctx, message, args);
 }
 
 /**
@@ -272,17 +270,17 @@ function handleCommand(client, message) {
  *  2. Captcha solved notification (DM from OwO)
  *  3. User command dispatch
  */
-module.exports = async (client, message) => {
+module.exports = async (ctx, message) => {
     // 408785106942164992 is OwO's official bot ID. Only its messages can
     // contain captcha prompts or "solved" confirmations.
     if (message.author.id === OWO_ID) {
-        const msgcontent = client.globalutil.removeInvisibleChars(
+        const msgcontent = ctx.globalutil.removeInvisibleChars(
             message.content.toLowerCase(),
         );
-        handleCaptchaDetection(client, message, msgcontent);
-        handleCaptchaSolved(client, message, msgcontent);
+        handleCaptchaDetection(ctx, message, msgcontent);
+        handleCaptchaSolved(ctx, message, msgcontent);
     }
-    handleCommand(client, message);
+    handleCommand(ctx, message);
 };
 
 module.exports.isWebCaptchaMessage = isWebCaptchaMessage;

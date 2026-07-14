@@ -2,24 +2,18 @@ const { describe, it, mock, before, after, afterEach } = require("node:test");
 const assert = require("node:assert");
 
 const safety = require("../src/modules/safety.js");
-const LoopManager = require("../src/services/loopManager.js");
+const { makeCtx } = require("./helpers/makeCtx.js");
 
 function makeClient(overrides = {}) {
-    const logs = [];
-    return {
+    return makeCtx({
         config: {
             settings: {
                 safety: { pauseafter: 1, pausefor: 1 },
             },
         },
-        loops: new LoopManager(),
         global: { paused: false, captchadetected: false },
-        logger: {
-            warn: (...args) => logs.push(args),
-            info: () => {},
-        },
         ...overrides,
-    };
+    });
 }
 
 describe("safety", () => {
