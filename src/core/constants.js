@@ -7,7 +7,7 @@
  */
 
 // OwO (408785106942164992) is the only bot that can issue captcha prompts,
-// quest logs, hunt results, inventory replies, etc.
+// hunt results, inventory replies, etc.
 const OWO_ID = "408785106942164992";
 
 // Unpacked hCaptcha solver extension shipped under src/vendor/hcaptchasolver.

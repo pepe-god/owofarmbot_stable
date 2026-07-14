@@ -2,7 +2,7 @@
  * Watchdog — recovers from stuck runtime flags (livelock / forgotten state).
  *
  * The bot tracks a handful of boolean flags on `ctx.global` that pause
- * competing actions (use, inventory, checklist) or the whole bot (captcha).
+ * competing actions (use, inventory) or the whole bot (captcha).
  * If a module throws after raising one of these flags and its normal cleanup
  * path is skipped, the flag can stay set forever and freeze farming. This
  * watchdog periodically force-clears any flag held longer than a threshold and

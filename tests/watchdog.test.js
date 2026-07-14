@@ -9,7 +9,6 @@ function makeCtx(overrides = {}) {
         global: {
             use: false,
             inventory: false,
-            checklist: false,
             captchadetected: false,
             paused: true,
             type: "test",

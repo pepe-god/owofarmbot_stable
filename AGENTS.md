@@ -30,7 +30,6 @@ Follow these when touching code:
 ## Config
 - `config.json` is primary; `.env` overrides: `MAIN_TOKEN`, `MAIN_USERID`, `WEBHOOK_URL`
 - `config.settings.owoprefix` defaults to `"owo"` if missing/empty (in runtimeConfig.js)
-- `extra` config section exists but code for it was fully removed (YAGNI) — do not add back
 - `client.prefix()` randomizes between `"owo"` and `config.settings.owoprefix` — use this instead of hardcoding
 - Config validation lives in `src/services/configSchema.js` (valibot-based: validateConfig + parseConfigErrors + getDebugConfig + checkToken)
 

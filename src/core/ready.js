@@ -38,7 +38,6 @@ async function handleAutoStart(ctx) {
 
 /**
  * Ready event'te yapılan hazırlık adımlarını yönetir:
- *   - OwO support sunucusu üyeliği kontrolü
  *   - autostart açıksa botu ilk/tekrar başlatma
  */
 module.exports = async (ctx) => {
