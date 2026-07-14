@@ -10,9 +10,6 @@ data/
 *.log
 .logs/
 
-# Auto-generated
-adblockcache/
-
 # Dev config
 developer/
 test.js
@@ -22,7 +19,7 @@ test.js
 .github/
 !.github/
 .opencode/
-.kilo/
+.kilo
 
 
 # OS files

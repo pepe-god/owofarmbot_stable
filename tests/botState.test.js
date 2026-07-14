@@ -76,19 +76,9 @@ describe("BotState", () => {
             const state = new BotState({
                 paused: true,
                 inventory: true,
-                checklist: true,
                 captchadetected: true,
             });
             assert.strictEqual(state.status, "captcha");
-        });
-
-        it("checklist outranks inventory and paused", () => {
-            const state = new BotState({
-                paused: true,
-                inventory: true,
-                checklist: true,
-            });
-            assert.strictEqual(state.status, "checklist");
         });
 
         it("inventory outranks paused", () => {
@@ -137,13 +127,6 @@ describe("BotState", () => {
             assert.strictEqual(state.get("inventory"), false);
         });
 
-        it("checklist start/end", () => {
-            const state = new BotState();
-            state.startChecklist();
-            assert.strictEqual(state.get("checklist"), true);
-            state.endChecklist();
-            assert.strictEqual(state.get("checklist"), false);
-        });
     });
 
     describe("waitUntilIdle", () => {
@@ -184,7 +167,6 @@ describe("attachState", () => {
             paused: true,
             captchadetected: false,
             inventory: false,
-            checklist: false,
             temp: { started: true },
         };
         const state = attachState(global);

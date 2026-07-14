@@ -2,8 +2,7 @@
  * Main orchestration entry point for the `start`/`resume` command.
  *
  * Coordinates the initialization of every bot subsystem in sequence:
- *  - farming (hunt/battle) or checklist
- *  - quest tracking
+ *  - farming (hunt/battle)
  *  - animal sell/sacrifice
  *  - pray/curse luck buffs
  *  - safety auto-pause
@@ -26,48 +25,24 @@ module.exports = async (ctx, message) => {
     await initFarming(ctx, channel, message);
     await ctx.delay(2000);
 
-    await initQuest(ctx, message);
     await initAnimals(ctx, channel);
     await initPrayer(ctx, message);
     initSafety(ctx);
 };
 
 /**
- * Start either the checklist subsystem or direct farm commands.
- * Checklist takes priority when enabled in config.
+ * Start the farm subsystem (hunt/battle).
  *
  * @param {Client} ctx - The Discord ctx instance.
  * @param {TextChannel} channel - The commands channel.
  * @param {Message} message - The originating command message.
- * @returns {Promise<void>} Resolves once the chosen subsystem has been started.
- * @sideeffect Starts the checklist subsystem (which also launches farming) or the farm module directly.
+ * @returns {Promise<void>} Resolves once the farm module has been started.
+ * @sideeffect Starts the farm module directly.
  */
 async function initFarming(ctx, channel, message) {
-    if (ctx.basic.commands.checklist) {
-        await ctx.globalutil.waitWhileBusy(ctx);
-        await require("./checklist.js")(ctx, channel);
-    } else {
-        await ctx.globalutil.waitWhileBusy(ctx);
-        await ctx.delay(2000);
-        require("../modules/farm.js")(ctx, message);
-    }
-}
-
-/**
- * Start the quest tracking module, or mark quests as disabled.
- *
- * @param {Client} ctx - The Discord ctx instance; reads `basic.commands.autoquest`.
- * @param {Message} message - The originating command message.
- * @returns {Promise<void>} Resolves once quest tracking is started (or disabled).
- * @sideeffect Starts the quest module, or sets `global.quest.title = "Quest not enabled"`.
- */
-async function initQuest(ctx, message) {
-    if (ctx.basic.commands.autoquest) {
-        await ctx.globalutil.waitWhileBusy(ctx);
-        require("../modules/quest.js")(ctx, message);
-    } else {
-        ctx.global.quest.title = "Quest not enabled";
-    }
+    await ctx.globalutil.waitWhileBusy(ctx);
+    await ctx.delay(2000);
+    require("../modules/farm.js")(ctx, message);
 }
 
 /**

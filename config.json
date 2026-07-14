@@ -6,7 +6,6 @@
     "userid": "",
     "commandschannelid": "1491785595008061480",
     "owodmchannelid": "1498607007282757654",
-    "autoquestchannelid": "1491785893751554079",
     "autostart": true,
     "commands": {
       "hunt": true,
@@ -14,9 +13,7 @@
       "pray": true,
       "curse": false,
       "animals": false,
-      "inventory": true,
-      "checklist": false,
-      "autoquest": false
+      "inventory": true
     },
     "maximum_gem_rarity": "fabled"
   },
@@ -26,13 +23,6 @@
     "chatfeedback": true,
     "autophrases": true,
     "autoresume": false,
-    "checklist": {
-      "types": {
-        "daily": true,
-        "cookie": false,
-        "vote": false
-      }
-    },
     "inventory": {
       "use": {
         "lootbox": true,

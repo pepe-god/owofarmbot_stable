@@ -34,7 +34,7 @@ const client = new Client();
 /**
  * Factory that creates the shared global state object stored at
  * `client.global`. This object tracks runtime flags (paused, captcha,
- * inventory, checklist) and counters for every bot feature.
+ * inventory) and counters for every bot feature.
  *
  * @param {string} name - Identifier for this state instance.
  * @param {string} type - Display type used in logs/RPC.
@@ -49,7 +49,6 @@ function createGlobalState(name, type) {
         paused: true,
         use: false,
         inventory: false,
-        checklist: false,
         hunt: false,
         battle: false,
         total: {
@@ -59,7 +58,6 @@ function createGlobalState(name, type) {
             curse: 0,
             captcha: 0,
             solvedcaptcha: 0,
-            vote: 0,
         },
         gems: {
             need: [],
@@ -69,18 +67,9 @@ function createGlobalState(name, type) {
             huntssinceinv: 0,
             missingHandled: false,
         },
-        quest: {
-            title: "Waiting...",
-            reward: "",
-            progress: "",
-        },
         temp: {
             usedevent: false,
-            usedcookie: false,
             animaltype: "",
-            intervals: {
-                checklist: 0,
-            },
             isready: false,
             started: false,
         },

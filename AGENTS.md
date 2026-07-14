@@ -21,13 +21,11 @@ Follow these when touching code:
 - `src/core/admin.js` — pause/resume/start/restart/stats
 - `src/core/messageCreate.js` — captcha detection + command dispatch
 - `start`/`resume` command → `src/services/mainHandler.js` → orchestrates:
-  - `initFarming` → checklist or farm
-  - `initQuest` (quest)
+  - `initFarming` → farm (hunt/battle)
   - `initAnimals` (animals — sell/sacrifice loop)
   - `initPrayer` (luck — pray/curse)
   - `initSafety` (safety)
-- Checklist subsystem lives in `src/services/checklist.js` (9 functions)
-- All self-looping modules live in `src/modules/` (7 files), loaded at runtime via `require()`
+- All self-looping modules live in `src/modules/` (6 files), loaded at runtime via `require()`
 
 ## Config
 - `config.json` is primary; `.env` overrides: `MAIN_TOKEN`, `MAIN_USERID`, `WEBHOOK_URL`
@@ -37,16 +35,16 @@ Follow these when touching code:
 - Config validation lives in `src/services/configSchema.js` (valibot-based: validateConfig + parseConfigErrors + getDebugConfig + checkToken)
 
 ## Key Patterns
-- `client.globalutil.waitWhileBusy(client)` — always call before any action (checks paused/captcha/inventory/checklist flags)
+- `client.globalutil.waitWhileBusy(client)` — always call before any action (checks paused/captcha/inventory flags)
 - Logger: `client.logger.info(type, module, message)` — also `warn`, `alert`, `debug`
 - Self-looping modules: `module.exports = (client, message) => { setTimeout(..., getrand(...)) }`
 - `client.global` holds live state (paused, captchadetected, totals, gems, temp)
 - `client.delay(ms)` — `() => new Promise(resolve => setTimeout(resolve, ms))`
 
 ## File Organization
-- `src/core/` — consolidated: bot.js (bootstrap), index.js (loader), admin.js, messageCreate.js, ready.js, globalutil.js, captcha.js, autovote.js
-- `src/services/` — orchestration, config validation, checklist, logging. Business logic that coordinates modules.
-- `src/modules/` — self-looping farming modules (farm, quest, etc.). Each owns a specific OwO bot feature.
+- `src/core/` — consolidated: bot.js (bootstrap), index.js (loader), admin.js, messageCreate.js, ready.js, globalutil.js, captcha.js
+- `src/services/` — orchestration, config validation, logging. Business logic that coordinates modules.
+- `src/modules/` — self-looping farming modules (farm, luck, etc.). Each owns a specific OwO bot feature.
 
 ## Module Boundaries (IMPORTANT)
 - **New helper functions** (sleep, random, string manipulation) → `src/core/globalutil.js`
@@ -57,9 +55,8 @@ Follow these when touching code:
 - `src/core/globalutil.js` — runtime utilities (waitForMessage, waitWhileBusy, parseDuration, commandrandomizer, getrand, removeInvisibleChars)
 - `src/services/runtimeConfig.js` — config file loading + .env overrides + default prefix initialization
 - `src/services/configSchema.js` — startup config validation (valibot schema + helpers)
-- `src/services/checklist.js` — checklist subsystem (smol, executeChecklistLine, handleDaily/Vote/Cookie, etc.)
-- `src/services/mainHandler.js` — orchestrator (module.exports + 6 init functions, no top-level requires)
-- `src/modules/` — self-looping modules: farm, quest, luck, safety, inventory, animals, captchaNotify
+- `src/services/mainHandler.js` — orchestrator (module.exports + 4 init functions, no top-level requires)
+- `src/modules/` — self-looping modules: farm, luck, safety, inventory, animals, captchaNotify
 
 ## Biome (lint config)
 - `complexity/noExcessiveCognitiveComplexity` (max 15) — error

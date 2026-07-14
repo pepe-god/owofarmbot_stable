@@ -15,7 +15,7 @@ The following items were addressed with code changes (see commit history):
 | S1  | Cluster crash-loop                     | `src/main.js` caps forks to 5 per 60s window with a short backoff. |
 | S2  | Dead `autostart` config                | Wired and active via `src/core/ready.js` (auto-starts after login when `config.main.autostart` is true). |
 | S3  | Inventory flag livelock               | `src/modules/inventory.js` wraps `use()` / `inventory()` in `try/finally` so flags always clear. |
-| S4  | Stuck runtime flags                    | New `src/services/watchdog.js` force-clears `use`/`inventory`/`checklist` held >120s and a stale `captchadetected` held >30min. |
+| S4  | Stuck runtime flags                    | New `src/services/watchdog.js` force-clears `use`/`inventory` held >120s and a stale `captchadetected` held >30min. |
 | L3  | Token shape validation                 | `checkToken` rejects malformed tokens (not just short ones). |
 | L4  | Suppressed Node warnings               | `src/core/bootstrap.js` no longer overrides `process.emitWarning`; all warnings surface. |
 | T6  | Post-mortem logging                    | Alerts are mirrored to `data/logs/alert.log` (`src/services/logger.js`). |

@@ -111,33 +111,6 @@ const checkToken = (config, ctx) => {
 };
 
 /**
- * Ensure the user did not reuse the same channel ID for multiple features
- * (hunt, battle, quest).
- *
- * @returns {boolean} True if all channel IDs are unique.
- */
-const checkDuplicateChannels = (config, ctx) => {
-    const vars = [
-        config.main.commandschannelid,
-        config.main.autoquestchannelid,
-    ];
-    for (let i = 0; i < vars.length; i++) {
-        for (let j = i + 1; j < vars.length; j++) {
-            if (vars[i] === vars[j] && vars[i].length > 0) {
-                showerr(ctx, "There are some duplicate channel id!");
-                ctx.logger.info(
-                    "Bot",
-                    "Config",
-                    "Please use different channels for each feature for best efficiency!",
-                );
-                return false;
-            }
-        }
-    }
-    return true;
-};
-
-/**
  * Enforce mutual exclusion between pray and curse. Only pray is kept active
  * if both are enabled.
  *
@@ -282,7 +255,6 @@ const validateConfig = (ctx, config) => {
     const errors = [];
     const fatalChecks = [
         () => checkToken(config, ctx),
-        () => checkDuplicateChannels(config, ctx),
         () => parseGemRarity(ctx),
         () => parseAnimalTypes(ctx),
         () => checkSellSacrificeConflict(config, ctx),
@@ -350,16 +322,9 @@ Main commands:
   Curse: ${config.main.commands.curse} - type: ${typeof config.main.commands.curse}
   Animals: ${config.main.commands.animals} - type: ${typeof config.main.commands.animals}
   Inventory: ${config.main.commands.inventory} - type: ${typeof config.main.commands.inventory}
-  Checklist: ${config.main.commands.checklist} - type: ${typeof config.main.commands.checklist}
-  Autoquest: ${config.main.commands.autoquest} - type: ${typeof config.main.commands.autoquest}
   Gem rarity: ${config.main.maximum_gem_rarity} - type: ${typeof config.main.maximum_gem_rarity}
 
 Elaina: ${config.settings.autophrases} - type: ${typeof config.settings.autophrases}
-
-Checklist:
-  Daily: ${config.settings.checklist.types.daily} - type: ${typeof config.settings.checklist.types.daily}
-  Cookie: ${config.settings.checklist.types.cookie} - type: ${typeof config.settings.checklist.types.cookie}
-  Vote: ${config.settings.checklist.types.vote} - type: ${typeof config.settings.checklist.types.vote}
 
 Inventory:
   Use:
@@ -401,8 +366,6 @@ Interval:
 
   Animals: ${config.interval.animals.min} - ${config.interval.animals.max}
   Type: ${typeof config.interval.animals.min} - ${typeof config.interval.animals.max}
-
-  Checklist: ${config.interval.checklist} - type: ${typeof config.interval.checklist}
 -------------------------
 `);
 };

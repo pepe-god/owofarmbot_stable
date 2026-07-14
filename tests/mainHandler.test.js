@@ -13,9 +13,7 @@ function resolveModulePath(relative) {
 }
 
 const MODULE_PATHS = [
-    "./checklist.js",
     "../modules/farm.js",
-    "../modules/quest.js",
     "../modules/animals.js",
     "../modules/luck.js",
     "../modules/safety.js",
@@ -58,11 +56,8 @@ describe("mainHandler", () => {
                     safety: { autopause: false },
                 },
             },
-            global: { quest: {} },
             basic: {
                 commands: {
-                    checklist: false,
-                    autoquest: false,
                     animals: false,
                     pray: false,
                     curse: false,
@@ -101,46 +96,15 @@ describe("mainHandler", () => {
         assert.strictEqual(client.config.settings.owoprefix, "custom");
     });
 
-    it("requires farm when checklist is disabled", async () => {
+    it("requires farm directly", async () => {
         const farmMock = mock.fn(async () => {});
         mockModules({ "../modules/farm.js": farmMock });
         const mainHandler = require("../src/services/mainHandler.js");
         const client = baseClient();
 
-        // Make it reach farm (not hunt, not battle) by setting commands to minimal
-        // We just need to verify farm is loaded
         await mainHandler(client, {});
 
         assert.strictEqual(farmMock.mock.calls.length, 1);
-    });
-
-
-    it("requires quest when autoquest enabled", async () => {
-        const farmMock = mock.fn(async () => {});
-        const questMock = mock.fn(async () => {});
-        mockModules({
-            "../modules/farm.js": farmMock,
-            "../modules/quest.js": questMock,
-        });
-        const mainHandler = require("../src/services/mainHandler.js");
-        const client = baseClient();
-        client.basic.commands.autoquest = true;
-
-        await mainHandler(client, {});
-
-        assert.strictEqual(questMock.mock.calls.length, 1);
-    });
-
-    it("sets quest title when autoquest disabled", async () => {
-        const farmMock = mock.fn(async () => {});
-        mockModules({ "../modules/farm.js": farmMock });
-        const mainHandler = require("../src/services/mainHandler.js");
-        const client = baseClient();
-        client.basic.commands.autoquest = false;
-
-        await mainHandler(client, {});
-
-        assert.strictEqual(client.global.quest?.title, "Quest not enabled");
     });
 
     it("requires animals when enabled", async () => {
@@ -207,17 +171,5 @@ describe("mainHandler", () => {
         await mainHandler(client, {});
 
         assert.strictEqual(safetyMock.mock.calls.length, 1);
-    });
-
-    it("requires checklist when basic.commands.checklist enabled", async () => {
-        const checklistMock = mock.fn(async () => {});
-        mockModules({ "./checklist.js": checklistMock });
-        const mainHandler = require("../src/services/mainHandler.js");
-        const client = baseClient();
-        client.basic.commands.checklist = true;
-
-        await mainHandler(client, {});
-
-        assert.strictEqual(checklistMock.mock.calls.length, 1);
     });
 });

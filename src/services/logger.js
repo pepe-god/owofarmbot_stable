@@ -1,5 +1,5 @@
 const chalk = require("chalk");
-const fse = require("fs-extra");
+const fs = require("node:fs");
 const path = require("node:path");
 const { isJsonFormat, formatStructured } = require("./structuredLogger.js");
 
@@ -113,8 +113,8 @@ class Logger {
      */
     _appendAlertToFile(type, module, result) {
         try {
-            fse.ensureDirSync(ALERT_LOG_DIR);
-            fse.appendFileSync(
+            fs.mkdirSync(ALERT_LOG_DIR, { recursive: true });
+            fs.appendFileSync(
                 ALERT_LOG_PATH,
                 `[${new Date().toLocaleTimeString()}] ${type} >> ` +
                     `${this.ctx.global.type} > ${module} > ${result}\n`,

@@ -14,7 +14,7 @@
  */
 
 // Flags that should never stay set longer than `STUCK_FLAG_MS`.
-const STUCK_FLAGS = ["use", "inventory", "checklist"];
+const STUCK_FLAGS = ["use", "inventory"];
 
 // How long a transient flag may stay set before being force-cleared.
 const DEFAULT_STUCK_FLAG_MS = 120000;

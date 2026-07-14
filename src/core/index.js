@@ -76,7 +76,6 @@ const registerCommands = (ctx) => {
         "index.js",
         "globalutil.js",
         "captcha.js",
-        "autovote.js",
     ]);
     // Scan the core directory and keep only plain .js modules.
     const files = ctx.fs

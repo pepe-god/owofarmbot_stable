@@ -66,7 +66,6 @@ function createDefaultConfig() {
             token: "test_token",
             userid: "123",
             commandschannelid: "111",
-            autoquestchannelid: "444",
             owodmchannelid: "555",
             autostart: true,
             commands: {
@@ -76,8 +75,6 @@ function createDefaultConfig() {
                 curse: false,
                 animals: false,
                 inventory: true,
-                checklist: false,
-                autoquest: false,
             },
             maximum_gem_rarity: "fabled",
         },
@@ -87,13 +84,6 @@ function createDefaultConfig() {
             chatfeedback: false,
             autophrases: true,
             autoresume: false,
-            checklist: {
-                types: {
-                    daily: true,
-                    cookie: false,
-                    vote: false,
-                },
-            },
             inventory: {
                 use: {
                     lootbox: true,
@@ -186,9 +176,8 @@ function createDefaultGlobal() {
         paused: false,
         captchadetected: false,
         inventory: false,
-        checklist: false,
         temp: { started: false, usedevent: false },
-        total: { farm: 0, hunt: 0, battle: 0, quest: 0 },
+        total: { farm: 0, hunt: 0, battle: 0 },
         gems: {
             need: [],
             use: "",

@@ -6,7 +6,7 @@
  *  - waitForMessage: wait for a specific message with a fallback timeout.
  *  - commandrandomizer: pick a random element from an array.
  *  - getrand: generate a random float between min and max.
- *  - waitWhileBusy: block execution while bot is paused/captcha/inventory/checklist.
+ *  - waitWhileBusy: block execution while bot is paused/captcha/inventory.
  *  - parseDuration: convert strings like "1H 30M" into milliseconds.
  */
 
@@ -81,7 +81,6 @@ exports.getrand = (min, max) => Math.random() * (max - min) + min;
  *  - paused: user/admin paused the bot.
  *  - captchadetected: OwO captcha detected and not yet solved.
  *  - inventory: inventory module is currently running.
- *  - checklist: checklist module is currently running.
  *
  * When the bot state machine is available (`ctx.state`), this resolves via a
  * one-shot subscription the instant the last busy flag clears — no polling.

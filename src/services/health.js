@@ -29,7 +29,6 @@ function normalizeTotals(total = {}) {
         solvedcaptcha: total.solvedcaptcha ?? 0,
         pray: total.pray ?? 0,
         curse: total.curse ?? 0,
-        vote: total.vote ?? 0,
     };
 }
 

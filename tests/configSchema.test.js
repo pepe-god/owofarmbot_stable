@@ -45,18 +45,11 @@ function makeValidConfig() {
                 curse: false,
                 animals: false,
                 inventory: false,
-                checklist: false,
-                autoquest: false,
             },
             commandschannelid: "111",
-            autoquestchannelid: "444",
             maximum_gem_rarity: "",
         },
         settings: {
-
-            checklist: {
-                types: { daily: false, cookie: false, vote: false },
-            },
             inventory: {
                 use: {
                     lootbox: false,
@@ -89,7 +82,6 @@ function makeValidConfig() {
             battle: { min: 12000, max: 16000 },
             pray: { min: 316000, max: 332000 },
             animals: { min: 610000, max: 661000 },
-            checklist: 3600000,
         },
     };
 }
@@ -125,16 +117,6 @@ describe("validateConfig", () => {
     it("rejects missing token", async () => {
         const config = makeValidConfig();
         config.main.token = "short";
-        const client = makeMockClient(config);
-
-        mock.method(process, "exit", () => {});
-        await verify(client, config);
-        assert.strictEqual(hasAlert(client), true);
-    });
-
-    it("rejects duplicate channel IDs", async () => {
-        const config = makeValidConfig();
-        config.main.autoquestchannelid = "111";
         const client = makeMockClient(config);
 
         mock.method(process, "exit", () => {});
