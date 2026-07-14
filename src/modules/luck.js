@@ -1,4 +1,10 @@
 const { getrand } = require("../core/globalutil.js");
+const {
+    handleModuleError,
+    RateLimitError,
+    nextRateLimitDelay,
+    resetRateLimitBackoff,
+} = require("../services/errors.js");
 
 const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -39,6 +45,7 @@ async function prayOrCurse(ctx, channel, type) {
         ctx.config.interval.pray.min,
         ctx.config.interval.pray.max,
     );
+    let rateLimited = false;
     try {
         channel.sendTyping();
         const target = ctx.basic.commands.tomain
@@ -53,19 +60,36 @@ async function prayOrCurse(ctx, channel, type) {
             `Total ${type}ed time: ${ctx.global.total[type]}`,
         );
     } catch (err) {
-        ctx.logger.alert(
-            "Farm",
-            capitalize(type),
-            `Error while ${type}ing: ${err}`,
-        );
-        ctx.logger.debug(err);
+        const wrapped = handleModuleError(ctx, err, {
+            type: "Farm",
+            module: capitalize(type),
+            fallback: `Error while ${type}ing`,
+        });
+        if (wrapped instanceof RateLimitError) {
+            rateLimited = true;
+            const key = `luck:${type}`;
+            const delay = nextRateLimitDelay(ctx, key);
+            ctx.logger.warn(
+                "Farm",
+                capitalize(type),
+                `Rate limited, backing off ${delay}ms before retry.`,
+            );
+            ctx.loops.schedule(
+                () => prayOrCurse(ctx, channel, type),
+                delay,
+                `${key}:ratelimit`,
+            );
+        }
     } finally {
-        ctx.loops.schedule(
-            () => {
-                prayOrCurse(ctx, channel, type);
-            },
-            interval,
-            `luck:${type}`,
-        );
+        if (!rateLimited) {
+            resetRateLimitBackoff(ctx, `luck:${type}`);
+            ctx.loops.schedule(
+                () => {
+                    prayOrCurse(ctx, channel, type);
+                },
+                interval,
+                `luck:${type}`,
+            );
+        }
     }
 }

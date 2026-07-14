@@ -1,11 +1,15 @@
 /* eslint-disable no-control-regex */
 
 /**
- * Configuration validation and debug-dump utilities.
+ * Schema-based configuration validation using valibot.
  *
  * Responsibilities:
- *  - verifyconfig: run fatal and non-fatal checks on startup.
- *  - getconfig: log the full resolved config for debugging.
+ *  - validateConfig: run fatal and non-fatal checks, mutate config where the
+ *    original validator did (pray/curse exclusion, interval clamping, gem rarity
+ *    level, animal type suffix building) and return `{ success, errors }`.
+ *  - parseConfigErrors: log collected errors and terminate the process on
+ *    fatal failures.
+ *  - getDebugConfig: log the full resolved config for debugging.
  *
  * Fatal checks (bot exits if any fail):
  *  - Token presence and length.
@@ -20,21 +24,13 @@
  *  - Interval bounds and defaults.
  */
 
-const _path = require("node:path");
-const _fse = require("fs-extra");
+const v = require("valibot");
 
 // Discord user tokens are three dot-separated base64url segments
-// (e.g. "<id>.<timestamp>.<secret>"). Used by checkToken to reject obviously
-// malformed values before attempting to log in.
+// (e.g. "<id>.<timestamp>.<secret>").
 const TOKEN_SHAPE = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 
-// --- Constants ---
-
-/**
- * Maps rarity names to numeric levels used for gem selection.
- * Higher numbers mean rarer gems. Consumed by `parseGemRarity`.
- * @type {Object.<string, number>}
- */
+// Maps rarity names to numeric levels used for gem selection.
 const RARITY_MAP = {
     fabled: 7,
     legendary: 6,
@@ -45,11 +41,7 @@ const RARITY_MAP = {
     common: 1,
 };
 
-/**
- * Maps animal type names to the suffix character OwO uses in commands.
- * Built by `parseAnimalTypes` into `ctx.global.temp.animaltype`.
- * @type {Object.<string, string>}
- */
+// Maps animal type names to the suffix character OwO uses in commands.
 const ANIMAL_TYPE_MAP = {
     common: " c",
     uncommon: " u",
@@ -67,11 +59,7 @@ const ANIMAL_TYPE_MAP = {
     hidden: " h",
 };
 
-/**
- * Default min/max intervals (ms) per action type.
- * Used to clamp user-configured values that are too aggressive.
- * @type {Array<{ type: string, min: number, max: number }>}
- */
+// Default min/max intervals (ms) per action type.
 const INTERVAL_DEFAULTS = [
     { type: "hunt", min: 12000, max: 16000 },
     { type: "battle", min: 12000, max: 16000 },
@@ -81,48 +69,58 @@ const INTERVAL_DEFAULTS = [
     { type: "animals", min: 610000, max: 661000 },
 ];
 
-// --- Helper functions (module-internal) ---
+const RARITY_LIST = Object.keys(RARITY_MAP);
+const ANIMAL_TYPE_LIST = Object.keys(ANIMAL_TYPE_MAP);
 
-/**
- * Log a config-related alert message.
- *
- * @param {Client} ctx - The Discord ctx instance; used for logging.
- * @param {string} err - The human-readable conflict description.
- * @returns {void}
- */
+// valibot schemas for the pure-shape leaves that map cleanly to the original
+// checks. Custom messages keep the user-facing strings identical.
+const tokenSchema = v.pipe(
+    v.string(),
+    v.minLength(10, "Main token is missing or too short!"),
+    v.regex(TOKEN_SHAPE, "Main token is malformed!"),
+);
+
+const gambleAmountSchema = v.pipe(
+    v.number(),
+    v.minValue(1, "Invalid gamble amount!"),
+);
+
+const raritySchema = v.picklist(
+    RARITY_LIST,
+    "Gem rarity: Invalid value. Valid value is: fabled, legendary, mythical, epic, rare, uncommon, common",
+);
+
+const animalTypeSchema = v.picklist(ANIMAL_TYPE_LIST);
+
 const showerr = (ctx, err) => {
     ctx.logger.alert("Bot", "Config", `Config conflict: ${err}`);
 };
 
 /**
- * Verify that the main token exists and has a minimum length.
+ * Verify that the main token exists, has a minimum length, and matches the
+ * Discord token shape.
  *
  * @returns {boolean} True if token is valid.
  */
 const checkToken = (config, ctx) => {
     const token = config.main.token;
-    if (!token || token.length < 10) {
-        showerr(
-            ctx,
-            "Main token is missing or too short! Set MAIN_TOKEN in your .env file.",
-        );
-        return false;
-    }
-    if (!TOKEN_SHAPE.test(token)) {
-        showerr(
-            ctx,
-            "Main token is malformed! Discord tokens look like " +
-                "'<id>.<timestamp>.<secret>' (three dot-separated base64url " +
-                "segments). Set MAIN_TOKEN in your .env file.",
-        );
-        return false;
-    }
-    return true;
+    const result = v.safeParse(tokenSchema, token ?? "");
+    if (result.success) return true;
+    const message = result.issues[0]?.message ?? "Main token is malformed!";
+    showerr(
+        ctx,
+        message === "Main token is malformed!"
+            ? "Main token is malformed! Discord tokens look like " +
+                  "'<id>.<timestamp>.<secret>' (three dot-separated base64url " +
+                  "segments). Set MAIN_TOKEN in your .env file."
+            : "Main token is missing or too short! Set MAIN_TOKEN in your .env file.",
+    );
+    return false;
 };
 
 /**
  * Ensure the user did not reuse the same channel ID for multiple features
- * (hunt, battle, quest, gamble), which would cause command collisions.
+ * (hunt, battle, quest, gamble).
  *
  * @returns {boolean} True if all channel IDs are unique.
  */
@@ -137,10 +135,14 @@ const checkDuplicateChannels = (config, ctx) => {
         for (let j = i + 1; j < vars.length; j++) {
             if (vars[i] === vars[j] && vars[i].length > 0) {
                 showerr(ctx, "There are some duplicate channel id!");
-                console.log(
+                ctx.logger.info(
+                    "Bot",
+                    "Config",
                     "Please use four different channel for one tokentype for best efficiency!",
                 );
-                console.log(
+                ctx.logger.info(
+                    "Bot",
+                    "Config",
                     "That mean if you use farm, huntbot, quest and gamble, you need four channel!",
                 );
                 return false;
@@ -154,10 +156,7 @@ const checkDuplicateChannels = (config, ctx) => {
  * Enforce mutual exclusion between pray and curse. Only pray is kept active
  * if both are enabled.
  *
- * @param {Client} ctx - The Discord ctx instance; may disable `basic.curse`.
- * @param {Object} config - The resolved config; `main.commands.curse` may be turned off.
- * @returns {void}
- * @sideeffect Disables `config.main.commands.curse` and `ctx.basic.curse` when both are enabled, and logs a conflict.
+ * @sideeffect Disables `config.main.commands.curse` and `ctx.basic.curse` when both are enabled.
  */
 const checkPrayCurseConflict = (ctx, config) => {
     if (config.main.commands.pray && config.main.commands.curse) {
@@ -178,10 +177,18 @@ const checkPrayCurseConflict = (ctx, config) => {
 const checkGambleAmount = (config, ctx) => {
     const { coinflip, slot } = config.main.commands.gamble;
     const amounts = config.settings.gamble;
-    if (
-        (coinflip && amounts.coinflip.default_amount <= 0) ||
-        (slot && amounts.slot.default_amount <= 0)
-    ) {
+    const checks = [];
+    if (coinflip) {
+        checks.push(
+            v.safeParse(gambleAmountSchema, amounts.coinflip.default_amount),
+        );
+    }
+    if (slot) {
+        checks.push(
+            v.safeParse(gambleAmountSchema, amounts.slot.default_amount),
+        );
+    }
+    if (checks.some((r) => !r.success)) {
         showerr(ctx, "Invalid gamble amount!");
         return false;
     }
@@ -197,9 +204,9 @@ const checkGambleAmount = (config, ctx) => {
 const parseGemRarity = (ctx) => {
     if (!ctx.basic.maximum_gem_rarity?.length) return true;
     const rarity = ctx.basic.maximum_gem_rarity.toLowerCase();
-    const level = RARITY_MAP[rarity];
-    if (level !== undefined) {
-        ctx.global.rareLevel = level;
+    const result = v.safeParse(raritySchema, rarity);
+    if (result.success) {
+        ctx.global.rareLevel = RARITY_MAP[rarity];
         return true;
     }
     ctx.logger.warn(
@@ -213,8 +220,6 @@ const parseGemRarity = (ctx) => {
 
 /**
  * Build a concatenated string of enabled animal type suffixes from config.
- * The resulting string is stored in `ctx.global.temp.animaltype` and
- * appended to animal sell/sacrifice commands.
  *
  * @returns {boolean} True if at least one animal type is enabled.
  */
@@ -223,6 +228,15 @@ const parseAnimalTypes = (ctx) => {
     const animaltypes = ctx.config.animals.animaltype;
     for (const [type, isEnabled] of Object.entries(animaltypes)) {
         if (!isEnabled) continue;
+        const result = v.safeParse(animalTypeSchema, type);
+        if (!result.success) {
+            ctx.logger.warn(
+                `Bot${ctx.chalk.white(" >> ")}${ctx.global.type}`,
+                "Config",
+                `Animals: unknown animaltype "${type}"!`,
+            );
+            continue;
+        }
         const suffix = ANIMAL_TYPE_MAP[type];
         if (suffix) ctx.global.temp.animaltype += suffix;
     }
@@ -253,10 +267,7 @@ const checkSellSacrificeConflict = (config, ctx) => {
  * Clamp configured action intervals to safe minimums defined in
  * INTERVAL_DEFAULTS. Warns and resets any out-of-range values.
  *
- * @param {Object} config - The resolved config; `config.interval[type]` values may be mutated.
- * @param {Client} ctx - The Discord ctx instance; used for warnings.
- * @returns {void}
- * @sideeffect Resets out-of-range `config.interval[type].min`/`max` to the defaults and logs each correction.
+ * @sideeffect Resets out-of-range `config.interval[type].min`/`max` to the defaults.
  */
 const validateIntervals = (config, ctx) => {
     const intervals = ["hunt", "battle", "pray", "coinflip", "slot", "animals"];
@@ -296,19 +307,20 @@ const validateIntervals = (config, ctx) => {
     }
 };
 
-// --- Exports ---
-
-exports.checkToken = checkToken;
-
 /**
  * Run all fatal and non-fatal config validation checks.
  *
- * Fatal failures log an alert and terminate the process after a short delay.
- * Non-fatal issues are logged as warnings and auto-corrected where possible.
+ * Fatal failures are collected into `errors` and surfaced via
+ * `parseConfigErrors`, which terminates the process. Non-fatal issues are
+ * auto-corrected in place (pray/curse, interval clamping) and logged as
+ * warnings.
+ *
+ * @returns {{ success: boolean, errors: string[] }}
  */
-exports.verifyconfig = async (ctx, config) => {
+const validateConfig = (ctx, config) => {
     ctx.logger.info("Bot", "Config", "Verifying Config... Please wait...");
 
+    const errors = [];
     const fatalChecks = [
         () => checkToken(config, ctx),
         () => checkDuplicateChannels(config, ctx),
@@ -326,30 +338,42 @@ exports.verifyconfig = async (ctx, config) => {
     checkPrayCurseConflict(ctx, config);
     validateIntervals(config, ctx);
 
-    if (ok) {
+    if (!ok) {
+        errors.push(
+            "Config is not verified or contains errors, please check the logs and fix the errors!",
+        );
+    } else {
         ctx.logger.info(
             "Bot",
             "Config",
             "Config verified, things seem to be okey :3",
         );
-    } else {
-        ctx.logger.alert(
-            "Bot",
-            "Config",
-            "Config is not verified or contains errors, please check the logs and fix the errors!",
-        );
-        setTimeout(() => {
-            ctx.logger.warn("Bot", "Config", "Exiting...");
-            process.exit(1);
-        }, 1600);
     }
+
+    return { success: ok, errors };
+};
+
+/**
+ * Log collected config errors and terminate the process on fatal failures.
+ *
+ * @param {string[]} errors - Array of error messages to log.
+ * @param {BotContext} ctx - The bot context; provides the logger.
+ */
+const parseConfigErrors = (errors, ctx) => {
+    if (!errors || errors.length === 0) return;
+    for (const err of errors) {
+        ctx.logger.alert("Bot", "Config", err);
+    }
+    setTimeout(() => {
+        ctx.logger.warn("Bot", "Config", "Exiting...");
+        process.exit(1);
+    }, 1600);
 };
 
 /**
  * Log the full resolved configuration for debugging purposes.
- * Output is sent at debug level so it does not clutter normal startup.
  */
-exports.getconfig = (config, ctx) => {
+const getDebugConfig = (ctx, config) => {
     const packageJson = require("../../package.json");
 
     ctx.logger.debug(`OwO Farm Bot Stable - Debug log
@@ -445,4 +469,14 @@ Interval:
   Checklist: ${config.interval.checklist} - type: ${typeof config.interval.checklist}
 -------------------------
 `);
+};
+
+module.exports = {
+    validateConfig,
+    parseConfigErrors,
+    getDebugConfig,
+    checkToken,
+    RARITY_MAP,
+    ANIMAL_TYPE_MAP,
+    INTERVAL_DEFAULTS,
 };

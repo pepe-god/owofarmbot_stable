@@ -55,9 +55,6 @@ try {
         config = require("../../config.json");
     }
 } catch (_error) {
-    console.log(
-        "Failed to load developer config, falling back to production config.",
-    );
     config = require("../../config.json");
 }
 

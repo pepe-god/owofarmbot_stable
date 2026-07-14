@@ -16,17 +16,24 @@
  * logging them through the ctx's logger before the process exits.
  */
 const setupAntiCrash = (ctx) => {
+    const { RateLimitError, describeError } = require("../services/errors.js");
+
     const logError = (type, err, origin = null) => {
         const errMessage = `--------------------------------------
 Error: ${err?.message || err}
 Stack: ${err?.stack || "No stack trace available"}
 Origin: ${origin || "N/A"}
+Classification: ${describeError(err)}
 --------------------------------------`;
 
+        const classified =
+            err instanceof RateLimitError
+                ? "Rate limited"
+                : "An crash happened!";
         ctx.logger.alert(
             "Bot",
             "Anticrash",
-            `An crash happened! ${type}\n${errMessage}`,
+            `${classified} (${type})\n${errMessage}`,
         );
     };
 

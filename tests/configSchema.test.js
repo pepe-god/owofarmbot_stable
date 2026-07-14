@@ -1,7 +1,11 @@
 const { describe, it, mock, before, after, afterEach } = require("node:test");
 const assert = require("node:assert");
 
-const { verifyconfig, checkToken } = require("../src/services/configValidator");
+const {
+    validateConfig,
+    parseConfigErrors,
+    checkToken,
+} = require("../src/services/configSchema");
 
 function makeMockClient(config, overrides = {}) {
     const logs = [];
@@ -106,7 +110,14 @@ function hasAlert(client) {
     );
 }
 
-describe("verifyconfig", () => {
+// Mirror bot.js: validate, then surface errors (which may exit on fatal).
+async function verify(client, config) {
+    const { success, errors } = validateConfig(client, config);
+    parseConfigErrors(errors, client);
+    return { success };
+}
+
+describe("validateConfig", () => {
     before(() => mock.timers.enable({ apis: ["setTimeout"] }));
     after(() => mock.timers.reset());
 
@@ -117,7 +128,7 @@ describe("verifyconfig", () => {
     it("accepts a valid config", async () => {
         const config = makeValidConfig();
         const client = makeMockClient(config);
-        await verifyconfig(client, config);
+        await verify(client, config);
         assert.strictEqual(hasAlert(client), false);
     });
 
@@ -127,7 +138,7 @@ describe("verifyconfig", () => {
         const client = makeMockClient(config);
 
         mock.method(process, "exit", () => {});
-        await verifyconfig(client, config);
+        await verify(client, config);
         assert.strictEqual(hasAlert(client), true);
     });
 
@@ -137,7 +148,7 @@ describe("verifyconfig", () => {
         const client = makeMockClient(config);
 
         mock.method(process, "exit", () => {});
-        await verifyconfig(client, config);
+        await verify(client, config);
         assert.strictEqual(hasAlert(client), true);
     });
 
@@ -148,7 +159,7 @@ describe("verifyconfig", () => {
         const client = makeMockClient(config);
 
         mock.method(process, "exit", () => {});
-        await verifyconfig(client, config);
+        await verify(client, config);
         assert.strictEqual(hasAlert(client), true);
     });
 
@@ -158,7 +169,7 @@ describe("verifyconfig", () => {
         config.main.commands.curse = true;
         const client = makeMockClient(config);
 
-        await verifyconfig(client, config);
+        await verify(client, config);
         assert.strictEqual(config.main.commands.curse, false);
         assert.strictEqual(client.basic.curse, false);
     });
@@ -168,7 +179,7 @@ describe("verifyconfig", () => {
         config.interval.hunt.min = 500;
         const client = makeMockClient(config);
 
-        await verifyconfig(client, config);
+        await verify(client, config);
         assert.strictEqual(config.interval.hunt.min, 12000);
     });
 
@@ -180,7 +191,7 @@ describe("verifyconfig", () => {
         client.basic.commands.animals = true;
 
         mock.method(process, "exit", () => {});
-        await verifyconfig(client, config);
+        await verify(client, config);
         assert.strictEqual(hasAlert(client), true);
     });
 
@@ -189,7 +200,7 @@ describe("verifyconfig", () => {
         const client = makeMockClient(config);
         client.basic.maximum_gem_rarity = "invalid_rarity";
 
-        await verifyconfig(client, config);
+        await verify(client, config);
         assert.strictEqual(client.global.rareLevel, 7);
     });
 });

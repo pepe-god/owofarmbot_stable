@@ -1,5 +1,11 @@
 const { commandrandomizer, getrand } = require("../core/globalutil.js");
 const { OWO_ID } = require("../core/constants.js");
+const {
+    handleModuleError,
+    RateLimitError,
+    nextRateLimitDelay,
+    resetRateLimitBackoff,
+} = require("../services/errors.js");
 
 /**
  * Game-specific configuration maps for coinflip and slot logic.
@@ -230,6 +236,7 @@ async function playGame(type, ctx, channel) {
             ctx.config.interval[type].max,
         );
 
+        let rateLimited = false;
         try {
             const messageId = await sendBet(
                 ctx,
@@ -239,20 +246,33 @@ async function playGame(type, ctx, channel) {
             );
             setupResultListeners(ctx, channel, messageId, game, currentBetRef);
         } catch (err) {
-            ctx.logger.alert(
-                "Farm",
-                game.label,
-                `Error while ${game.label.toLowerCase()}ing: ${err}`,
-            );
-            ctx.logger.debug(err);
+            const wrapped = handleModuleError(ctx, err, {
+                type: "Farm",
+                module: game.label,
+                fallback: `Error while ${game.label.toLowerCase()}ing`,
+            });
+            if (wrapped instanceof RateLimitError) {
+                rateLimited = true;
+                const key = `gamble:${type}`;
+                const delay = nextRateLimitDelay(ctx, key);
+                ctx.logger.warn(
+                    "Farm",
+                    game.label,
+                    `Rate limited, backing off ${delay}ms before retry.`,
+                );
+                ctx.loops.schedule(() => loop(), delay, `${key}:ratelimit`);
+            }
         } finally {
-            ctx.loops.schedule(
-                () => {
-                    loop();
-                },
-                interval,
-                `gamble:${type}`,
-            );
+            if (!rateLimited) {
+                resetRateLimitBackoff(ctx, `gamble:${type}`);
+                ctx.loops.schedule(
+                    () => {
+                        loop();
+                    },
+                    interval,
+                    `gamble:${type}`,
+                );
+            }
         }
     }
 

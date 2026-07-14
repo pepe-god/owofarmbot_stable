@@ -20,7 +20,7 @@ const fs = require("node:fs");
 const chalk = require("chalk");
 
 const globalutil = require("./globalutil.js");
-const configValidator = require("../services/configValidator.js");
+const configSchema = require("../services/configSchema.js");
 const LoopManager = require("../services/loopManager.js");
 const BotContext = require("./botContext.js");
 const { initializeBootstrap } = require("./bootstrap.js");
@@ -180,11 +180,21 @@ process.title = `OwO Farm Bot Stable v${packageJson.version}`;
  * validation and login before the process continues.
  */
 (async () => {
-    // 1) Validate config shape, 2) load runtime/extra config into `ctx`.
-    await configValidator.verifyconfig(ctx, config);
-    await configValidator.getconfig(config, ctx);
+    ctx.logger.info("Bot", "Config", "Verifying Config... Please wait...");
 
-    // 3) Wire collections, handlers/events, then log in to Discord.
+    const result = configSchema.validateConfig(ctx, config);
+    configSchema.parseConfigErrors(result.errors, ctx);
+
+    if (result.success) {
+        ctx.logger.info(
+            "Bot",
+            "Config",
+            "Config verified, things seem to be okey :3",
+        );
+    }
+
+    ctx.logger.debug(configSchema.getDebugConfig(ctx, config));
+
     await initializeBot();
 
     ctx.logger.warn(

@@ -20,8 +20,8 @@ test.js
 # Editor
 .vscode
 .github/
+!.github/
 .opencode/
-.kilo/
 
 
 # OS files

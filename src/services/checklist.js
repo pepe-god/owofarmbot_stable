@@ -1,6 +1,12 @@
 const path = require("node:path");
 const { commandrandomizer } = require("../core/globalutil.js");
 const { OWO_ID } = require("../core/constants.js");
+const {
+    handleModuleError,
+    RateLimitError,
+    nextRateLimitDelay,
+    resetRateLimitBackoff,
+} = require("../services/errors.js");
 
 /**
  * Checklist subsystem entry point.
@@ -272,23 +278,27 @@ async function smol(ctx, channel) {
         await waitWhileCaptcha(ctx);
         ctx.logger.info("Farm", "Checklist", `Paused: ${ctx.global.checklist}`);
     } catch (e) {
-        ctx.logger.alert(
-            "Farm",
-            "Checklist",
-            "Error while checking checklist: ",
-            e,
-        );
-        ctx.logger.warn(
-            "Farm",
-            "Checklist",
-            "Recheck checklist after 10 minutes",
-        );
-        ctx.logger.debug(e);
+        const wrapped = handleModuleError(ctx, e, {
+            type: "Farm",
+            module: "Checklist",
+            fallback: "Error while checking checklist",
+        });
+        let delay = 610000;
+        if (wrapped instanceof RateLimitError) {
+            delay = nextRateLimitDelay(ctx, "checklist");
+            ctx.logger.warn(
+                "Farm",
+                "Checklist",
+                `Rate limited, backing off ${delay}ms before retry.`,
+            );
+        } else {
+            resetRateLimitBackoff(ctx, "checklist");
+        }
         ctx.loops.schedule(
             () => {
                 smol(ctx, channel);
             },
-            610000,
+            delay,
             "checklist:retry",
         );
         return;

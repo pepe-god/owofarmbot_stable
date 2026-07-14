@@ -1,4 +1,12 @@
 const { getrand } = require("../core/globalutil.js");
+const {
+    handleModuleError,
+    RateLimitError,
+    nextRateLimitDelay,
+    resetRateLimitBackoff,
+} = require("../services/errors.js");
+
+const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /**
  * Animal module entry point — sells or sacrifices animals on a loop.
@@ -26,24 +34,48 @@ module.exports = async function sell(ctx, channel, choose, types) {
         );
         return;
     }
+    let rateLimited = false;
     try {
         channel.sendTyping();
         await channel.send({
             content: `${ctx.prefix()} ${choose} ${types}`,
         });
     } catch (err) {
-        ctx.logger.alert("Farm", "Sell", `Failed to sell: ${err}`);
-        ctx.logger.debug(err);
+        const wrapped = handleModuleError(ctx, err, {
+            type: "Farm",
+            module: capitalize(choose),
+            fallback: `Error while ${choose}ing`,
+        });
+        if (wrapped instanceof RateLimitError) {
+            rateLimited = true;
+            const key = `animals:${choose}`;
+            const delay = nextRateLimitDelay(ctx, key);
+            ctx.logger.warn(
+                "Farm",
+                capitalize(choose),
+                `Rate limited, backing off ${delay}ms before retry.`,
+            );
+            ctx.loops.schedule(
+                () => {
+                    sell(ctx, channel, choose, types);
+                },
+                delay,
+                `${key}:ratelimit`,
+            );
+        }
     } finally {
-        ctx.loops.schedule(
-            () => {
-                sell(ctx, channel, choose, types);
-            },
-            getrand(
-                ctx.config.interval.animals.min,
-                ctx.config.interval.animals.max,
-            ),
-            "animals",
-        );
+        if (!rateLimited) {
+            resetRateLimitBackoff(ctx, `animals:${choose}`);
+            ctx.loops.schedule(
+                () => {
+                    sell(ctx, channel, choose, types);
+                },
+                getrand(
+                    ctx.config.interval.animals.min,
+                    ctx.config.interval.animals.max,
+                ),
+                "animals",
+            );
+        }
     }
 };

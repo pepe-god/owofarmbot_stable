@@ -1,5 +1,11 @@
 const { commandrandomizer, getrand } = require("../core/globalutil.js");
 const { OWO_ID } = require("../core/constants.js");
+const {
+    handleModuleError,
+    RateLimitError,
+    nextRateLimitDelay,
+    resetRateLimitBackoff,
+} = require("../services/errors.js");
 
 const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const REQUIRED_GEMS = ["gem1", "gem3", "gem4"];
@@ -70,6 +76,7 @@ async function farmAction(ctx, channel, { type, cmd, onResult }) {
         ctx.config.interval[type].max,
     );
 
+    let rateLimited = false;
     try {
         channel.sendTyping();
         if (ctx.global[type === "hunt" ? "battle" : "hunt"])
@@ -88,21 +95,38 @@ async function farmAction(ctx, channel, { type, cmd, onResult }) {
         if (onResult) await onResult(ctx, channel, msg);
         await ctx.delay(1000);
     } catch (err) {
-        ctx.logger.alert(
-            "Farm",
-            capitalize(type),
-            `Error while ${type}ing: ${err}`,
-        );
-        ctx.logger.debug(err);
+        const wrapped = handleModuleError(ctx, err, {
+            type: "Farm",
+            module: capitalize(type),
+            fallback: `Error while ${type}ing`,
+        });
+        if (wrapped instanceof RateLimitError) {
+            rateLimited = true;
+            const key = `farm:${type}`;
+            const delay = nextRateLimitDelay(ctx, key);
+            ctx.logger.warn(
+                "Farm",
+                capitalize(type),
+                `Rate limited, backing off ${delay}ms before retry.`,
+            );
+            ctx.loops.schedule(
+                () => farmAction(ctx, channel, { type, cmd, onResult }),
+                delay,
+                `farm:${type}:ratelimit`,
+            );
+        }
     } finally {
         ctx.global[type] = false;
-        ctx.loops.schedule(
-            () => {
-                farmAction(ctx, channel, { type, cmd, onResult });
-            },
-            interval,
-            `farm:${type}`,
-        );
+        if (!rateLimited) {
+            resetRateLimitBackoff(ctx, `farm:${type}`);
+            ctx.loops.schedule(
+                () => {
+                    farmAction(ctx, channel, { type, cmd, onResult });
+                },
+                interval,
+                `farm:${type}`,
+            );
+        }
     }
 }
 
@@ -233,6 +257,19 @@ function handleMissingGems(ctx, channel, huntContent) {
 let phrasesCache = null;
 
 /**
+ * Pick a random phrase, avoiding repetition of the previous one.
+ * @param {number} lastIndex - The previously used phrase index.
+ * @returns {{ text: string, idx: number }} Selected phrase and its index.
+ */
+function pickPhrase(lastIndex) {
+    let idx = Math.floor(Math.random() * phrasesCache.length);
+    if (phrasesCache.length > 1 && idx === lastIndex) {
+        idx = (idx + 1) % phrasesCache.length;
+    }
+    return { text: phrasesCache[idx], idx };
+}
+
+/**
  * Start the autophrases background loop.
  *
  * Lazily loads phrases from `src/core/phrases.json` (cached for the process
@@ -255,6 +292,57 @@ function startAutophrases(ctx, channel) {
         return;
     }
 
+    const MIN_DELAY = 8000;
+    const MAX_DELAY = 25000;
+
+    async function scheduleNext() {
+        const delay = getrand(MIN_DELAY, MAX_DELAY);
+        ctx.logger.debug("Farm", "Phrases", `Next phrase in ${delay}ms`);
+        ctx.loops.schedule(sendPhrase, delay, "farm:phrases");
+    }
+
+    async function sendPhrase() {
+        if (ctx.global.captchadetected || ctx.global.paused) {
+            scheduleNext();
+            return;
+        }
+        if (!channel) {
+            ctx.logger.debug(
+                "Farm",
+                "Phrases",
+                "Channel lost, stopping autophrases.",
+            );
+            return;
+        }
+
+        try {
+            await ctx.globalutil.waitWhileBusy(ctx);
+            const { text, idx } = pickPhrase(ctx.global.temp.lastPhraseIndex);
+            await channel.sendTyping();
+            await ctx.delay(800);
+            await channel.send({ content: text });
+            ctx.global.temp.lastPhraseIndex = idx;
+            ctx.logger.info("Farm", "Phrases", "Successfully sent.");
+        } catch (err) {
+            const wrapped = handleModuleError(ctx, err, {
+                type: "Farm",
+                module: "Phrases",
+                fallback: "Error sending phrase",
+            });
+            if (wrapped instanceof RateLimitError) {
+                const delay = nextRateLimitDelay(ctx, "farm:phrases");
+                ctx.logger.warn(
+                    "Farm",
+                    "Phrases",
+                    `Rate limited, backing off ${delay}ms.`,
+                );
+                ctx.loops.schedule(sendPhrase, delay, "farm:phrases:ratelimit");
+                return;
+            }
+        }
+        scheduleNext();
+    }
+
     (async () => {
         if (!phrasesCache) {
             try {
@@ -273,67 +361,14 @@ function startAutophrases(ctx, channel) {
                     return;
                 }
             } catch (err) {
-                ctx.logger.alert(
-                    "Farm",
-                    "Phrases",
-                    `Failed to load phrases.json: ${err}`,
-                );
+                handleModuleError(ctx, err, {
+                    type: "Farm",
+                    module: "Phrases",
+                    fallback: "Failed to load phrases.json",
+                });
                 return;
             }
         }
-
-        const MIN_DELAY = 8000;
-        const MAX_DELAY = 25000;
-
-        async function sendPhrase() {
-            if (ctx.global.captchadetected || ctx.global.paused) {
-                scheduleNext();
-                return;
-            }
-
-            if (!channel) {
-                ctx.logger.debug(
-                    "Farm",
-                    "Phrases",
-                    "Channel lost, stopping autophrases.",
-                );
-                return;
-            }
-
-            try {
-                await ctx.globalutil.waitWhileBusy(ctx);
-
-                let idx = Math.floor(Math.random() * phrasesCache.length);
-                if (
-                    phrasesCache.length > 1 &&
-                    idx === ctx.global.temp.lastPhraseIndex
-                ) {
-                    idx = (idx + 1) % phrasesCache.length;
-                }
-                const text = phrasesCache[idx];
-
-                await channel.sendTyping();
-                await ctx.delay(800);
-                await channel.send({ content: text });
-                ctx.global.temp.lastPhraseIndex = idx;
-                ctx.logger.info("Farm", "Phrases", "Successfully sent.");
-            } catch (err) {
-                ctx.logger.alert(
-                    "Farm",
-                    "Phrases",
-                    `Error sending phrase: ${err}`,
-                );
-            }
-
-            scheduleNext();
-        }
-
-        function scheduleNext() {
-            const delay = getrand(MIN_DELAY, MAX_DELAY);
-            ctx.logger.debug("Farm", "Phrases", `Next phrase in ${delay}ms`);
-            ctx.loops.schedule(sendPhrase, delay, "farm:phrases");
-        }
-
         ctx.logger.info("Farm", "Phrases", "Phrases interval started.");
         scheduleNext();
     })();

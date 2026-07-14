@@ -16,7 +16,7 @@ Follow these when touching code:
 ## Entrypoint & Architecture
 - `src/main.js` forks itself via `cluster.fork()`; worker calls `src/core/bot.js`
 - `src/core/bot.js` attaches everything to the Discord.js `Client` via `Object.assign`, then: load handlers → login → wait for message commands
-- `src/core/bot.js` startup: `configValidator.verifyconfig()` → `configValidator.getconfig()` → `initializeBot()`
+- `src/core/bot.js` startup: `configSchema.validateConfig()` → `configSchema.parseConfigErrors()` → `configSchema.getDebugConfig()` → `initializeBot()`
 - `src/core/index.js` wires: antiCrash, command registration, event binding
 - `src/core/admin.js` — pause/resume/start/restart/stats
 - `src/core/messageCreate.js` — captcha detection + command dispatch
@@ -37,7 +37,7 @@ Follow these when touching code:
 - `config.settings.owoprefix` defaults to `"owo"` if missing/empty (in runtimeConfig.js)
 - `extra` config section exists but code for it was fully removed (YAGNI) — do not add back
 - `client.prefix()` randomizes between `"owo"` and `config.settings.owoprefix` — use this instead of hardcoding
-- Config validation lives in `src/services/configValidator.js` (verifyconfig + getconfig + helpers)
+- Config validation lives in `src/services/configSchema.js` (valibot-based: validateConfig + parseConfigErrors + getDebugConfig + checkToken)
 
 ## Key Patterns
 - `client.globalutil.waitWhileBusy(client)` — always call before any action (checks paused/captcha/inventory/checklist flags)
@@ -59,7 +59,7 @@ Follow these when touching code:
 ## Key Files
 - `src/core/globalutil.js` — runtime utilities (waitForMessage, waitWhileBusy, parseDuration, commandrandomizer, getrand, removeInvisibleChars)
 - `src/services/runtimeConfig.js` — config file loading + .env overrides + default prefix initialization
-- `src/services/configValidator.js` — startup config validation (verifyconfig, getconfig, 8 helpers)
+- `src/services/configSchema.js` — startup config validation (valibot schema + helpers)
 - `src/services/checklist.js` — checklist subsystem (smol, executeChecklistLine, handleDaily/Vote/Cookie, etc.)
 - `src/services/mainHandler.js` — orchestrator (module.exports + 8 init functions, no top-level requires)
 - `src/modules/` — self-looping modules: farm, gamble, quest, luck, huntbot, safety, inventory, joingiveaways, animals, captchaNotify

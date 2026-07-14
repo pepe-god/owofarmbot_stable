@@ -59,49 +59,144 @@ function createMockGlobalUtil() {
 
 function createDefaultConfig() {
     return {
-        settings: {
-            owoprefix: "owo",
-            inventory: { use: { gems: true } },
-            chatfeedback: false,
-            logging: { loglength: 16, showlogbeforeexit: false, newlog: false },
-            captcha: {
-                autosolve: false,
-                alerttype: {
-                    webhook: false,
-                    webhookurl: "",
-                    desktop: {
-                        force: false,
-                        notification: false,
-                        prompt: false,
-                    },
-                },
-            },
-            safety: { pauseafter: 60, pausefor: 10 },
-            autoquest: true,
-            gamble: {
-                coinflip: true,
-                slots: false,
-                coinflipamount: 100,
-                slotamount: 100,
-            },
-            pray: { use: false, amount: 100 },
-            curse: { use: false, amount: 100 },
-            animals: {
-                sell: false,
-                sacrifice: false,
-                selllevel: 1,
-                sacrificelevel: 1,
-            },
-            checklist: { daily: true, vote: true, cookie: true },
-        },
+        firstrun: false,
+        prefix: "!",
         main: {
             token: "test_token",
+            userid: "123",
             commandschannelid: "111",
             huntbotchannelid: "222",
             gamblechannelid: "333",
             autoquestchannelid: "444",
             owodmchannelid: "555",
-            userid: "123",
+            autostart: true,
+            commands: {
+                hunt: true,
+                battle: true,
+                pray: false,
+                curse: false,
+                huntbot: {
+                    enable: false,
+                    maxtime: 10,
+                    upgrade: false,
+                    upgradetype: "duration",
+                },
+                gamble: {
+                    coinflip: true,
+                    slot: false,
+                },
+                animals: false,
+                inventory: true,
+                checklist: false,
+                autoquest: false,
+            },
+            maximum_gem_rarity: "fabled",
+        },
+        settings: {
+            owoprefix: "owo",
+            discordrpc: false,
+            chatfeedback: false,
+            autophrases: true,
+            autoresume: false,
+            autojoingiveaways: false,
+            checklist: {
+                types: {
+                    daily: true,
+                    cookie: false,
+                    vote: false,
+                },
+            },
+            inventory: {
+                use: {
+                    lootbox: true,
+                    fabledlootbox: false,
+                    crate: true,
+                    gems: true,
+                },
+            },
+            gamble: {
+                coinflip: {
+                    default_amount: 1,
+                    max_amount: 11,
+                    multiplier: 1,
+                },
+                slot: {
+                    default_amount: 1,
+                    max_amount: 11,
+                    multiplier: 1,
+                },
+            },
+            logging: {
+                newlog: true,
+                loglength: 20,
+                showlogbeforeexit: false,
+            },
+            safety: {
+                autopause: true,
+                pauseafter: 30,
+                pausefor: 5,
+            },
+            captcha: {
+                autosolve: false,
+                autosolve_thread: 1,
+                alerttype: {
+                    webhook: true,
+                    webhookurl: "",
+                    desktop: {
+                        force: true,
+                        notification: true,
+                        prompt: true,
+                    },
+                },
+            },
+        },
+        animals: {
+            type: {
+                sell: false,
+                sacrifice: false,
+            },
+            animaltype: {
+                common: false,
+                uncommon: false,
+                rare: false,
+                epic: false,
+                mythical: false,
+                patreon: false,
+                cpatreon: false,
+                legendary: false,
+                gem: false,
+                bot: false,
+                distorted: false,
+                fabled: false,
+                special: false,
+                hidden: false,
+            },
+        },
+        interval: {
+            hunt: {
+                max: 32000,
+                min: 16000,
+            },
+            battle: {
+                max: 32000,
+                min: 16000,
+            },
+            pray: {
+                max: 332000,
+                min: 316000,
+            },
+            coinflip: {
+                max: 32000,
+                min: 16000,
+            },
+            slot: {
+                max: 32000,
+                min: 16000,
+            },
+            animals: {
+                max: 661000,
+                min: 610000,
+            },
         },
     };
 }
@@ -110,11 +205,20 @@ function createDefaultBasic(config) {
     return {
         ...config.main,
         commands: {
+            ...config.main.commands,
             inventory: true,
             hunt: true,
             battle: true,
-            gamble: { coinflip: true, slots: false },
-            huntbot: { upgrade: true, upgradetype: "trait" },
+            gamble: {
+                ...config.main.commands.gamble,
+                coinflip: true,
+                slot: false,
+            },
+            huntbot: {
+                ...config.main.commands.huntbot,
+                upgrade: true,
+                upgradetype: "trait",
+            },
         },
     };
 }

@@ -1,5 +1,11 @@
 const { commandrandomizer, getrand } = require("../core/globalutil.js");
 const { OWO_ID } = require("../core/constants.js");
+const {
+    handleModuleError,
+    RateLimitError,
+    nextRateLimitDelay,
+    resetRateLimitBackoff,
+} = require("../services/errors.js");
 
 /**
  * Human-readable suffixes appended to a quest reward amount based on its type.
@@ -77,15 +83,25 @@ async function questHandler(ctx, channel) {
         const quests = parseQuests(embedContent);
         await selectQuest(ctx, channel, quests);
     } catch (err) {
-        ctx.logger.alert(
-            "Farm",
-            "Quest",
-            `Error while getting quest: ${err}\nRecheck after 61 seconds.`,
-        );
-        ctx.logger.debug(err);
+        const wrapped = handleModuleError(ctx, err, {
+            type: "Farm",
+            module: "Quest",
+            fallback: "Error while getting quest",
+        });
+        let delay = 61000;
+        if (wrapped instanceof RateLimitError) {
+            delay = nextRateLimitDelay(ctx, "quest:handler");
+            ctx.logger.warn(
+                "Farm",
+                "Quest",
+                `Rate limited, backing off ${delay}ms before retry.`,
+            );
+        } else {
+            resetRateLimitBackoff(ctx, "quest:handler");
+        }
         ctx.loops.schedule(
             () => questHandler(ctx, channel),
-            61000,
+            delay,
             "quest:retry",
         );
     }
@@ -253,12 +269,11 @@ async function questLoop(ctx, channel, quest, opts) {
             ctx.global.quest.progress = `${quest.pro1} / ${quest.pro2}`;
             await ctx.delay(opts.useGetRand ? getrand(12000, 16000) : delayMs);
         } catch (err) {
-            ctx.logger.alert(
-                "Farm",
-                "Quest",
-                `Error while doing quest: ${err}`,
-            );
-            ctx.logger.debug(err);
+            handleModuleError(ctx, err, {
+                type: "Farm",
+                module: "Quest",
+                fallback: "Error while doing quest",
+            });
             quest.pro1--;
             ctx.global.quest.progress = `${quest.pro1} / ${quest.pro2}`;
         }

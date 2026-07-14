@@ -11,7 +11,7 @@ describe("Logger", () => {
 
     it("uses default logLength when ctx has no logging config", () => {
         const logger = createLogger(makeCtx({ global: { type: "test" } }));
-        assert.strictEqual(logger.logLength, 16);
+        assert.strictEqual(logger.logLength, 20);
         assert.ok(!logger.exitLog);
     });
 

@@ -5,6 +5,7 @@ const {
     OWO_SUPPORT_GUILD_ID,
     GIVEAWAY_CHANNEL_IDS,
 } = require("../core/constants.js");
+const { handleModuleError } = require("../services/errors.js");
 
 /**
  * Retrieve (or initialize) the per-user list of giveaway message IDs
@@ -86,11 +87,11 @@ async function pressButtonsSequentially(ctx, enteredGiveaways, buttonQueue) {
             myEntered.push(message.id);
             await ctx.delay(15000);
         } catch (error) {
-            ctx.logger.alert(
-                "Farm",
-                "Auto Join Giveaways",
-                `Error joining giveaway: ${error}`,
-            );
+            handleModuleError(ctx, error, {
+                type: "Farm",
+                module: "Auto Join Giveaways",
+                fallback: "Error joining giveaway",
+            });
         }
     }
 }
@@ -186,11 +187,11 @@ async function scanChannelGiveaways(ctx, guild, enteredGiveaways) {
                 );
             }
         } catch (error) {
-            ctx.logger.alert(
-                "Farm",
-                "Auto Join Giveaways",
-                `Error retrieving giveaway messages from ${channel.name}: ${error}`,
-            );
+            handleModuleError(ctx, error, {
+                type: "Farm",
+                module: "Auto Join Giveaways",
+                fallback: `Error retrieving giveaway messages from ${channel.name}`,
+            });
         }
     }
 }
