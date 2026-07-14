@@ -55,7 +55,6 @@ module.exports = async (ctx) => {
  * @returns {Promise<string|null>} Raw inventory message content, or null on timeout/pause.
  */
 async function fetchInventoryData(ctx, channel) {
-    channel.sendTyping();
     ctx.state.startInventory();
     ctx.logger.info(
         "Farm",

@@ -1,12 +1,10 @@
-const { getrand } = require("../core/globalutil.js");
+const { getrand, capitalize } = require("../core/globalutil.js");
 const {
     handleModuleError,
     RateLimitError,
     nextRateLimitDelay,
     resetRateLimitBackoff,
 } = require("../services/errors.js");
-
-const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /**
  * Animal module entry point — sells or sacrifices animals on a loop.
@@ -36,7 +34,6 @@ module.exports = async function sell(ctx, channel, choose, types) {
     }
     let rateLimited = false;
     try {
-        channel.sendTyping();
         await channel.send({
             content: `${ctx.prefix()} ${choose} ${types}`,
         });

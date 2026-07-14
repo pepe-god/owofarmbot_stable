@@ -55,38 +55,46 @@ module.exports = async (ctx) => {
 
 /**
  * Periodically trim the Discord message cache to avoid unbounded memory
- * growth. Runs every 5 minutes and deletes the oldest ~85% of cached
- * messages across all visible channels.
+ * growth. Runs every 5 minutes via {@link LoopManager} and deletes the
+ * oldest ~85% of cached messages across all visible channels.
  *
- * @param {Client} botClient - The Discord ctx instance.
+ * Using LoopManager instead of a raw `setInterval` ensures the sweeper is
+ * tracked and can be cancelled by {@link LoopManager#stopAll} during restarts,
+ * preventing duplicate sweepers on reconnection.
+ *
+ * @param {Client} ctx - The Discord ctx instance.
  */
-function setupSweeper(botClient) {
-    setInterval(
-        () => {
-            botClient.client.channels.cache.forEach((channel) => {
-                if (channel.messages) {
-                    const messagesArray = Array.from(
-                        channel.messages.cache.values(),
-                    );
-                    messagesArray.sort(
-                        (a, b) => a.createdTimestamp - b.createdTimestamp,
-                    );
-                    // Keep only the newest ~15% of cached messages to bound RAM.
-                    const messagesToDelete = Math.floor(
-                        messagesArray.length * 0.85,
-                    );
-                    for (let i = 0; i < messagesToDelete; i++) {
-                        channel.messages.cache.delete(messagesArray[i].id);
-                    }
-                }
-            });
+function setupSweeper(ctx) {
+    const SWEEPER_INTERVAL = 5 * 60 * 1000;
 
-            botClient.logger.warn(
-                "Bot",
-                "Cache",
-                `Cleared oldest 85% of message cache for [${botClient.client.user.username}].`,
-            );
-        },
-        5 * 60 * 1000,
-    );
+    async function sweep() {
+        ctx.client.channels.cache.forEach((channel) => {
+            if (channel.messages) {
+                const messagesArray = Array.from(
+                    channel.messages.cache.values(),
+                );
+                messagesArray.sort(
+                    (a, b) => a.createdTimestamp - b.createdTimestamp,
+                );
+                // Keep only the newest ~15% of cached messages to bound RAM.
+                const messagesToDelete = Math.floor(
+                    messagesArray.length * 0.85,
+                );
+                for (let i = 0; i < messagesToDelete; i++) {
+                    channel.messages.cache.delete(messagesArray[i].id);
+                }
+            }
+        });
+
+        ctx.logger.warn(
+            "Bot",
+            "Cache",
+            `Cleared oldest 85% of message cache for [${ctx.client.user.username}].`,
+        );
+
+        // Self-reschedule through LoopManager so the timer is trackable.
+        ctx.loops.schedule(sweep, SWEEPER_INTERVAL, "sweeper");
+    }
+
+    ctx.loops.schedule(sweep, SWEEPER_INTERVAL, "sweeper");
 }

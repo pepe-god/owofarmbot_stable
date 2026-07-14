@@ -108,7 +108,7 @@ const ctx = new BotContext({
     delay,
     prefix,
     chalk,
-    childprocess: cp,
+    child_process: cp,
     notifier,
     fs,
 });

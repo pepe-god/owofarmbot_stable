@@ -18,14 +18,13 @@
  */
 module.exports = async (ctx, message) => {
     await ctx.globalutil.waitWhileBusy(ctx);
-    const channel = ctx.client.channels.cache.get(ctx.basic.commandschannelid);
     if (!ctx.config.settings.owoprefix.length)
         ctx.config.settings.owoprefix = "owo";
 
-    await initFarming(ctx, channel, message);
+    await initFarming(ctx, message);
     await ctx.delay(2000);
 
-    await initAnimals(ctx, channel);
+    await initAnimals(ctx);
     await initPrayer(ctx, message);
     initSafety(ctx);
 };
@@ -33,13 +32,15 @@ module.exports = async (ctx, message) => {
 /**
  * Start the farm subsystem (hunt/battle).
  *
+ * The farm module resolves its own commands channel from ctx, so the channel
+ * is refreshed each iteration and does not need to be passed from here.
+ *
  * @param {Client} ctx - The Discord ctx instance.
- * @param {TextChannel} channel - The commands channel.
  * @param {Message} message - The originating command message.
  * @returns {Promise<void>} Resolves once the farm module has been started.
  * @sideeffect Starts the farm module directly.
  */
-async function initFarming(ctx, channel, message) {
+async function initFarming(ctx, message) {
     await ctx.globalutil.waitWhileBusy(ctx);
     await ctx.delay(2000);
     require("../modules/farm.js")(ctx, message);
@@ -48,17 +49,20 @@ async function initFarming(ctx, channel, message) {
 /**
  * Start the animal sell/sacrifice loop.
  *
- * Selects "sell" vs "sacrifice" from config and passes the resolved, concatenated
- * animal-type suffix string (`global.temp.animaltype`) to the module.
+ * Resolves the current commands channel from ctx so that the reference is
+ * refreshed each call. Selects "sell" vs "sacrifice" from config and passes
+ * the concatenated animal-type suffix to the module.
  *
  * @param {Client} ctx - The Discord ctx instance; reads `basic.commands.animals`, `config.animals.type.sell`, and `global.temp.animaltype`.
- * @param {TextChannel} channel - The commands channel.
  * @returns {Promise<void>} Resolves once the animal loop is launched.
  * @sideeffect Starts the animals module loop when enabled.
  */
-async function initAnimals(ctx, channel) {
+async function initAnimals(ctx) {
     if (ctx.basic.commands.animals) {
         await ctx.globalutil.waitWhileBusy(ctx);
+        const channel = ctx.client.channels.cache.get(
+            ctx.basic.commandschannelid,
+        );
         await require("../modules/animals.js")(
             ctx,
             channel,

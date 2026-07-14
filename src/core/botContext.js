@@ -28,7 +28,7 @@ class BotContext {
      * @param {() => Promise<void>} deps.delay - Delay helper.
      * @param {() => string} deps.prefix - Random prefix ("owo"/config prefix) resolver.
      * @param {Object} deps.chalk - chalk instance.
-     * @param {Object} deps.childprocess - child_process (spawn/exec).
+     * @param {Object} deps.child_process - child_process (spawn/exec).
      * @param {Object} deps.notifier - node-notifier.
      * @param {Object} deps.fs - node:fs.
      */

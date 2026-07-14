@@ -18,7 +18,7 @@
 const { connect } = require("puppeteer-real-browser");
 const yargs = require("yargs");
 const path = require("node:path");
-const fse = require("fs-extra");
+const fs = require("node:fs");
 const { HCAPTCHA_EXTENSION_ID } = require("./constants.js");
 
 /**
@@ -91,8 +91,8 @@ const extensionPath = path.resolve(__dirname, "../vendor/hcaptchasolver");
  */
 const adblockcachedir = path.resolve(__dirname, "../vendor/adblockcache");
 
-if (!fse.existsSync(adblockcachedir)) {
-    fse.mkdirSync(adblockcachedir, { recursive: true });
+if (!fs.existsSync(adblockcachedir)) {
+    fs.mkdirSync(adblockcachedir, { recursive: true });
 }
 
 /**

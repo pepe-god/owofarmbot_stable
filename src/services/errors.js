@@ -72,8 +72,9 @@ class CaptchaError extends BotError {}
 
 /**
  * Discord rate-limit hit. Carries an optional `retryAfter` (ms) reported by
- * Discord and an `attempt` counter used by {@link nextDelay} for exponential
- * backoff across consecutive limits.
+ * Discord so callers can inspect the original rate-limit duration.
+ * Backoff logic lives in {@link nextRateLimitDelay} which manages external
+ * attempt counters on `ctx.global.temp.rateLimit`.
  *
  * @extends BotError
  */
@@ -82,28 +83,11 @@ class RateLimitError extends BotError {
      * @param {string} type - High-level feature.
      * @param {string} module - Subsystem that raised the error.
      * @param {string} message - Human-readable description.
-     * @param {{ cause?: unknown, retryAfter?: number, attempt?: number }} [options]
+     * @param {{ cause?: unknown, retryAfter?: number }} [options]
      */
     constructor(type, module, message, options = {}) {
         super(type, module, message, options);
         this.retryAfter = options.retryAfter ?? 0;
-        this.attempt = options.attempt ?? 0;
-    }
-
-    /**
-     * Exponential backoff delay (ms) for the next retry, capped.
-     *
-     * @param {number} [base=RATE_LIMIT_BASE_MS] - Base delay in ms.
-     * @param {number} [factor=RATE_LIMIT_FACTOR] - Growth factor per attempt.
-     * @param {number} [cap=RATE_LIMIT_CAP_MS] - Maximum delay in ms.
-     * @returns {number} The next backoff delay in milliseconds.
-     */
-    nextDelay(
-        base = RATE_LIMIT_BASE_MS,
-        factor = RATE_LIMIT_FACTOR,
-        cap = RATE_LIMIT_CAP_MS,
-    ) {
-        return Math.min(base * factor ** this.attempt, cap);
     }
 }
 

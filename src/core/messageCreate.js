@@ -122,7 +122,7 @@ async function launchAutoSolve(ctx) {
     for (let spawncount = 0; spawncount < spawnthread; spawncount++) {
         // Pass the token via the OwoToken env var (not argv) so it never
         // appears in the worker's command line, which is visible via `ps`.
-        ctx.childprocess.spawn(
+        ctx.child_process.spawn(
             "node",
             ["./core/captcha.js", `--userid=${ctx.client.user.id}`],
             { env: { ...process.env, OwoToken: ctx.basic.token } },

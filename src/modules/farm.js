@@ -1,4 +1,8 @@
-const { commandrandomizer, getrand } = require("../core/globalutil.js");
+const {
+    commandrandomizer,
+    getrand,
+    capitalize,
+} = require("../core/globalutil.js");
 const { OWO_ID } = require("../core/constants.js");
 const {
     handleModuleError,
@@ -7,7 +11,6 @@ const {
     resetRateLimitBackoff,
 } = require("../services/errors.js");
 
-const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const REQUIRED_GEMS = ["gem1", "gem3", "gem4"];
 
 /**
@@ -68,7 +71,7 @@ module.exports = async (ctx) => {
 async function farmAction(ctx, channel, { type, cmd, onResult }) {
     await ctx.globalutil.waitWhileBusy(ctx);
     while (ctx.global.use || ctx.global[type]) {
-        await ctx.delay(16000);
+        await ctx.delay(3000);
     }
 
     const interval = getrand(
@@ -78,7 +81,6 @@ async function farmAction(ctx, channel, { type, cmd, onResult }) {
 
     let rateLimited = false;
     try {
-        channel.sendTyping();
         if (ctx.global[type === "hunt" ? "battle" : "hunt"])
             await ctx.delay(1500);
         ctx.global[type] = true;
@@ -318,7 +320,6 @@ function startAutophrases(ctx, channel) {
         try {
             await ctx.globalutil.waitWhileBusy(ctx);
             const { text, idx } = pickPhrase(ctx.global.temp.lastPhraseIndex);
-            await channel.sendTyping();
             await ctx.delay(800);
             await channel.send({ content: text });
             ctx.global.temp.lastPhraseIndex = idx;

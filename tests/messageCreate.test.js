@@ -54,7 +54,7 @@ function makeClient(overrides = {}) {
             debug: () => {},
         },
         delay: async () => {},
-        childprocess: { spawn: () => {}, exec: () => {} },
+        child_process: { spawn: () => {}, exec: () => {} },
         client: { user: { id: "123" } },
         ...overrides,
     };
@@ -224,7 +224,7 @@ describe("handleCaptchaDetection", () => {
                     },
                 },
             },
-            childprocess: { spawn, exec: () => {} },
+            child_process: { spawn, exec: () => {} },
         });
         const message = makeMessage({
             channelId: "111",

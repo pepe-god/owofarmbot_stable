@@ -13,7 +13,6 @@ const {
     resetRateLimitBackoff,
     RATE_LIMIT_BASE_MS,
     RATE_LIMIT_FACTOR,
-    RATE_LIMIT_CAP_MS,
 } = require("../src/services/errors.js");
 
 describe("errors", () => {
@@ -50,38 +49,11 @@ describe("errors", () => {
     });
 
     describe("RateLimitError", () => {
-        it("stores retryAfter and attempt", () => {
+        it("stores retryAfter", () => {
             const err = new RateLimitError("Farm", "Hunt", "Rate limited", {
                 retryAfter: 30,
-                attempt: 2,
             });
             assert.strictEqual(err.retryAfter, 30);
-            assert.strictEqual(err.attempt, 2);
-        });
-
-        it("nextDelay computes exponential backoff", () => {
-            const err0 = new RateLimitError("Farm", "Hunt", "Rate limited", {
-                attempt: 0,
-            });
-            assert.strictEqual(err0.nextDelay(), RATE_LIMIT_BASE_MS); // 5000 * 2^0 = 5000
-
-            const err1 = new RateLimitError("Farm", "Hunt", "Rate limited", {
-                attempt: 1,
-            });
-            assert.strictEqual(err1.nextDelay(), RATE_LIMIT_BASE_MS * 2); // 10000
-
-            const errmax = new RateLimitError("Farm", "Hunt", "Rate limited", {
-                attempt: 10,
-            });
-            assert.strictEqual(errmax.nextDelay(), RATE_LIMIT_CAP_MS); // capped at 320000
-        });
-
-        it("nextDelay respects custom base/factor/cap", () => {
-            const err = new RateLimitError("Farm", "Hunt", "Rate limited", {
-                attempt: 3,
-            });
-            // 1000 * 3^3 = 27000, capped at 100000
-            assert.strictEqual(err.nextDelay(1000, 3, 100000), 27000);
         });
     });
 

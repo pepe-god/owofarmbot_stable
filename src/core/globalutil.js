@@ -10,6 +10,16 @@
  *  - parseDuration: convert strings like "1H 30M" into milliseconds.
  */
 
+const { BUSY_FLAGS } = require("../services/botState.js");
+
+/**
+ * Capitalize the first character of a string.
+ *
+ * @param {string} s - Input string.
+ * @returns {string} The string with its first letter uppercased.
+ */
+exports.capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
 exports.removeInvisibleChars = (str) => {
     const invisibleRegex = /[\u0000-\u001F\u007F\u200B-\u200D\uFEFF]/g;
     return str.replace(invisibleRegex, "");
@@ -95,8 +105,7 @@ exports.waitWhileBusy = async (ctx) => {
         return;
     }
     // Fallback for contexts without a state machine: poll the same busy flags
-    // the state machine owns (imported so the two lists cannot drift apart).
-    const { BUSY_FLAGS } = require("../services/botState.js");
+    // the state machine owns.
     while (BUSY_FLAGS.some((flag) => ctx.global[flag])) {
         await ctx.delay(3000);
     }
