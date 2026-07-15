@@ -73,7 +73,13 @@ if (process.env.WEBHOOK_URL)
 // because config.json is git-tracked. The logger is not wired yet at this
 // require-time, so we use console.warn (transient) to nudge the user toward
 // `.env`. No warning is emitted once the token comes from the env override.
-if (!tokenFromEnv && config.main.token && config.main.token.length > 0) {
+// Placeholder strings like "(use MAIN_TOKEN in .env)" are skipped.
+if (
+    !tokenFromEnv &&
+    config.main.token &&
+    config.main.token.length > 0 &&
+    !config.main.token.startsWith("(use ")
+) {
     console.warn(
         "[DEPRECATED] Found a token in config.json. Storing tokens in " +
             "config.json is deprecated and a security risk. Set MAIN_TOKEN in " +

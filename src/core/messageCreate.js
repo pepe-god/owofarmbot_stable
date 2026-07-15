@@ -82,13 +82,14 @@ function sendWebhookNotification(ctx) {
     const webhookurl = ctx.config.settings.captcha.alerttype.webhookurl;
     if (
         !ctx.config.settings.captcha.alerttype.webhook ||
-        !(webhookurl?.length > 10)
+        !(webhookurl?.length > 10) ||
+        !webhookurl.startsWith("https://discord.com/api/webhooks/")
     )
         return;
 
     const { WebhookClient } = require("discord.js-selfbot-v13");
     const webhookClient = new WebhookClient({
-        url: ctx.config.settings.captcha.alerttype.webhookurl,
+        url: webhookurl,
     });
     let message = `#Token Type: ${ctx.global.type}\n**🚨Captcha detected!🚨 Solve the captcha**`;
 
