@@ -36,7 +36,6 @@ function makeClient(overrides = {}) {
         basic: {
             token: "test_token",
             commandschannelid: "111",
-            autoquestchannelid: "444",
             owodmchannelid: "555",
             userid: "123",
         },

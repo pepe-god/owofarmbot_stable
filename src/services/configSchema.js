@@ -1,5 +1,3 @@
-/* eslint-disable no-control-regex */
-
 /**
  * Schema-based configuration validation using valibot.
  *

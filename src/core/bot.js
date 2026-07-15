@@ -1,6 +1,3 @@
-/* eslint-disable no-unused-vars */
-/* eslint-disable no-useless-escape */
-
 /**
  * Bot runtime bootstrap.
  *
