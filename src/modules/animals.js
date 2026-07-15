@@ -1,10 +1,5 @@
 const { getrand, capitalize } = require("../core/globalutil.js");
-const {
-    handleModuleError,
-    RateLimitError,
-    nextRateLimitDelay,
-    resetRateLimitBackoff,
-} = require("../services/errors.js");
+const { withRateLimit } = require("../services/errors.js");
 
 /**
  * Animal module entry point — sells or sacrifices animals on a loop.
@@ -32,37 +27,16 @@ module.exports = async function sell(ctx, channel, choose, types) {
         );
         return;
     }
-    let rateLimited = false;
-    try {
-        await channel.send({
-            content: `${ctx.prefix()} ${choose} ${types}`,
-        });
-    } catch (err) {
-        const wrapped = handleModuleError(ctx, err, {
-            type: "Farm",
-            module: capitalize(choose),
-            fallback: `Error while ${choose}ing`,
-        });
-        if (wrapped instanceof RateLimitError) {
-            rateLimited = true;
-            const key = `animals:${choose}`;
-            const delay = nextRateLimitDelay(ctx, key);
-            ctx.logger.warn(
-                "Farm",
-                capitalize(choose),
-                `Rate limited, backing off ${delay}ms before retry.`,
-            );
-            ctx.loops.schedule(
-                () => {
-                    sell(ctx, channel, choose, types);
-                },
-                delay,
-                `${key}:ratelimit`,
-            );
-        }
-    } finally {
-        if (!rateLimited) {
-            resetRateLimitBackoff(ctx, `animals:${choose}`);
+    await withRateLimit(ctx, {
+        type: "Farm",
+        module: capitalize(choose),
+        key: `animals:${choose}`,
+        run: async () => {
+            await channel.send({
+                content: `${ctx.prefix()} ${choose} ${types}`,
+            });
+        },
+        onSuccess: () => {
             ctx.loops.schedule(
                 () => {
                     sell(ctx, channel, choose, types);
@@ -73,6 +47,6 @@ module.exports = async function sell(ctx, channel, choose, types) {
                 ),
                 "animals",
             );
-        }
-    }
+        },
+    });
 };

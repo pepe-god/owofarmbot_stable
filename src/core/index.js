@@ -72,7 +72,13 @@ const registerCommand = (ctx, pull) => {
 const registerCommands = (ctx) => {
     // These files are infrastructure (loader, helpers, standalone CLIs),
     // not commands or events, so they must be skipped during discovery.
-    const EXCLUDE = new Set(["index.js", "globalutil.js", "captcha.js"]);
+    const EXCLUDE = new Set([
+        "index.js",
+        "globalutil.js",
+        "captcha.js",
+        "bot.js",
+        "botContext.js",
+    ]);
     // Scan the core directory and keep only plain .js modules.
     const files = ctx.fs
         .readdirSync(__dirname)

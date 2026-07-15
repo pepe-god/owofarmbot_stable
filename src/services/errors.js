@@ -205,6 +205,58 @@ function resetRateLimitBackoff(ctx, key) {
     if (store) store[key] = 0;
 }
 
+/**
+ * Wrap a module action with rate-limit-aware error handling and rescheduling.
+ *
+ * Executes `run` inside a try/catch. On rate-limit, reschedules with
+ * exponential backoff via {@link nextRateLimitDelay}. On success, calls
+ * `onSuccess` so the module can schedule its next normal iteration.
+ * An optional `onFinally` runs in the finally block regardless of outcome.
+ *
+ * @param {import("../core/botContext.js")} ctx - The bot context.
+ * @param {Object} opts
+ * @param {string} opts.type - Feature type (e.g. "Farm").
+ * @param {string} opts.module - Subsystem name (e.g. "Hunt", "Pray").
+ * @param {string} opts.key - Rate-limit tracking key (e.g. "farm:hunt").
+ * @param {() => Promise<void>} opts.run - The action to execute.
+ * @param {() => void} opts.onSuccess - Called on success (schedule next run).
+ * @param {() => void} [opts.onFinally] - Optional cleanup that always runs.
+ * @returns {Promise<void>}
+ */
+async function withRateLimit(ctx, opts) {
+    const { type, module, key, run, onSuccess, onFinally = () => {} } = opts;
+    let rateLimited = false;
+    try {
+        await run();
+    } catch (err) {
+        const wrapped = handleModuleError(ctx, err, {
+            type,
+            module,
+            fallback: `Error while ${module.toLowerCase()}ing`,
+        });
+        if (wrapped instanceof RateLimitError) {
+            rateLimited = true;
+            const delay = nextRateLimitDelay(ctx, key);
+            ctx.logger.warn(
+                type,
+                module,
+                `Rate limited, backing off ${delay}ms before retry.`,
+            );
+            ctx.loops.schedule(
+                () => withRateLimit(ctx, opts),
+                delay,
+                `${key}:ratelimit`,
+            );
+        }
+    } finally {
+        onFinally();
+        if (!rateLimited) {
+            resetRateLimitBackoff(ctx, key);
+            onSuccess();
+        }
+    }
+}
+
 module.exports = {
     BotError,
     ConfigError,
@@ -216,6 +268,7 @@ module.exports = {
     describeError,
     nextRateLimitDelay,
     resetRateLimitBackoff,
+    withRateLimit,
     RATE_LIMIT_BASE_MS,
     RATE_LIMIT_FACTOR,
     RATE_LIMIT_CAP_MS,

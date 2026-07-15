@@ -1,10 +1,5 @@
 const { getrand, capitalize } = require("../core/globalutil.js");
-const {
-    handleModuleError,
-    RateLimitError,
-    nextRateLimitDelay,
-    resetRateLimitBackoff,
-} = require("../services/errors.js");
+const { withRateLimit } = require("../services/errors.js");
 
 /**
  * Luck module entry point — starts the pray/curse loop.
@@ -43,50 +38,30 @@ async function prayOrCurse(ctx, type) {
         ctx.config.interval.pray.min,
         ctx.config.interval.pray.max,
     );
-    let rateLimited = false;
-    try {
-        const target = ctx.basic.commands.tomain
-            ? ` <@${ctx.config.main.userid}>`
-            : "";
-        const content = `${ctx.prefix()}${type}${target}`;
-        await channel.send({ content });
-        ctx.global.total[type]++;
-        ctx.logger.info(
-            "Farm",
-            capitalize(type),
-            `Total ${type}ed time: ${ctx.global.total[type]}`,
-        );
-    } catch (err) {
-        const wrapped = handleModuleError(ctx, err, {
-            type: "Farm",
-            module: capitalize(type),
-            fallback: `Error while ${type}ing`,
-        });
-        if (wrapped instanceof RateLimitError) {
-            rateLimited = true;
-            const key = `luck:${type}`;
-            const delay = nextRateLimitDelay(ctx, key);
-            ctx.logger.warn(
+
+    await withRateLimit(ctx, {
+        type: "Farm",
+        module: capitalize(type),
+        key: `luck:${type}`,
+        run: async () => {
+            const target = ctx.basic.commands.tomain
+                ? ` <@${ctx.config.main.userid}>`
+                : "";
+            const content = `${ctx.prefix()}${type}${target}`;
+            await channel.send({ content });
+            ctx.global.total[type]++;
+            ctx.logger.info(
                 "Farm",
                 capitalize(type),
-                `Rate limited, backing off ${delay}ms before retry.`,
+                `Total ${type}ed time: ${ctx.global.total[type]}`,
             );
+        },
+        onSuccess: () => {
             ctx.loops.schedule(
                 () => prayOrCurse(ctx, type),
-                delay,
-                `${key}:ratelimit`,
-            );
-        }
-    } finally {
-        if (!rateLimited) {
-            resetRateLimitBackoff(ctx, `luck:${type}`);
-            ctx.loops.schedule(
-                () => {
-                    prayOrCurse(ctx, type);
-                },
                 interval,
                 `luck:${type}`,
             );
-        }
-    }
+        },
+    });
 }

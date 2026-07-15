@@ -8,7 +8,7 @@ const {
     handleModuleError,
     RateLimitError,
     nextRateLimitDelay,
-    resetRateLimitBackoff,
+    withRateLimit,
 } = require("../services/errors.js");
 
 const REQUIRED_GEMS = ["gem1", "gem3", "gem4"];
@@ -79,57 +79,39 @@ async function farmAction(ctx, channel, { type, cmd, onResult }) {
         ctx.config.interval[type].max,
     );
 
-    let rateLimited = false;
-    try {
-        if (ctx.global[type === "hunt" ? "battle" : "hunt"])
-            await ctx.delay(1500);
-        ctx.global[type] = true;
-        const msg = await channel.send({
-            content: `${ctx.prefix()} ${cmd()}`,
-        });
-        ctx.global.total[type]++;
-        ctx.logger.info(
-            "Farm",
-            capitalize(type),
-            `Total ${type}: ${ctx.global.total[type]}`,
-        );
+    const moduleName = capitalize(type);
 
-        if (onResult) await onResult(ctx, channel, msg);
-        await ctx.delay(1000);
-    } catch (err) {
-        const wrapped = handleModuleError(ctx, err, {
-            type: "Farm",
-            module: capitalize(type),
-            fallback: `Error while ${type}ing`,
-        });
-        if (wrapped instanceof RateLimitError) {
-            rateLimited = true;
-            const key = `farm:${type}`;
-            const delay = nextRateLimitDelay(ctx, key);
-            ctx.logger.warn(
+    await withRateLimit(ctx, {
+        type: "Farm",
+        module: moduleName,
+        key: `farm:${type}`,
+        run: async () => {
+            if (ctx.global[type === "hunt" ? "battle" : "hunt"])
+                await ctx.delay(1500);
+            ctx.global[type] = true;
+            const msg = await channel.send({
+                content: `${ctx.prefix()} ${cmd()}`,
+            });
+            ctx.global.total[type]++;
+            ctx.logger.info(
                 "Farm",
-                capitalize(type),
-                `Rate limited, backing off ${delay}ms before retry.`,
+                moduleName,
+                `Total ${type}: ${ctx.global.total[type]}`,
             );
+            if (onResult) await onResult(ctx, channel, msg);
+            await ctx.delay(1000);
+        },
+        onFinally: () => {
+            ctx.global[type] = false;
+        },
+        onSuccess: () => {
             ctx.loops.schedule(
                 () => farmAction(ctx, channel, { type, cmd, onResult }),
-                delay,
-                `farm:${type}:ratelimit`,
-            );
-        }
-    } finally {
-        ctx.global[type] = false;
-        if (!rateLimited) {
-            resetRateLimitBackoff(ctx, `farm:${type}`);
-            ctx.loops.schedule(
-                () => {
-                    farmAction(ctx, channel, { type, cmd, onResult });
-                },
                 interval,
                 `farm:${type}`,
             );
-        }
-    }
+        },
+    });
 }
 
 /**
