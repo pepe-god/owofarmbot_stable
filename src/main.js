@@ -20,7 +20,7 @@ const FORK_WINDOW_MS = 60000;
 const MAX_FORKS = 5;
 // Short backoff applied between the first few re-forks to avoid a tight
 // restart storm right after a crash.
-const REFORK_BACKOFF_MS = 1000;
+const REFORK_BACKOFF_MS = 5000;
 const REFORK_BACKOFF_LIMIT = 3;
 
 if (cluster.isPrimary) {

@@ -113,6 +113,10 @@ function startHealthServer(ctx, options = {}) {
         handleRequest(ctx, req, res),
     );
 
+    // Prevent slow-loris / resource exhaustion.
+    server.requestTimeout = 5000;
+    server.headersTimeout = 6000;
+
     server.listen(port, host, () => {
         const actual = server.address()?.port ?? port;
         ctx.logger?.info?.(

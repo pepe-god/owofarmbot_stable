@@ -107,7 +107,7 @@ exports.waitWhileBusy = async (ctx) => {
     // Fallback for contexts without a state machine: poll the same busy flags
     // the state machine owns.
     while (BUSY_FLAGS.some((flag) => ctx.global[flag])) {
-        await ctx.delay(3000);
+        await ctx.delay(500);
     }
 };
 

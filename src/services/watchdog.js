@@ -95,7 +95,7 @@ function checkCaptcha(ctx, captchaSince, now, captchaMs) {
 function startWatchdog(ctx, options = {}) {
     const stuckMs = options.stuckMs ?? DEFAULT_STUCK_FLAG_MS;
     const captchaMs = options.captchaMs ?? DEFAULT_CAPTCHA_MAX_MS;
-    const tick = options.tick ?? DEFAULT_TICK_MS;
+    const tickMs = options.tick ?? DEFAULT_TICK_MS;
 
     // Timestamp (ms) since each flag was first observed as continuously `true`.
     const flagSince = {};
@@ -103,13 +103,16 @@ function startWatchdog(ctx, options = {}) {
 
     ctx.logger.info("Bot", "Watchdog", "Watchdog started.");
 
-    return setInterval(() => {
+    function tick() {
         const now = Date.now();
         for (const flag of STUCK_FLAGS) {
             checkStuckFlag(ctx, flag, flagSince, now, stuckMs);
         }
         captchaSince = checkCaptcha(ctx, captchaSince, now, captchaMs);
-    }, tick);
+        handle = setTimeout(tick, tickMs);
+    }
+    let handle = setTimeout(tick, tickMs);
+    return handle;
 }
 
 module.exports = {

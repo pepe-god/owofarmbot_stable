@@ -295,7 +295,7 @@ const parseConfigErrors = (errors, ctx) => {
     setTimeout(() => {
         ctx.logger.warn("Bot", "Config", "Exiting...");
         process.exit(1);
-    }, 1600);
+    }, 2000);
 };
 
 /**

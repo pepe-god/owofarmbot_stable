@@ -13,6 +13,8 @@
  */
 
 const dotenv = require("dotenv");
+// Suppress dotenvx promotional messages (they spam every .env load).
+process.env.DOTENV_CONFIG_QUIET = "true";
 dotenv.config();
 
 /**

@@ -19,9 +19,18 @@ const setupAntiCrash = (ctx) => {
     const { RateLimitError, describeError } = require("../services/errors.js");
 
     const logError = (type, err, origin = null) => {
+        // Sanitize error output: redact anything that looks like a Discord
+        // token (segment.segment.segment) to prevent secrets in logs.
+        const sanitize = (text) =>
+            typeof text === "string"
+                ? text.replace(
+                      /[a-zA-Z0-9_-]{24,30}\.[a-zA-Z0-9_-]{6,7}\.[a-zA-Z0-9_-]{27,40}/g,
+                      "[REDACTED_TOKEN]",
+                  )
+                : text;
         const errMessage = `--------------------------------------
-Error: ${err?.message || err}
-Stack: ${err?.stack || "No stack trace available"}
+Error: ${sanitize(err?.message) || err}
+Stack: ${sanitize(err?.stack) || "No stack trace available"}
 Origin: ${origin || "N/A"}
 Classification: ${describeError(err)}
 --------------------------------------`;
@@ -69,7 +78,7 @@ const registerCommand = (ctx, pull) => {
 /**
  * Discover and register all commands/events from src/core/.
  */
-const registerCommands = (ctx) => {
+const registerCommands = async (ctx) => {
     // These files are infrastructure (loader, helpers, standalone CLIs),
     // not commands or events, so they must be skipped during discovery.
     const EXCLUDE = new Set([
@@ -80,9 +89,19 @@ const registerCommands = (ctx) => {
         "botContext.js",
     ]);
     // Scan the core directory and keep only plain .js modules.
-    const files = ctx.fs
-        .readdirSync(__dirname)
-        .filter((d) => d.endsWith(".js") && !EXCLUDE.has(d));
+    let files;
+    try {
+        files = (await ctx.fs.promises.readdir(__dirname)).filter(
+            (d) => d.endsWith(".js") && !EXCLUDE.has(d),
+        );
+    } catch (err) {
+        ctx.logger.alert(
+            "Handler",
+            "Discovery",
+            `Failed to read core directory: ${err.message}`,
+        );
+        return;
+    }
     for (const file of files) {
         try {
             const pull = require(`./${file}`);
@@ -124,7 +143,7 @@ const bindEvent = (ctx, file, evt) => {
  *  2. Command registration
  *  3. Event binding
  */
-module.exports = (ctx) => {
+module.exports = async (ctx) => {
     setupAntiCrash(ctx);
-    registerCommands(ctx);
+    await registerCommands(ctx);
 };

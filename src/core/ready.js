@@ -68,23 +68,21 @@ function setupSweeper(ctx) {
     const SWEEPER_INTERVAL = 5 * 60 * 1000;
 
     async function sweep() {
-        ctx.client.channels.cache.forEach((channel) => {
-            if (channel.messages) {
-                const messagesArray = Array.from(
-                    channel.messages.cache.values(),
-                );
-                messagesArray.sort(
-                    (a, b) => a.createdTimestamp - b.createdTimestamp,
-                );
-                // Keep only the newest ~15% of cached messages to bound RAM.
-                const messagesToDelete = Math.floor(
-                    messagesArray.length * 0.85,
-                );
-                for (let i = 0; i < messagesToDelete; i++) {
-                    channel.messages.cache.delete(messagesArray[i].id);
-                }
+        for (const channel of ctx.client.channels.cache.values()) {
+            if (!channel.messages) continue;
+            if (channel.messages.cache.size === 0) continue;
+
+            // Delete first 85% by Map insertion order (no O(n log n) sort).
+            const messagesToDelete = Math.floor(
+                channel.messages.cache.size * 0.85,
+            );
+            let i = 0;
+            for (const [id] of channel.messages.cache) {
+                if (i >= messagesToDelete) break;
+                channel.messages.cache.delete(id);
+                i++;
             }
-        });
+        }
 
         ctx.logger.warn(
             "Bot",

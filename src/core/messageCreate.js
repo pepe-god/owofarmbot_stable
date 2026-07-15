@@ -57,14 +57,19 @@ function sendDesktopNotifications(ctx) {
     }
     if (showDesktop && ctx.config.settings.captcha.alerttype.desktop.prompt) {
         const promptmessage = `Captcha detected! Solve the captcha and type ${ctx.prefix()}resume in farm channel`;
-        const psCommands = [
+        // Escape single quotes for PowerShell single-quoted string context
+        // (powered by a user-controlled prefix — never shell-interpolated).
+        const escaped = promptmessage.replace(/'/g, "''");
+        const psScript = [
             "Add-Type -AssemblyName PresentationFramework",
-            "[System.Windows.MessageBox]::" +
-                `Show('${promptmessage}', 'OwO Farm Bot Stable', 'OK', 'Warning')`,
-        ];
-        ctx.child_process.exec(
-            `powershell.exe -ExecutionPolicy Bypass -Command "${psCommands.join("; ")}"`,
-        );
+            `[System.Windows.MessageBox]::Show('${escaped}', 'OwO Farm Bot Stable', 'OK', 'Warning')`,
+        ].join("; ");
+        ctx.child_process.spawn("powershell.exe", [
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            psScript,
+        ]);
     }
 }
 
@@ -254,7 +259,15 @@ function handleCommand(ctx, message) {
     // user ID may run admin commands.
     if (!cmd) return;
     if (message.author.id !== ctx.basic.userid) return;
-    cmd.run(ctx, message, args);
+    try {
+        cmd.run(ctx, message, args);
+    } catch (err) {
+        ctx.logger.alert(
+            "Bot",
+            "Command",
+            `Error executing command: ${err.message}`,
+        );
+    }
 }
 
 /**

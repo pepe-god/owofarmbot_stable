@@ -71,7 +71,7 @@ module.exports = async (ctx) => {
 async function farmAction(ctx, channel, { type, cmd, onResult }) {
     await ctx.globalutil.waitWhileBusy(ctx);
     while (ctx.global.use || ctx.global[type]) {
-        await ctx.delay(3000);
+        await ctx.delay(500);
     }
 
     const interval = getrand(

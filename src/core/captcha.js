@@ -83,9 +83,10 @@ const extensionPath = path.resolve(__dirname, "../vendor/hcaptchasolver");
  */
 const adblockcachedir = path.resolve(__dirname, "../vendor/adblockcache");
 
-if (!fs.existsSync(adblockcachedir)) {
-    fs.mkdirSync(adblockcachedir, { recursive: true });
-}
+fs.mkdirSync(adblockcachedir, { recursive: true });
+
+// Maximum consecutive auth failures before giving up (rate-limit guard).
+const MAX_AUTH_RETRIES = 3;
 
 /**
  * Inspect the current post-auth page to determine whether Discord is rate
@@ -181,7 +182,8 @@ async function waitForCaptchaResult(page) {
 
 (async () => {
     try {
-        while (true) {
+        let authRetries = 0;
+        while (authRetries < MAX_AUTH_RETRIES) {
             /**
              * Spin up a real Chromium instance with:
              *  - headless off so the extension UI / challenge is visible (for debugging)
@@ -245,8 +247,9 @@ async function waitForCaptchaResult(page) {
                  */
                 const { isRateLimit, isLoggedIn } = await checkAuthStatus(page);
                 if (isRateLimit) {
+                    authRetries++;
                     console.log(
-                        "Rate limit detected. Waiting for 5 minutes...",
+                        `Rate limit detected (${authRetries}/${MAX_AUTH_RETRIES}). Waiting for 5 minutes...`,
                     );
                 } else if (isLoggedIn) {
                     console.log(
@@ -260,6 +263,8 @@ async function waitForCaptchaResult(page) {
                         console.log(
                             "Captcha flow complete. Exiting successfully.",
                         );
+                        // Clear token from localStorage before closing browser.
+                        await page.evaluate(() => localStorage.clear());
                         await browser.close();
                         /**
                          * Exit 0 signals success to the parent process.
@@ -268,8 +273,11 @@ async function waitForCaptchaResult(page) {
                         process.exit(0);
                     }
                 } else {
-                    console.log("Authorization failed.");
-                    break;
+                    authRetries++;
+                    console.log(
+                        `Authorization failed (${authRetries}/${MAX_AUTH_RETRIES}).`,
+                    );
+                    if (authRetries >= MAX_AUTH_RETRIES) break;
                 }
             } catch (loopError) {
                 console.error("Error during captcha worker loop:", loopError);
@@ -284,6 +292,10 @@ async function waitForCaptchaResult(page) {
             await browser.close().catch(() => {});
             await delay(300000);
         }
+        console.error(
+            `Exceeded ${MAX_AUTH_RETRIES} consecutive auth failures. Giving up.`,
+        );
+        process.exit(1);
     } catch (outerError) {
         console.error("Fatal error in captcha worker:", outerError);
         process.exit(1);

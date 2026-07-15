@@ -242,6 +242,9 @@ async function withRateLimit(ctx, opts) {
                 module,
                 `Rate limited, backing off ${delay}ms before retry.`,
             );
+            // Re-enter through withRateLimit so subsequent retries also get
+            // error classification, backoff, and cleanup. The call goes through
+            // setTimeout (via ctx.loops.schedule) so there's no deep recursion.
             ctx.loops.schedule(
                 () => withRateLimit(ctx, opts),
                 delay,

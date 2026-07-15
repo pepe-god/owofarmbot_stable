@@ -154,8 +154,8 @@ async function initializeBot() {
     for (const x of ["aliases", "commands"]) client[x] = new Collection();
 
     // Run the consolidated handler loader (anti-crash, commands, events).
-    require("./index.js")(ctx);
+    await require("./index.js")(ctx);
 
-    ctx.logger.warn("Bot", "Startup", "Logging in...");
+    ctx.logger.info("Bot", "Startup", "Logging in...");
     await ctx.client.login(config.main.token);
 }

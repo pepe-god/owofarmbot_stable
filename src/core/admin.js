@@ -43,8 +43,12 @@ const commands = [
             // (src/main.js) re-forks on any worker exit, so this restarts us.
             await message.channel.send("The bot is being restarted...");
             ctx.loops.stopAll();
-            await ctx.client.destroy();
-            setTimeout(() => process.exit(0), 2000);
+            try {
+                await ctx.client.destroy();
+            } finally {
+                // Guarantee exit even if destroy() throws.
+                setTimeout(() => process.exit(0), 2000);
+            }
         },
     },
     {
