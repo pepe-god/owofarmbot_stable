@@ -131,7 +131,7 @@ async function launchAutoSolve(ctx) {
         ctx.child_process.spawn(
             "node",
             ["./core/captcha.js", `--userid=${ctx.client.user.id}`],
-            { env: { ...process.env, OwoToken: ctx.basic.token } },
+            { env: { ...process.env, OwoToken: ctx.config.main.token } },
         );
         await ctx.delay(3000);
     }
@@ -147,7 +147,10 @@ async function launchAutoSolve(ctx) {
 async function handleCaptchaDetection(ctx, message, msgcontent) {
     // Only react to captchas inside channels we actively farm in
     // (commands channel and the OwO DM channel).
-    const CHANNEL_IDS = [ctx.basic.commandschannelid, ctx.basic.owodmchannelid];
+    const CHANNEL_IDS = [
+        ctx.config.main.commandschannelid,
+        ctx.config.main.owodmchannelid,
+    ];
 
     // Ignore any message not sent in one of the monitored channels.
     if (!CHANNEL_IDS.includes(message.channel.id)) return;
@@ -259,7 +262,7 @@ function handleCommand(ctx, message) {
     // Unknown command -> ignore. Security gate: only the configured owner
     // user ID may run admin commands.
     if (!cmd) return;
-    if (message.author.id !== ctx.basic.userid) return;
+    if (message.author.id !== ctx.config.main.userid) return;
     try {
         cmd.run(ctx, message, args);
     } catch (err) {

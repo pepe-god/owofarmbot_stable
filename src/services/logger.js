@@ -26,7 +26,7 @@ const ALERT_LOG_PATH = path.join(ALERT_LOG_DIR, "alert.log");
  * process via `process.send` when running as a worker).
  *
  * The buffered `fullLogs` are flushed on shutdown by `dumpExitLog()`, which the
- * process-wide SIGINT handler (registered in `src/core/bootstrap.js`) calls before
+ * process-wide SIGINT handler (registered in `src/core/bot.js`) calls before
  * the process exits — but only when `exitLog` is on.
  */
 class Logger {
@@ -53,7 +53,7 @@ class Logger {
     /**
      * Flush the buffered `fullLogs` to stdout, wrapped in marker lines.
      * No-op unless `exitLog` is enabled and at least one line was captured.
-     * Called by the process-wide SIGINT handler in `src/core/bootstrap.js`.
+     * Called by the process-wide SIGINT handler in `src/core/bot.js`.
      *
      * @returns {void}
      */

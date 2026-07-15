@@ -23,10 +23,7 @@
  */
 
 const { EventEmitter } = require("node:events");
-
-// The busy flags owned by the state machine, in status-priority order
-// (captcha is the most severe, running/idle is the absence of all flags).
-const BUSY_FLAGS = ["paused", "captchadetected", "inventory"];
+const { BUSY_FLAGS } = require("../core/constants.js");
 
 class BotState extends EventEmitter {
     /**

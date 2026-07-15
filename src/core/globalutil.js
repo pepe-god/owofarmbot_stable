@@ -7,10 +7,9 @@
  *  - commandrandomizer: pick a random element from an array.
  *  - getrand: generate a random float between min and max.
  *  - waitWhileBusy: block execution while bot is paused/captcha/inventory.
- *  - parseDuration: convert strings like "1H 30M" into milliseconds.
  */
 
-const { BUSY_FLAGS } = require("../services/botState.js");
+const { BUSY_FLAGS } = require("../core/constants.js");
 
 /**
  * Capitalize the first character of a string.
@@ -109,27 +108,4 @@ exports.waitWhileBusy = async (ctx) => {
     while (BUSY_FLAGS.some((flag) => ctx.global[flag])) {
         await ctx.delay(500);
     }
-};
-
-/**
- * Parse a duration string composed of digit+unit segments into milliseconds.
- *
- * Supported units: S (seconds), M (minutes), H (hours), D (days).
- *
- * @param {string} str - Duration string (e.g. "1H 30M").
- * @returns {number} Total milliseconds.
- */
-exports.parseDuration = (str) => {
-    const regex = /(\d+)([SMHD])/g;
-    const matches = str.matchAll(regex);
-    let ms = 0;
-    for (const match of matches) {
-        const time = parseInt(match[1], 10);
-        const unit = match[2];
-        if (unit === "S") ms += time * 1000;
-        else if (unit === "M") ms += time * 60 * 1000;
-        else if (unit === "H") ms += time * 60 * 60 * 1000;
-        else if (unit === "D") ms += time * 24 * 60 * 60 * 1000;
-    }
-    return ms;
 };

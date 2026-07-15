@@ -12,6 +12,7 @@
  * `DEVELOPER_MODE` flag for downstream consumers.
  */
 
+const { DEFAULT_PREFIX } = require("../core/constants.js");
 const dotenv = require("dotenv");
 // Suppress dotenvx promotional messages (they spam every .env load).
 process.env.DOTENV_CONFIG_QUIET = "true";
@@ -88,7 +89,7 @@ if (
 }
 
 if (!config.settings.owoprefix || config.settings.owoprefix.length <= 0) {
-    config.settings.owoprefix = "owo";
+    config.settings.owoprefix = DEFAULT_PREFIX;
 }
 
 module.exports = { config, DEVELOPER_MODE };

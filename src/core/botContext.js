@@ -8,7 +8,7 @@
  * signature, and the Discord client is used only as the Discord API.
  *
  * Injected services (formerly `client.logger`, `client.global`, ...):
- *   logger, config, global, loops, globalutil, delay, prefix, basic,
+ *   logger, config, global, loops, globalutil, delay, prefix,
  *   chalk, childprocess, notifier, fs
  *
  * Discord API (formerly `client.channels`, `client.user`, `client.login`, ...):
@@ -19,7 +19,6 @@ class BotContext {
      * @param {Object} deps
      * @param {Object} deps.client - The Discord.js client (Discord API surface).
      * @param {Object} deps.config - Parsed runtime config (config.json + env).
-     * @param {Object} deps.basic - Alias of `config.main` (commands/channel ids/token/userid).
      * @param {Object} deps.logger - The application logger instance.
      * @param {Object} deps.global - Shared runtime state object (`client.global`).
      * @param {Object} deps.state - Event-driven busy-flag state machine (`BotState`).
@@ -35,7 +34,6 @@ class BotContext {
     constructor(deps) {
         this.client = deps.client;
         this.config = deps.config;
-        this.basic = deps.basic;
         this.logger = deps.logger;
         this.global = deps.global;
         this.state = deps.state;

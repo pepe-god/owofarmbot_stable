@@ -22,39 +22,13 @@
  */
 
 const v = require("valibot");
-
-// Discord user tokens are three dot-separated base64url segments
-// (e.g. "<id>.<timestamp>.<secret>").
-const TOKEN_SHAPE = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
-
-// Maps rarity names to numeric levels used for gem selection.
-const RARITY_MAP = {
-    fabled: 7,
-    legendary: 6,
-    mythical: 5,
-    epic: 4,
-    rare: 3,
-    uncommon: 2,
-    common: 1,
-};
-
-// Maps animal type names to the suffix character OwO uses in commands.
-const ANIMAL_TYPE_MAP = {
-    common: " c",
-    uncommon: " u",
-    rare: " r",
-    epic: " e",
-    mythical: " m",
-    patreon: " p",
-    cpatreon: " cp",
-    legendary: " l",
-    gem: " g",
-    bot: " b",
-    distorted: " d",
-    fabled: " f",
-    special: " s",
-    hidden: " h",
-};
+const {
+    TOKEN_SHAPE,
+    RARITY_MAP,
+    RARITY_LIST,
+    ANIMAL_TYPE_MAP,
+    ANIMAL_TYPE_LIST,
+} = require("../core/constants.js");
 
 // Default min/max intervals (ms) per action type.
 const INTERVAL_DEFAULTS = [
@@ -64,8 +38,7 @@ const INTERVAL_DEFAULTS = [
     { type: "animals", min: 610000, max: 661000 },
 ];
 
-const RARITY_LIST = Object.keys(RARITY_MAP);
-const ANIMAL_TYPE_LIST = Object.keys(ANIMAL_TYPE_MAP);
+// RARITY_LIST and ANIMAL_TYPE_LIST imported from constants.js
 
 // valibot schemas for the pure-shape leaves that map cleanly to the original
 // checks. Custom messages keep the user-facing strings identical.
@@ -112,12 +85,12 @@ const checkToken = (config, ctx) => {
  * Enforce mutual exclusion between pray and curse. Only pray is kept active
  * if both are enabled.
  *
- * @sideeffect Disables `config.main.commands.curse` and `ctx.basic.curse` when both are enabled.
+ * @sideeffect Disables `config.main.commands.curse` when both are enabled.
  */
 const checkPrayCurseConflict = (ctx, config) => {
     if (config.main.commands.pray && config.main.commands.curse) {
         config.main.commands.curse = false;
-        ctx.basic.curse = false;
+        ctx.config.main.curse = false;
         showerr(
             ctx,
             "Curse and pray cannot be turn on at the same time! By default pray will be used.",
@@ -132,8 +105,8 @@ const checkPrayCurseConflict = (ctx, config) => {
  * @returns {boolean} True if the rarity string was valid.
  */
 const parseGemRarity = (ctx) => {
-    if (!ctx.basic.maximum_gem_rarity?.length) return true;
-    const rarity = ctx.basic.maximum_gem_rarity.toLowerCase();
+    if (!ctx.config.main.maximum_gem_rarity?.length) return true;
+    const rarity = ctx.config.main.maximum_gem_rarity.toLowerCase();
     const result = v.safeParse(raritySchema, rarity);
     if (result.success) {
         ctx.global.rareLevel = RARITY_MAP[rarity];
@@ -154,7 +127,7 @@ const parseGemRarity = (ctx) => {
  * @returns {boolean} True if at least one animal type is enabled.
  */
 const parseAnimalTypes = (ctx) => {
-    if (!ctx.basic.commands.animals) return true;
+    if (!ctx.config.main.commands.animals) return true;
     const animaltypes = ctx.config.animals.animaltype;
     for (const [type, isEnabled] of Object.entries(animaltypes)) {
         if (!isEnabled) continue;
@@ -185,7 +158,7 @@ const parseAnimalTypes = (ctx) => {
  * @returns {boolean} True if the conflict does not exist.
  */
 const checkSellSacrificeConflict = (config, ctx) => {
-    if (!ctx.basic.commands.animals) return true;
+    if (!ctx.config.main.commands.animals) return true;
     if (config.animals.type.sell && config.animals.type.sacrifice) {
         showerr(ctx, "Sell and sacrifice cannot be turn on at the same time!");
         return false;
@@ -373,7 +346,4 @@ module.exports = {
     parseConfigErrors,
     getDebugConfig,
     checkToken,
-    RARITY_MAP,
-    ANIMAL_TYPE_MAP,
-    INTERVAL_DEFAULTS,
 };

@@ -16,10 +16,12 @@
  * @returns {Promise<void>} Resolves once every enabled subsystem has been kicked off.
  * @sideeffect Launches all enabled subsystem loops and may set `config.settings.owoprefix` to `"owo"`.
  */
+const { DEFAULT_PREFIX } = require("../core/constants.js");
+
 module.exports = async (ctx, message) => {
     await ctx.globalutil.waitWhileBusy(ctx);
     if (!ctx.config.settings.owoprefix.length)
-        ctx.config.settings.owoprefix = "owo";
+        ctx.config.settings.owoprefix = DEFAULT_PREFIX;
 
     await initFarming(ctx, message);
     await ctx.delay(2000);
@@ -53,15 +55,15 @@ async function initFarming(ctx, message) {
  * refreshed each call. Selects "sell" vs "sacrifice" from config and passes
  * the concatenated animal-type suffix to the module.
  *
- * @param {Client} ctx - The Discord ctx instance; reads `basic.commands.animals`, `config.animals.type.sell`, and `global.temp.animaltype`.
+ * @param {Client} ctx - The Discord ctx instance; reads `config.main.commands.animals`, `config.animals.type.sell`, and `global.temp.animaltype`.
  * @returns {Promise<void>} Resolves once the animal loop is launched.
  * @sideeffect Starts the animals module loop when enabled.
  */
 async function initAnimals(ctx) {
-    if (ctx.basic.commands.animals) {
+    if (ctx.config.main.commands.animals) {
         await ctx.globalutil.waitWhileBusy(ctx);
         const channel = ctx.client.channels.cache.get(
-            ctx.basic.commandschannelid,
+            ctx.config.main.commandschannelid,
         );
         await require("../modules/animals.js")(
             ctx,
@@ -75,13 +77,13 @@ async function initAnimals(ctx) {
 /**
  * Start the pray/curse luck buff loop.
  *
- * @param {Client} ctx - The Discord ctx instance; reads `basic.commands.pray`/`curse`.
+ * @param {Client} ctx - The Discord ctx instance; reads `config.main.commands.pray`/`curse`.
  * @param {Message} message - The originating command message.
  * @returns {Promise<void>} Resolves after the luck loop is launched (after a 32s spacing delay).
  * @sideeffect Starts the luck module loop when pray or curse is enabled.
  */
 async function initPrayer(ctx, message) {
-    if (ctx.basic.commands.pray || ctx.basic.commands.curse) {
+    if (ctx.config.main.commands.pray || ctx.config.main.commands.curse) {
         await ctx.globalutil.waitWhileBusy(ctx);
         // Initial wait to space out luck buffs from farming actions.
         await ctx.delay(32000);

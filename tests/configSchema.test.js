@@ -22,11 +22,6 @@ function makeMockClient(config, overrides = {}) {
             rareLevel: 0,
             temp: { animaltype: "" },
         },
-        basic: {
-            maximum_gem_rarity: "",
-            commands: { animals: false },
-            curse: false,
-        },
         chalk: {
             white: (s) => s,
         },
@@ -132,7 +127,7 @@ describe("validateConfig", () => {
 
         await verify(client, config);
         assert.strictEqual(config.main.commands.curse, false);
-        assert.strictEqual(client.basic.curse, false);
+        assert.strictEqual(client.config.main.curse, false);
     });
 
     it("resets intervals that are too low", async () => {
@@ -149,7 +144,7 @@ describe("validateConfig", () => {
         config.animals.type.sell = true;
         config.animals.type.sacrifice = true;
         const client = makeMockClient(config);
-        client.basic.commands.animals = true;
+        client.config.main.commands.animals = true;
 
         mock.method(process, "exit", () => {});
         await verify(client, config);
@@ -159,7 +154,7 @@ describe("validateConfig", () => {
     it("defaults invalid gem rarity to level 7", async () => {
         const config = makeValidConfig();
         const client = makeMockClient(config);
-        client.basic.maximum_gem_rarity = "invalid_rarity";
+        client.config.main.maximum_gem_rarity = "invalid_rarity";
 
         await verify(client, config);
         assert.strictEqual(client.global.rareLevel, 7);

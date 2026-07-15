@@ -20,7 +20,7 @@ test.js
 !.github/
 .opencode/
 .kilo
-
+.tmp
 
 # OS files
 Thumbs.db

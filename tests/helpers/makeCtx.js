@@ -158,18 +158,6 @@ function createDefaultConfig() {
     };
 }
 
-function createDefaultBasic(config) {
-    return {
-        ...config.main,
-        commands: {
-            ...config.main.commands,
-            inventory: true,
-            hunt: true,
-            battle: true,
-        },
-    };
-}
-
 function createDefaultGlobal() {
     return {
         paused: false,
@@ -189,13 +177,11 @@ function createDefaultGlobal() {
 
 function makeCtx(overrides = {}) {
     const config = { ...createDefaultConfig(), ...overrides.config };
-    const basic = { ...createDefaultBasic(config), ...overrides.basic };
     const global = { ...createDefaultGlobal(), ...overrides.global };
 
     const deps = {
         client: overrides.client || createMockClient(),
         config,
-        basic,
         logger: overrides.logger || createMockLogger(),
         global,
         loops: overrides.loops || new LoopManager(),
@@ -225,6 +211,10 @@ function makeCtx(overrides = {}) {
 
     const ctx = new BotContext(deps);
     Object.assign(ctx, overrides);
+    // Re-apply the properly merged config and global — Object.assign(ctx, overrides)
+    // above overwrites them with the raw partial overrides, losing default fields.
+    ctx.config = config;
+    ctx.global = global;
     // Bind the state machine to the (possibly overridden) global object so
     // `ctx.state` and the busy-flag accessors behave like the real runtime.
     if (!ctx.state) ctx.state = attachState(ctx.global);

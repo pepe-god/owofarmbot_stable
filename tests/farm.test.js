@@ -2,6 +2,11 @@ const { describe, it, mock, afterEach, beforeEach } = require("node:test");
 const assert = require("node:assert");
 
 const { makeCtx } = require("./helpers/makeCtx.js");
+const { capitalize } = require("../src/core/globalutil.js");
+const {
+    huntResult,
+    handleMissingGems,
+} = require("../src/modules/gemHandler.js");
 
 describe("farm", () => {
     beforeEach(() => {
@@ -15,23 +20,19 @@ describe("farm", () => {
 
     describe("capitalize", () => {
         it("capitalizes first letter", () => {
-            const farm = require("../src/modules/farm.js");
-            assert.strictEqual(farm.capitalize("hello"), "Hello");
+            assert.strictEqual(capitalize("hello"), "Hello");
         });
 
         it("handles single character", () => {
-            const farm = require("../src/modules/farm.js");
-            assert.strictEqual(farm.capitalize("a"), "A");
+            assert.strictEqual(capitalize("a"), "A");
         });
 
         it("handles empty string", () => {
-            const farm = require("../src/modules/farm.js");
-            assert.strictEqual(farm.capitalize(""), "");
+            assert.strictEqual(capitalize(""), "");
         });
 
         it("leaves already capitalized string unchanged", () => {
-            const farm = require("../src/modules/farm.js");
-            assert.strictEqual(farm.capitalize("Hello"), "Hello");
+            assert.strictEqual(capitalize("Hello"), "Hello");
         });
     });
 
@@ -41,7 +42,6 @@ describe("farm", () => {
         }
 
         it("parses message and finds no missing gems when all present", async () => {
-            const farm = require("../src/modules/farm.js");
             const client = makeCtx({
                 globalutil: {
                     waitForMessage: async () => ({
@@ -50,14 +50,13 @@ describe("farm", () => {
                 },
             });
 
-            await farm.huntResult(client, mockChannel(), { id: "hunt123" });
+            await huntResult(client, mockChannel(), { id: "hunt123" });
 
             assert.deepStrictEqual(client.global.gems.need, []);
             assert.strictEqual(client.global.gems.huntssinceinv, 1);
         });
 
         it("finds missing gem3", async () => {
-            const farm = require("../src/modules/farm.js");
             const client = makeCtx({
                 globalutil: {
                     waitForMessage: async () => ({
@@ -66,13 +65,12 @@ describe("farm", () => {
                 },
             });
 
-            await farm.huntResult(client, mockChannel(), { id: "hunt123" });
+            await huntResult(client, mockChannel(), { id: "hunt123" });
 
             assert.deepStrictEqual(client.global.gems.need, ["gem3"]);
         });
 
         it("finds all gems missing", async () => {
-            const farm = require("../src/modules/farm.js");
             const client = makeCtx({
                 globalutil: {
                     waitForMessage: async () => ({
@@ -81,7 +79,7 @@ describe("farm", () => {
                 },
             });
 
-            await farm.huntResult(client, mockChannel(), { id: "hunt123" });
+            await huntResult(client, mockChannel(), { id: "hunt123" });
 
             assert.deepStrictEqual(client.global.gems.need, [
                 "gem1",
@@ -91,34 +89,31 @@ describe("farm", () => {
         });
 
         it("returns early when message is null", async () => {
-            const farm = require("../src/modules/farm.js");
             const client = makeCtx({
                 globalutil: { waitForMessage: async () => null },
             });
             client.global.gems.need = ["existing"];
 
-            await farm.huntResult(client, mockChannel(), { id: "hunt123" });
+            await huntResult(client, mockChannel(), { id: "hunt123" });
 
             // Gems should NOT have been reset
             assert.deepStrictEqual(client.global.gems.need, ["existing"]);
         });
 
         it("returns early when message content is null", async () => {
-            const farm = require("../src/modules/farm.js");
             const client = makeCtx({
                 globalutil: {
                     waitForMessage: async () => ({ content: null }),
                 },
             });
 
-            await farm.huntResult(client, mockChannel(), { id: "hunt123" });
+            await huntResult(client, mockChannel(), { id: "hunt123" });
 
             // need should be empty (reset at start), but no gems added after
             assert.deepStrictEqual(client.global.gems.need, []);
         });
 
         it("returns early when inventory gems setting disabled", async () => {
-            const farm = require("../src/modules/farm.js");
             const client = makeCtx();
             client.config.settings.inventory.use.gems = false;
             // waitForMessage should not be called
@@ -128,13 +123,12 @@ describe("farm", () => {
                 return { content: "test" };
             };
 
-            await farm.huntResult(client, mockChannel(), { id: "hunt123" });
+            await huntResult(client, mockChannel(), { id: "hunt123" });
 
             assert.strictEqual(waitCalled, false);
         });
 
         it("handles event with star found", async () => {
-            const farm = require("../src/modules/farm.js");
             const client = makeCtx({
                 global: {
                     gems: {
@@ -153,14 +147,13 @@ describe("farm", () => {
                 },
             });
 
-            await farm.huntResult(client, mockChannel(), { id: "hunt123" });
+            await huntResult(client, mockChannel(), { id: "hunt123" });
 
             assert.deepStrictEqual(client.global.gems.need, []);
             assert.strictEqual(client.global.temp.usedevent, false);
         });
 
         it("handles event without star and not yet used", async () => {
-            const farm = require("../src/modules/farm.js");
             const client = makeCtx({
                 global: {
                     gems: {
@@ -179,14 +172,13 @@ describe("farm", () => {
                 },
             });
 
-            await farm.huntResult(client, mockChannel(), { id: "hunt123" });
+            await huntResult(client, mockChannel(), { id: "hunt123" });
 
             assert.ok(client.global.gems.need.includes("star"));
             assert.strictEqual(client.global.temp.usedevent, true);
         });
 
         it("disables event flag when star not found and already used", async () => {
-            const farm = require("../src/modules/farm.js");
             const client = makeCtx({
                 global: {
                     gems: {
@@ -205,7 +197,7 @@ describe("farm", () => {
                 },
             });
 
-            await farm.huntResult(client, mockChannel(), { id: "hunt123" });
+            await huntResult(client, mockChannel(), { id: "hunt123" });
 
             assert.strictEqual(client.global.gems.isevent, false);
             assert.strictEqual(client.global.temp.usedevent, true);
@@ -214,26 +206,23 @@ describe("farm", () => {
 
     describe("handleMissingGems", () => {
         it("returns early when inventory disabled", () => {
-            const farm = require("../src/modules/farm.js");
-            const client = makeCtx({
-                basic: { commands: { inventory: false } },
-            });
+            const client = makeCtx();
+            client.config.main.commands.inventory = false;
             const channel = { send: mock.fn() };
             client.logger = { warn: () => {}, info: () => {}, alert: () => {} };
 
-            farm.handleMissingGems(client, channel, "some content");
+            handleMissingGems(client, channel, "some content");
 
             assert.strictEqual(channel.send.mock.calls.length, 0);
             assert.strictEqual(client.global.gems.missingHandled, false);
         });
 
         it("sets missingHandled and sends lootbox on first call", () => {
-            const farm = require("../src/modules/farm.js");
             const client = makeCtx();
             const channel = { send: mock.fn() };
             client.logger = { warn: () => {}, info: () => {}, alert: () => {} };
 
-            farm.handleMissingGems(client, channel, "some content");
+            handleMissingGems(client, channel, "some content");
 
             assert.strictEqual(client.global.gems.missingHandled, true);
             assert.strictEqual(client.global.gems.huntssinceinv, 0);
@@ -247,20 +236,18 @@ describe("farm", () => {
         });
 
         it("resets huntssinceinv when content includes lootbox", () => {
-            const farm = require("../src/modules/farm.js");
             const client = makeCtx();
             client.global.gems.missingHandled = true;
             client.global.gems.huntssinceinv = 10;
             const channel = { send: mock.fn() };
             client.logger = { warn: () => {}, info: () => {}, alert: () => {} };
 
-            farm.handleMissingGems(client, channel, "lootbox reward!");
+            handleMissingGems(client, channel, "lootbox reward!");
 
             assert.strictEqual(client.global.gems.huntssinceinv, 0);
         });
 
         it("resets huntssinceinv when threshold met", () => {
-            const farm = require("../src/modules/farm.js");
             const client = makeCtx();
             client.global.gems.missingHandled = true;
             client.global.gems.huntssinceinv = 30;
@@ -270,13 +257,12 @@ describe("farm", () => {
             // Mock Math.random so getrand(15, 30) returns deterministic value
             mock.method(Math, "random", () => 0);
 
-            farm.handleMissingGems(client, channel, "some content");
+            handleMissingGems(client, channel, "some content");
 
             assert.strictEqual(client.global.gems.huntssinceinv, 0);
         });
 
         it("does not reset huntssinceinv when threshold not met", () => {
-            const farm = require("../src/modules/farm.js");
             const client = makeCtx();
             client.global.gems.missingHandled = true;
             client.global.gems.huntssinceinv = 5;
@@ -286,7 +272,7 @@ describe("farm", () => {
             // Mock Math.random so getrand(15, 30) returns deterministic value
             mock.method(Math, "random", () => 0);
 
-            farm.handleMissingGems(client, channel, "some content");
+            handleMissingGems(client, channel, "some content");
 
             assert.strictEqual(client.global.gems.huntssinceinv, 5);
         });

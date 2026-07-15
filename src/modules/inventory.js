@@ -1,17 +1,5 @@
 const { commandrandomizer } = require("../core/globalutil.js");
-const { OWO_ID } = require("../core/constants.js");
-
-/**
- * Map of gem type -> ordered list of inventory item codes.
- * Codes are listed weakest-first so {@link selectGemCodes} can pick the first
- * one the user owns at or below their current rarity level.
- */
-const GEM_ITEMS = {
-    gem1: ["057", "056", "055", "054", "053", "052", "051"],
-    gem3: ["071", "070", "069", "068", "067", "066", "065"],
-    gem4: ["078", "077", "076", "075", "074", "073", "072"],
-    star: ["085", "084", "083", "082", "081", "080", "079"],
-};
+const { OWO_ID, GEM_ITEMS, RARITY_MAP } = require("../core/constants.js");
 
 /**
  * Map of special inventory item codes -> how to consume them.
@@ -38,7 +26,9 @@ const ITEM_ACTIONS = {
  * @returns {Promise<void>} Resolves once the inventory routine has finished.
  */
 module.exports = async (ctx) => {
-    const channel = ctx.client.channels.cache.get(ctx.basic.commandschannelid);
+    const channel = ctx.client.channels.cache.get(
+        ctx.config.main.commandschannelid,
+    );
     await inventory(ctx, channel);
 };
 
@@ -127,7 +117,10 @@ function selectGemCodes(ctx, values) {
         const codes = GEM_ITEMS[gem];
         if (!codes) return;
         for (let i = 0; i < codes.length; i++) {
-            if (values.includes(codes[i]) && ctx.global.rareLevel >= 7 - i) {
+            if (
+                values.includes(codes[i]) &&
+                ctx.global.rareLevel >= RARITY_MAP.fabled - i
+            ) {
                 ctx.global.gems.use += `${codes[i]} `;
                 break;
             }

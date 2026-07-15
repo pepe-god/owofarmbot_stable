@@ -12,8 +12,8 @@ const { withRateLimit } = require("../services/errors.js");
  * @returns {void} This function only kicks off the self-looping handler.
  */
 module.exports = async (ctx) => {
-    if (ctx.basic.commands.pray) prayOrCurse(ctx, "pray");
-    else if (ctx.basic.commands.curse) prayOrCurse(ctx, "curse");
+    if (ctx.config.main.commands.pray) prayOrCurse(ctx, "pray");
+    else if (ctx.config.main.commands.curse) prayOrCurse(ctx, "curse");
 };
 
 /**
@@ -32,7 +32,9 @@ module.exports = async (ctx) => {
  * @returns {void} Self-reschedules via setTimeout; never resolves a meaningful value.
  */
 async function prayOrCurse(ctx, type) {
-    const channel = ctx.client.channels.cache.get(ctx.basic.commandschannelid);
+    const channel = ctx.client.channels.cache.get(
+        ctx.config.main.commandschannelid,
+    );
     await ctx.globalutil.waitWhileBusy(ctx);
     const interval = getrand(
         ctx.config.interval.pray.min,
@@ -44,7 +46,7 @@ async function prayOrCurse(ctx, type) {
         module: capitalize(type),
         key: `luck:${type}`,
         run: async () => {
-            const target = ctx.basic.commands.tomain
+            const target = ctx.config.main.commands.tomain
                 ? ` <@${ctx.config.main.userid}>`
                 : "";
             const content = `${ctx.prefix()}${type}${target}`;

@@ -1,4 +1,4 @@
-const { describe, it, mock, afterEach, beforeEach } = require("node:test");
+const { describe, it, mock, afterEach } = require("node:test");
 const assert = require("node:assert");
 
 const createLogger = require("../src/services/logger");
@@ -105,47 +105,5 @@ describe("Logger", () => {
         assert.ok(logs[0].message.includes("IPC > test"));
 
         delete process.send;
-    });
-});
-
-describe("bootstrap SIGINT registration", () => {
-    let initializeBootstrap;
-    let added;
-
-    beforeEach(() => {
-        delete require.cache[require.resolve("../src/core/bootstrap.js")];
-        initializeBootstrap =
-            require("../src/core/bootstrap.js").initializeBootstrap;
-        added = null;
-    });
-
-    afterEach(() => {
-        if (added) {
-            process.removeListener("SIGINT", added);
-            added = null;
-        }
-        mock.restoreAll();
-    });
-
-    it("registers SIGINT listener on first call", () => {
-        const before = process.listeners("SIGINT").length;
-        initializeBootstrap(makeCtx());
-        const after = process.listeners("SIGINT");
-        assert.strictEqual(after.length, before + 1);
-        added = after[after.length - 1];
-    });
-
-    it("does NOT add a duplicate listener on second call", () => {
-        const before = process.listeners("SIGINT").length;
-        initializeBootstrap(makeCtx());
-        const afterFirst = process.listeners("SIGINT");
-        assert.strictEqual(afterFirst.length, before + 1);
-        added = afterFirst[afterFirst.length - 1];
-
-        initializeBootstrap(makeCtx());
-        assert.strictEqual(
-            process.listeners("SIGINT").length,
-            afterFirst.length,
-        );
     });
 });

@@ -9,6 +9,7 @@
 
 const cp = require("node:child_process");
 
+const { DEFAULT_PREFIX } = require("../core/constants.js");
 const { config, DEVELOPER_MODE } = require("../services/runtimeConfig.js");
 const packageJson = require("../../package.json");
 
@@ -20,7 +21,6 @@ const configSchema = require("../services/configSchema.js");
 const LoopManager = require("../services/loopManager.js");
 const { attachState } = require("../services/botState.js");
 const BotContext = require("./botContext.js");
-const { initializeBootstrap } = require("./bootstrap.js");
 const { startWatchdog } = require("../services/watchdog.js");
 
 //client
@@ -92,12 +92,11 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * (`ctx.client`).
  */
 const prefix = () =>
-    globalutil.commandrandomizer(["owo", config.settings.owoprefix]);
+    globalutil.commandrandomizer([DEFAULT_PREFIX, config.settings.owoprefix]);
 
 const ctx = new BotContext({
     client,
     config,
-    basic: config.main,
     global: owofarmbot_stable,
     state: botState,
     loops: new LoopManager(),
@@ -111,9 +110,16 @@ const ctx = new BotContext({
 });
 // The logger needs the context itself, so wire it in after creation.
 ctx.logger = require("../services/logger.js")(ctx);
-
-// Centralize process-wide side effects (SIGINT dump + crash/flag watchdog).
-initializeBootstrap(ctx);
+// Suppress non-DeprecationWarning noise from Node internals.
+process.emitWarning = (warning, type) => {
+    if (type === "DeprecationWarning") return;
+    console.warn(warning);
+};
+// On SIGINT, flush buffered logs then exit cleanly.
+process.on("SIGINT", () => {
+    ctx.logger?.dumpExitLog?.();
+    process.exit(0);
+});
 startWatchdog(ctx);
 
 // Opt-in health/metrics endpoint. Only starts when HEALTH_PORT is set so the

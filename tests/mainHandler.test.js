@@ -55,12 +55,16 @@ describe("mainHandler", () => {
                     owoprefix: "owo",
                     safety: { autopause: false },
                 },
-            },
-            basic: {
-                commands: {
-                    animals: false,
-                    pray: false,
-                    curse: false,
+                main: {
+                    commandschannelid: "111",
+                    commands: {
+                        animals: false,
+                        pray: false,
+                        curse: false,
+                        hunt: true,
+                        battle: true,
+                        inventory: true,
+                    },
                 },
             },
             globalutil: { waitWhileBusy: async () => {} },
@@ -116,7 +120,7 @@ describe("mainHandler", () => {
         });
         const mainHandler = require("../src/services/mainHandler.js");
         const client = baseClient();
-        client.basic.commands.animals = true;
+        client.config.main.commands.animals = true;
         client.config.animals = { type: { sell: false } };
         client.global.temp = { animaltype: "all" };
 
@@ -134,7 +138,7 @@ describe("mainHandler", () => {
         });
         const mainHandler = require("../src/services/mainHandler.js");
         const client = baseClient();
-        client.basic.commands.pray = true;
+        client.config.main.commands.pray = true;
 
         await mainHandler(client, {});
 
@@ -150,7 +154,7 @@ describe("mainHandler", () => {
         });
         const mainHandler = require("../src/services/mainHandler.js");
         const client = baseClient();
-        client.basic.commands.curse = true;
+        client.config.main.commands.curse = true;
 
         await mainHandler(client, {});
 

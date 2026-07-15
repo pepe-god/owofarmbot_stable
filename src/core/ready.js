@@ -9,7 +9,7 @@
  */
 async function handleAutoStart(ctx) {
     // Respect the `autostart` toggle in config.
-    if (!ctx.basic.autostart) return;
+    if (!ctx.config.main.autostart) return;
     // If already running, there is nothing to do.
     if (!ctx.global.paused) {
         return ctx.logger.warn("Bot", "AutoStart", "Bot is already working!!!");

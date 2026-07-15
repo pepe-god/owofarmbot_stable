@@ -3,7 +3,6 @@ const assert = require("node:assert");
 
 const {
     removeInvisibleChars,
-    parseDuration,
     getrand,
     commandrandomizer,
     waitWhileBusy,
@@ -49,44 +48,6 @@ describe("removeInvisibleChars", () => {
             removeInvisibleChars("\u0000A\u200BB\u007FC\uFEFF"),
             "ABC",
         );
-    });
-});
-
-describe("parseDuration", () => {
-    it("parses hours", () => {
-        assert.strictEqual(parseDuration("1H"), 3600000);
-    });
-
-    it("parses minutes", () => {
-        assert.strictEqual(parseDuration("30M"), 1800000);
-    });
-
-    it("parses seconds", () => {
-        assert.strictEqual(parseDuration("15S"), 15000);
-    });
-
-    it("parses days", () => {
-        assert.strictEqual(parseDuration("2D"), 172800000);
-    });
-
-    it("parses combined duration (1H30M)", () => {
-        assert.strictEqual(parseDuration("1H30M"), 5400000);
-    });
-
-    it("parses combined duration with all units", () => {
-        assert.strictEqual(parseDuration("1H30M15S"), 5415000);
-    });
-
-    it("parses multi-digit values", () => {
-        assert.strictEqual(parseDuration("12H"), 43200000);
-    });
-
-    it("returns 0 for empty string", () => {
-        assert.strictEqual(parseDuration(""), 0);
-    });
-
-    it("returns 0 for string with no duration patterns", () => {
-        assert.strictEqual(parseDuration("abc"), 0);
     });
 });
 

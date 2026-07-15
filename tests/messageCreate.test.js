@@ -17,6 +17,23 @@ const {
 function makeClient(overrides = {}) {
     const obj = {
         config: {
+            main: {
+                token: "test_token",
+                commandschannelid: "111",
+                owodmchannelid: "555",
+                userid: "123",
+                autostart: true,
+                commands: {
+                    hunt: true,
+                    battle: true,
+                    pray: false,
+                    curse: false,
+                    animals: false,
+                    inventory: true,
+                    tomain: false,
+                },
+                maximum_gem_rarity: "fabled",
+            },
             settings: {
                 autoresume: false,
                 captcha: {
@@ -32,12 +49,6 @@ function makeClient(overrides = {}) {
                     },
                 },
             },
-        },
-        basic: {
-            token: "test_token",
-            commandschannelid: "111",
-            owodmchannelid: "555",
-            userid: "123",
         },
         global: {
             paused: false,
@@ -827,7 +838,6 @@ describe("handleCommand", () => {
         commands.set("hunt", { run });
         aliases.set("h", "hunt");
         return makeCtx({
-            basic: { userid: "123" },
             prefix: () => "owo",
             client: {
                 user: { id: "123" },
