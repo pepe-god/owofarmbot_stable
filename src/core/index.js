@@ -10,6 +10,12 @@ const setupAntiCrash = (ctx) => {
     const { RateLimitError, describeError } = require("../services/errors.js");
 
     const logError = (type, err, origin = null) => {
+        // EPIPE means the stdout/stderr reader (a pipe, launcher, or pager)
+        // closed — it is not a real crash and logging about it would itself
+        // throw EPIPE again, spiraling into millions of alerts per second.
+        // Never log (or re-throw) an EPIPE from the crash handler.
+        if (err && err.code === "EPIPE") return;
+
         // Sanitize error output: redact anything that looks like a Discord
         // token (segment.segment.segment) to prevent secrets in logs.
         const sanitize = (text) =>
