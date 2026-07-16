@@ -244,13 +244,9 @@ async function withRateLimit(ctx, opts) {
 }
 
 module.exports = {
-    BotError,
     RateLimitError,
-    isRateLimitError,
-    toBotError,
     handleModuleError,
     describeError,
     nextRateLimitDelay,
-    resetRateLimitBackoff,
     withRateLimit,
 };

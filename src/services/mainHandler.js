@@ -28,14 +28,14 @@ const FARM_START_DELAY = 2000;
 /** Delay before starting luck module to space out from farming (ms). */
 const PRAYER_START_DELAY = 32000;
 
-module.exports = async (ctx, message) => {
+module.exports = async (ctx) => {
     await ctx.globalutil.waitWhileBusy(ctx);
 
-    await initFarming(ctx, message);
+    await initFarming(ctx);
     await ctx.delay(FARM_START_DELAY);
 
     await initAnimals(ctx);
-    await initPrayer(ctx, message);
+    await initPrayer(ctx);
     initSafety(ctx);
 };
 
@@ -46,14 +46,13 @@ module.exports = async (ctx, message) => {
  * is refreshed each iteration and does not need to be passed from here.
  *
  * @param {Client} ctx - The Discord ctx instance.
- * @param {Message} message - The originating command message.
  * @returns {Promise<void>} Resolves once the farm module has been started.
  * @sideeffect Starts the farm module directly.
  */
-async function initFarming(ctx, message) {
+async function initFarming(ctx) {
     await ctx.globalutil.waitWhileBusy(ctx);
     await ctx.delay(FARM_START_DELAY);
-    await startFarm(ctx, message);
+    await startFarm(ctx);
 }
 
 /**
@@ -86,16 +85,15 @@ async function initAnimals(ctx) {
  * Start the pray/curse luck buff loop.
  *
  * @param {Client} ctx - The Discord ctx instance; reads `config.main.commands.pray`/`curse`.
- * @param {Message} message - The originating command message.
  * @returns {Promise<void>} Resolves after the luck loop is launched (after a 32s spacing delay).
  * @sideeffect Starts the luck module loop when pray or curse is enabled.
  */
-async function initPrayer(ctx, message) {
+async function initPrayer(ctx) {
     if (ctx.config.main.commands.pray || ctx.config.main.commands.curse) {
         await ctx.globalutil.waitWhileBusy(ctx);
         // Initial wait to space out luck buffs from farming actions.
         await ctx.delay(PRAYER_START_DELAY);
-        await startLuck(ctx, message);
+        await startLuck(ctx);
     }
 }
 

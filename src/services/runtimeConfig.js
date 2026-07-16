@@ -2,9 +2,8 @@
  * Runtime config loader and environment resolver.
  *
  * Responsibilities:
- *  - Load config.json (production or developer override).
+ *  - Load config.json.
  *  - Apply .env overrides for token, user ID, and webhook URL.
- *  - Detect developer mode from env or current username.
  *  - Ensure owoprefix has a sensible default.
  *
  * The module exports a factory function `loadConfig()` that performs all side
@@ -19,53 +18,16 @@ process.env.DOTENV_CONFIG_QUIET = "true";
 dotenv.config();
 
 /**
- * Detect developer mode based on environment variable or current username.
- * Developer mode loads the developer-specific config file.
- *
- * Order of resolution:
- *  1. `DEV_MODE=true` env var.
- *  2. OS username equals `"Mido"` (best-effort; ignored if `os.userInfo()` throws).
- *
- * @returns {boolean}
- */
-function detectDeveloperMode() {
-    let devMode = process.env.DEV_MODE === "true";
-    if (!devMode) {
-        try {
-            const os = require("node:os");
-            if (os.userInfo().username === "Mido") {
-                devMode = true;
-            }
-        } catch (_error) {
-            /* os.userInfo() failed, skip */
-        }
-    }
-    return devMode;
-}
-
-/**
  * Load and resolve the configuration object.
  *
- * Attempts the developer config first (when `DEVELOPER_MODE`), falling back to
- * the production `config.json`. Any load failure silently falls back to the
- * production config. `.env` overrides (token/userid/webhook) are applied after
- * load, and `owoprefix` is defaulted to `"owo"` when empty.
+ * Loads `config.json`. Any load failure throws. `.env` overrides
+ * (token/userid/webhook) are applied after load, and `owoprefix` is defaulted
+ * to `"owo"` when empty.
  *
- * @returns {{ config: Object, DEVELOPER_MODE: boolean }}
+ * @returns {{ config: Object }}
  */
 function loadConfig() {
-    const DEVELOPER_MODE = detectDeveloperMode();
-
-    let config;
-    try {
-        if (DEVELOPER_MODE) {
-            config = require("../../developer/config.json");
-        } else {
-            config = require("../../config.json");
-        }
-    } catch (_error) {
-        config = require("../../config.json");
-    }
+    const config = require("../../config.json");
 
     // Environment variables take precedence over config.json for secrets.
     // This keeps tokens out of the git-tracked config and makes `.env` the
@@ -98,10 +60,10 @@ function loadConfig() {
         config.settings.owoprefix = DEFAULT_PREFIX;
     }
 
-    return { config, DEVELOPER_MODE };
+    return { config };
 }
 
 // Backward compatibility: resolve config at require-time for existing consumers.
-const { config, DEVELOPER_MODE } = loadConfig();
+const { config } = loadConfig();
 
-module.exports = { loadConfig, config, DEVELOPER_MODE };
+module.exports = { loadConfig, config };

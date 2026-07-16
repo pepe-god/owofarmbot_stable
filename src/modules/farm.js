@@ -13,7 +13,7 @@ const { startAutophrases } = require("./autophrases.js");
  * @param {Message} [message] - The originating command message (unused, kept for API compatibility).
  * @returns {void}
  */
-async function startFarm(ctx, message) {
+async function startFarm(ctx) {
     const channel = ctx.client.channels.cache.get(
         ctx.config.main.commandschannelid,
     );
@@ -98,4 +98,3 @@ async function farmAction(ctx, channel, { type, cmd, onResult }) {
 }
 
 module.exports = { startFarm, farmAction };
-module.exports.default = startFarm;

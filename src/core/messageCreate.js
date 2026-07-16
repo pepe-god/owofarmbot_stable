@@ -188,8 +188,3 @@ module.exports = async (ctx, message) => {
     }
     handleCommand(ctx, message);
 };
-
-module.exports.escapeRegex = escapeRegex;
-module.exports.handleCaptchaDetection = handleCaptchaDetection;
-module.exports.handleCaptchaSolved = handleCaptchaSolved;
-module.exports.handleCommand = handleCommand;

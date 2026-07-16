@@ -12,7 +12,6 @@ const setupAntiCrash = (ctx) => {
     const logError = (type, err, origin = null) => {
         // Sanitize error output: redact anything that looks like a Discord
         // token (segment.segment.segment) to prevent secrets in logs.
-        // Sanitize error output: redact anything that looks like a Discord token (segment.segment.segment) to prevent secrets in logs.
         const sanitize = (text) =>
             typeof text === "string"
                 ? text.replace(

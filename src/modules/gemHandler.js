@@ -106,4 +106,4 @@ function handleMissingGems(ctx, channel, huntContent) {
     }
 }
 
-module.exports = { REQUIRED_GEMS, huntResult, handleMissingGems };
+module.exports = { huntResult };

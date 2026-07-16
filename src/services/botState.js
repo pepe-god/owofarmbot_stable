@@ -184,4 +184,4 @@ function attachState(globalObj) {
     return state;
 }
 
-module.exports = { BotState, attachState, BUSY_FLAGS };
+module.exports = { attachState };

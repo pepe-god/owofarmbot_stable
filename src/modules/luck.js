@@ -7,7 +7,7 @@ const { withRateLimit } = require("../services/errors.js");
  * @param {Message} [message] - The originating command message (unused, kept for API compatibility).
  * @returns {void}
  */
-async function startLuck(ctx, message) {
+async function startLuck(ctx) {
     if (ctx.config.main.commands.pray) prayOrCurse(ctx, "pray");
     else if (ctx.config.main.commands.curse) prayOrCurse(ctx, "curse");
 }
@@ -56,4 +56,3 @@ async function prayOrCurse(ctx, type) {
 }
 
 module.exports = { startLuck };
-module.exports.default = startLuck;

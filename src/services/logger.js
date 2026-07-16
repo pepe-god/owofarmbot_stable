@@ -19,10 +19,9 @@ const ALERT_LOG_PATH = path.join(ALERT_LOG_DIR, "alert.log");
  * Lightweight, in-memory logger with colored console output and optional
  * shutdown dump.
  *
- * Each instance keeps three rolling buffers: `logs` (capped to `logLength` recent
- * non-debug lines), `fullLogs` (every non-debug line when exit-dump is enabled),
- * and `simpleLogs` (the same lines without color, forwarded to the parent cluster
- * process via `process.send` when running as a worker).
+ * Each instance keeps two rolling buffers: `logs` (capped to `logLength` recent
+ * non-debug lines) and `fullLogs` (every non-debug line when exit-dump is
+ * enabled).
  *
  * The buffered `fullLogs` are flushed on shutdown by `dumpExitLog()`, which the
  * process-wide SIGINT handler (registered in `src/core/bot.js`) calls before
@@ -42,7 +41,6 @@ class Logger {
         this.ctx = ctx;
         this.logs = [];
         this.fullLogs = [];
-        this.simpleLogs = [];
 
         const cfg = ctx?.config?.settings?.logging || {};
         this.logLength = cfg.loglength ?? 16;
@@ -140,8 +138,7 @@ class Logger {
      * Internal formatter/dispatcher for all log levels.
      *
      * Builds a colorized console line, pushes it into the rolling buffers when the
-     * level is not `white` (debug), prints the latest line, and forwards a plain
-     * (uncolored) copy to the parent process via `process.send` when available.
+     * level is not `white` (debug), and prints the latest line.
      *
      * @param {string} emoji - Status emoji prefix (🟢/🟡/🔴/⚪).
      * @param {string} type - High-level category.
@@ -149,7 +146,7 @@ class Logger {
      * @param {string} result - The message body.
      * @param {keyof typeof chalk} colorName - chalk color name for the message.
      * @returns {void}
-     * @sideeffect Mutates `logs`/`fullLogs`/`simpleLogs` and may call `process.send`.
+     * @sideeffect Mutates `logs`/`fullLogs`.
      */
     _log(emoji, type, module, result, colorName) {
         const color = chalk[colorName];
@@ -178,15 +175,6 @@ class Logger {
             if (this.exitLog) this.fullLogs.push(msg);
             if (this.logs.length > this.logLength) this.logs.shift();
             this._show();
-
-            const plain =
-                `[${new Date().toLocaleTimeString()}] ${emoji} ${type} >> ` +
-                `${this.ctx.global.type} > ${module} > ${result}`;
-            this.simpleLogs.push(plain);
-
-            if (process.send) {
-                process.send({ type: "log", message: plain });
-            }
         }
     }
 
@@ -199,15 +187,6 @@ class Logger {
     _show() {
         if (this.logs.length === 0) return;
         console.log(this.logs[this.logs.length - 1]);
-    }
-
-    /**
-     * Return the plain (uncolored) log history.
-     *
-     * @returns {string[]} All captured simple log lines in insertion order.
-     */
-    getSimpleLog() {
-        return this.simpleLogs;
     }
 }
 

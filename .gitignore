@@ -12,6 +12,7 @@ data/
 
 # Dev config
 developer/
+.opencode/
 test.js
 
 # Editor

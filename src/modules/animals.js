@@ -45,4 +45,3 @@ async function sell(ctx, channel, choose, types) {
 }
 
 module.exports = { startAnimals: sell };
-module.exports.default = sell;

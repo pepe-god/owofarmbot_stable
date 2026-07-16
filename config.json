@@ -1,6 +1,4 @@
 {
-  "firstrun": false,
-  "prefix": "!",
   "main": {
     "token": "(use MAIN_TOKEN in .env)",
     "userid": "(use MAIN_USERID in .env)",

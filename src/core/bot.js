@@ -6,7 +6,7 @@ const cp = require("node:child_process");
 
 const { DEFAULT_PREFIX } = require("../core/constants.js");
 const { loadConfig } = require("../services/runtimeConfig.js");
-const { config, DEVELOPER_MODE } = loadConfig();
+const { config } = loadConfig();
 const packageJson = require("../../package.json");
 
 const fs = require("node:fs");
@@ -33,7 +33,6 @@ function createGlobalState(name, type) {
     return {
         name,
         type,
-        devmod: DEVELOPER_MODE,
         captchadetected: false,
         paused: true,
         use: false,
@@ -106,12 +105,6 @@ process.on("SIGINT", () => {
     process.exit(0);
 });
 startWatchdog(ctx);
-
-// Opt-in health/metrics endpoint; only starts when HEALTH_PORT is set (default runtime opens no ports).
-if (process.env.HEALTH_PORT) {
-    const { startHealthServer } = require("../services/health.js");
-    startHealthServer(ctx, { port: Number(process.env.HEALTH_PORT) });
-}
 
 // Show the bot version in process listings (e.g. `ps aux`).
 process.title = `OwO Farm Bot Stable v${packageJson.version}`;

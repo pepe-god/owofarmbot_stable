@@ -14,6 +14,11 @@
         "enabled": true,
         "rules": {
             "preset": "recommended",
+            "correctness": {
+                "noUnusedVariables": "error",
+                "noUnusedImports": "error",
+                "noUnusedFunctionParameters": "error"
+            },
             "complexity": {
                 "noExcessiveCognitiveComplexity": "error",
                 "noExcessiveLinesPerFunction": {

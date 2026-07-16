@@ -13,7 +13,7 @@
  *
  * This class owns both concerns:
  *  - `tryStart()` is the single, atomic "first start vs. resume" gate.
- *  - `schedule()`/`stop()`/`stopAll()` track timer handles so pending loop
+ *  - `schedule()`/`stopAll()` track timer handles so pending loop
  *    iterations can be cancelled.
  */
 class LoopManager {
@@ -25,26 +25,10 @@ class LoopManager {
     }
 
     /**
-     * Whether the subsystem loops have been started at least once.
-     * @returns {boolean}
-     */
-    get started() {
-        return this.startedFlag;
-    }
-
-    /**
-     * Number of currently pending (not-yet-fired, not-cancelled) timers.
-     * @returns {number}
-     */
-    get size() {
-        return this.timers.size;
-    }
-
-    /**
      * Atomically claim the "first start". Returns true exactly once — the
-     * first time it is called after construction/reset — and false on every
-     * subsequent call. Callers use the boolean to decide between launching the
-     * orchestrator (first start) and simply un-pausing (resume).
+     * first time it is called — and false on every subsequent call. Callers use
+     * the boolean to decide between launching the orchestrator (first start)
+     * and simply un-pausing (resume).
      *
      * @returns {boolean} True if this call performed the first start.
      */
@@ -55,25 +39,14 @@ class LoopManager {
     }
 
     /**
-     * Cancel all tracked timers and clear the started flag, returning the
-     * manager to its initial state so a fresh `tryStart()` will succeed again.
-     *
-     * @returns {void}
-     */
-    reset() {
-        this.stopAll();
-        this.startedFlag = false;
-    }
-
-    /**
      * Schedule a tracked one-shot timer. Behaves like `setTimeout` but records
-     * the handle so it can be cancelled via {@link stop}/{@link stopAll}. The
-     * entry is auto-removed from the registry right before `fn` runs.
+     * the handle so it can be cancelled via {@link stopAll}. The entry is
+     * auto-removed from the registry right before `fn` runs.
      *
      * @param {() => void} fn - Callback to run after the delay.
      * @param {number} ms - Delay in milliseconds.
      * @param {string} [name="loop"] - Human-readable label for diagnostics.
-     * @returns {number} A registry id usable with {@link stop}.
+     * @returns {number} A registry id.
      */
     schedule(fn, ms, name = "loop") {
         const id = this.nextId++;
@@ -83,19 +56,6 @@ class LoopManager {
         }, ms);
         this.timers.set(id, { handle, name });
         return id;
-    }
-
-    /**
-     * Cancel a single tracked timer by its id.
-     *
-     * @param {number} id - The id returned by {@link schedule}.
-     * @returns {boolean} True if a pending timer was found and cancelled.
-     */
-    stop(id) {
-        const entry = this.timers.get(id);
-        if (!entry) return false;
-        clearTimeout(entry.handle);
-        return this.timers.delete(id);
     }
 
     /**

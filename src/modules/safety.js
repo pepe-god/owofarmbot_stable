@@ -58,4 +58,3 @@ function resume(ctx, pauseDuration, safetyInterval) {
 }
 
 module.exports = { startSafety, pause, resume };
-module.exports.default = startSafety;
