@@ -49,18 +49,11 @@ const commands = [
                     "Bot is already working!!!",
                 );
             }
-            // Clear a stale captcha flag from a previous session on resume.
-            if (ctx.global.captchadetected) ctx.state.captchaSolved();
-            ctx.state.resume();
-            // `loops.tryStart()` is the atomic gate: true exactly once (first start), else plain resume.
-            if (ctx.loops.tryStart()) {
-                ctx.global.temp.started = true;
-                await replyAndDelete(ctx, message, "BOT started have fun ;)");
-                setTimeout(
-                    () => require("../services/mainHandler.js")(ctx),
-                    1000,
+            const firstStart =
+                require("../services/mainHandler.js").startOrResume(ctx, () =>
+                    replyAndDelete(ctx, message, "BOT started have fun ;)"),
                 );
-            } else {
+            if (!firstStart) {
                 await replyAndDelete(ctx, message, "Resuming :)");
             }
         },

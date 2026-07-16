@@ -62,6 +62,19 @@ async function huntResult(ctx, channel, huntmsg) {
  * @param {string} huntContent - Raw content of the hunt result message.
  * @returns {void} May schedule inventory runs via setTimeout.
  */
+/**
+ * Schedule an inventory run after `delay` ms (tracked so it cancels on restart).
+ * @param {Object} ctx - The bot context.
+ * @param {number} delay - Milliseconds before the inventory module runs.
+ */
+function triggerInventory(ctx, delay) {
+    ctx.loops.schedule(
+        () => require("./inventory.js")(ctx),
+        delay,
+        "farm:inventory",
+    );
+}
+
 function handleMissingGems(ctx, channel, huntContent) {
     ctx.logger.warn("Farm", "Hunt", `Missing gems: ${ctx.global.gems.need}`);
     if (!ctx.config.main.commands.inventory) return;
@@ -72,37 +85,19 @@ function handleMissingGems(ctx, channel, huntContent) {
         channel.send({
             content: `${ctx.prefix()} ${commandrandomizer(["lb", "lootbox"])} all`,
         });
-        ctx.loops.schedule(
-            () => {
-                require("./inventory.js")(ctx);
-            },
-            5000,
-            "farm:inventory",
-        );
+        triggerInventory(ctx, 5000);
         return;
     }
 
     if (huntContent?.includes("lootbox")) {
         ctx.global.gems.huntssinceinv = 0;
-        ctx.loops.schedule(
-            () => {
-                require("./inventory.js")(ctx);
-            },
-            2000,
-            "farm:inventory",
-        );
+        triggerInventory(ctx, 2000);
         return;
     }
 
     if (ctx.global.gems.huntssinceinv >= getrand(15, 30)) {
         ctx.global.gems.huntssinceinv = 0;
-        ctx.loops.schedule(
-            () => {
-                require("./inventory.js")(ctx);
-            },
-            2000,
-            "farm:inventory",
-        );
+        triggerInventory(ctx, 2000);
     }
 }
 

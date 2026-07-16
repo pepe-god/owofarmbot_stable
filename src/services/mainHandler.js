@@ -10,7 +10,7 @@
  * Each subsystem is a self-looping module that manages its own timers.
  * This function only triggers their initial launch (with small inter-subsystem
  * delays to avoid command floods). The `owoprefix` default is already applied
- * at startup by `runtimeConfig.js`, so no normalization is needed here.
+ * at startup by `config.js`, so no normalization is needed here.
  *
  * @param {Client} ctx - The Discord ctx instance; carries config and global state.
  * @param {Message} message - The command message that triggered start/resume (passed to modules that need it).
@@ -28,6 +28,33 @@ const FARM_START_DELAY = 2000;
 /** Delay before starting luck module to space out from farming (ms). */
 const PRAYER_START_DELAY = 32000;
 
+/**
+ * Shared start/resume logic used by both the autostart (ready) and the
+ * admin `start`/`resume` command. Clears a stale captcha flag, unpauses, and
+ * either launches all subsystems (first start) or just resumes (already ran).
+ *
+ * @param {Object} ctx - The bot context.
+ * @param {() => void} [onFirstStart] - Called only on the first start (after launching subsystems).
+ * @returns {boolean} True if this was the first start, false if a plain resume.
+ */
+function startOrResume(ctx, onFirstStart) {
+    // Clear a stale captcha flag from a previous session on resume.
+    if (ctx.global.captchadetected) ctx.state.captchaSolved();
+    ctx.state.resume();
+
+    // loops.tryStart() is the atomic gate: true exactly once (first start).
+    if (ctx.loops.tryStart()) {
+        ctx.global.temp.started = true;
+        // Small delay so the ctx is fully settled before orchestrating.
+        setTimeout(() => {
+            module.exports(ctx);
+            if (onFirstStart) onFirstStart();
+        }, 1000);
+        return true;
+    }
+    return false;
+}
+
 module.exports = async (ctx) => {
     await ctx.globalutil.waitWhileBusy(ctx);
 
@@ -38,6 +65,8 @@ module.exports = async (ctx) => {
     await initPrayer(ctx);
     initSafety(ctx);
 };
+
+module.exports.startOrResume = startOrResume;
 
 /**
  * Start the farm subsystem (hunt/battle).

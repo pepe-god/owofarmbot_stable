@@ -1,14 +1,6 @@
 const chalk = require("chalk");
 const fs = require("node:fs");
 const path = require("node:path");
-const { isJsonFormat, formatStructured } = require("./structuredLogger.js");
-
-const LEVEL_BY_COLOR = {
-    green: "info",
-    yellow: "warn",
-    red: "alert",
-    white: "debug",
-};
 
 // Alerts are also mirrored to a rolling file so a hard crash still leaves a
 // post-mortem trail. `data/` is gitignored, so no secrets/state leak to git.
@@ -53,7 +45,7 @@ class Logger {
      *  - `loglength` — max number of recent lines retained in `logs` (default 16).
      *  - `showlogbeforeexit` + `newlog` — enable the shutdown dump.
      *
-     * @param {BotContext} ctx - The bot context; provides `config` and `global.type` (used in log formatting).
+     * @param {Object} ctx - The bot context; provides `config` and `global.type` (used in log formatting).
      */
     constructor(ctx) {
         this.ctx = ctx;
@@ -192,18 +184,7 @@ class Logger {
             `${chalk.cyan(chalk.bold(this.ctx.global.type))} > ` +
             `${chalk.magenta(module)} > ${color(result)}`;
 
-        // When LOG_FORMAT=json is set, emit a single-line JSON record instead
-        // of the colorized line; the state label is pulled from the state
-        // machine so each line carries the bot's current mode.
-        const msg = isJsonFormat()
-            ? formatStructured({
-                  level: LEVEL_BY_COLOR[colorName] || colorName,
-                  type,
-                  module: `${this.ctx.global.type} > ${module}`,
-                  message: result,
-                  state: this.ctx?.state?.status,
-              })
-            : colored;
+        const msg = colored;
 
         if (colorName !== "white") {
             this.logs.push(msg);

@@ -58,10 +58,6 @@ const ANIMAL_TYPE_LIST = Object.keys(ANIMAL_TYPE_MAP);
 // (e.g. "<id>.<timestamp>.<secret>").
 const TOKEN_SHAPE = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 
-// The busy flags owned by the state machine, in status-priority order
-// (captcha is the most severe, running/idle is the absence of all flags).
-const BUSY_FLAGS = ["paused", "captchadetected", "inventory"];
-
 module.exports = {
     OWO_ID,
     DEFAULT_PREFIX,
@@ -72,5 +68,4 @@ module.exports = {
     ANIMAL_TYPE_MAP,
     ANIMAL_TYPE_LIST,
     TOKEN_SHAPE,
-    BUSY_FLAGS,
 };

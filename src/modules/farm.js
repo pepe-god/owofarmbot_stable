@@ -1,16 +1,11 @@
-const {
-    commandrandomizer,
-    getrand,
-    capitalize,
-} = require("../core/globalutil.js");
-const { withRateLimit } = require("../services/errors.js");
+const { commandrandomizer, capitalize } = require("../core/globalutil.js");
+const { selfLoop } = require("./loop.js");
 const { huntResult } = require("./gemHandler.js");
 const { startAutophrases } = require("./autophrases.js");
 
 /**
  * Boots the hunt/battle loop (battle starts 2s after hunt) and optional autophrases.
- * @param {Client} ctx - The Discord ctx instance; carries config, logger and global state.
- * @param {Message} [message] - The originating command message (unused, kept for API compatibility).
+ * @param {Object} ctx - The bot context; carries config, logger and global state.
  * @returns {void}
  */
 async function startFarm(ctx) {
@@ -23,78 +18,53 @@ async function startFarm(ctx) {
     }
 
     if (ctx.config.main.commands.hunt) {
-        await farmAction(ctx, channel, {
-            type: "hunt",
-            cmd: () => commandrandomizer(["h", "hunt"]),
-            onResult: huntResult,
-        });
+        startFarmAction(ctx, channel, "hunt", () =>
+            commandrandomizer(["h", "hunt"]),
+        );
         await ctx.delay(2000);
         if (ctx.config.main.commands.battle)
-            await farmAction(ctx, channel, {
-                type: "battle",
-                cmd: () => commandrandomizer(["b", "battle"]),
-            });
+            startFarmAction(ctx, channel, "battle", () =>
+                commandrandomizer(["b", "battle"]),
+            );
     } else if (ctx.config.main.commands.battle)
-        await farmAction(ctx, channel, {
-            type: "battle",
-            cmd: () => commandrandomizer(["b", "battle"]),
-        });
+        startFarmAction(ctx, channel, "battle", () =>
+            commandrandomizer(["b", "battle"]),
+        );
 }
 
 /**
- * Self-looping hunt/battle sender: waits for idle, sends the randomized command, increments the counter, and reschedules after a randomized interval.
- * @param {Client} ctx - The Discord ctx instance.
- * @param {TextChannel} channel - The text channel where commands are sent.
- * @param {Object} opts - Action configuration.
- * @param {"hunt"|"battle"} opts.type - Which action this loop performs.
- * @param {() => string} opts.cmd - Returns the randomized base command token (without prefix).
- * @param {(ctx: Client, channel: TextChannel, msg: Object) => Promise<void>} [opts.onResult] - Optional handler run against the sent message's reply.
- * @returns {void} Self-reschedules via setTimeout.
+ * Start a hunt or battle self-loop.
+ * @param {Object} ctx - The bot context.
+ * @param {TextChannel} channel - Channel to send in.
+ * @param {"hunt"|"battle"} type - Which action this loop performs.
+ * @param {() => string} cmd - Returns the randomized base command token.
  */
-async function farmAction(ctx, channel, { type, cmd, onResult }) {
-    await ctx.globalutil.waitWhileBusy(ctx);
-    while (ctx.global.use || ctx.global[type]) {
-        await ctx.delay(500);
-    }
-
-    const interval = getrand(
-        ctx.config.interval[type].min,
-        ctx.config.interval[type].max,
-    );
-
-    const moduleName = capitalize(type);
-
-    await withRateLimit(ctx, {
-        type: "Farm",
-        module: moduleName,
+function startFarmAction(ctx, channel, type, cmd) {
+    const other = type === "hunt" ? "battle" : "hunt";
+    selfLoop(ctx, channel, {
+        type,
         key: `farm:${type}`,
-        run: async () => {
-            if (ctx.global[type === "hunt" ? "battle" : "hunt"])
-                await ctx.delay(1500);
-            ctx.global[type] = true;
-            const msg = await channel.send({
-                content: `${ctx.prefix()} ${cmd()}`,
-            });
-            ctx.global.total[type]++;
-            ctx.logger.info(
+        intervalKey: type,
+        buildContent: () => `${ctx.prefix()} ${cmd()}`,
+        onRun: async (c, ch, msg) => {
+            // Avoid running hunt and battle in the same instant.
+            if (c.global[other]) await c.delay(1500);
+            c.global.total[type]++;
+            c.logger.info(
                 "Farm",
-                moduleName,
-                `Total ${type}: ${ctx.global.total[type]}`,
+                capitalize(type),
+                `Total ${type}: ${c.global.total[type]}`,
             );
-            if (onResult) await onResult(ctx, channel, msg);
-            await ctx.delay(1000);
+            if (type === "hunt") await huntResult(c, ch, msg);
         },
         onFinally: () => {
             ctx.global[type] = false;
         },
-        onSuccess: () => {
-            ctx.loops.schedule(
-                () => farmAction(ctx, channel, { type, cmd, onResult }),
-                interval,
-                `farm:${type}`,
-            );
+        // Mark the busy flag before sending so concurrent loops coordinate.
+        beforeRun: () => {
+            ctx.global[type] = true;
         },
     });
 }
 
-module.exports = { startFarm, farmAction };
+module.exports = { startFarm };

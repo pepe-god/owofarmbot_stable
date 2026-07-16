@@ -1,10 +1,9 @@
-const { getrand, capitalize } = require("../core/globalutil.js");
-const { withRateLimit } = require("../services/errors.js");
+const { capitalize } = require("../core/globalutil.js");
+const { selfLoop } = require("./loop.js");
 
 /**
- * Starts the pray/curse loop (whichever is enabled in config) via {@link prayOrCurse}.
- * @param {Client} ctx - The Discord ctx instance; carries config, logger and global state.
- * @param {Message} [message] - The originating command message (unused, kept for API compatibility).
+ * Starts the pray/curse loop (whichever is enabled in config).
+ * @param {Object} ctx - The bot context; carries config, logger and global state.
  * @returns {void}
  */
 async function startLuck(ctx) {
@@ -13,43 +12,29 @@ async function startLuck(ctx) {
 }
 
 /**
- * Self-looping pray/curse sender: resolves the channel each iteration, waits for idle, sends the command (mentioning the user if `tomain`), then reschedules after a randomized interval.
- * @param {Client} ctx - The Discord ctx instance.
+ * Self-looping pray/curse sender.
+ * @param {Object} ctx - The bot context.
  * @param {"pray"|"curse"} type - Which luck command to send.
- * @returns {void} Self-reschedules via setTimeout.
  */
-async function prayOrCurse(ctx, type) {
+function prayOrCurse(ctx, type) {
     const channel = ctx.client.channels.cache.get(
         ctx.config.main.commandschannelid,
     );
-    await ctx.globalutil.waitWhileBusy(ctx);
-    const interval = getrand(
-        ctx.config.interval.pray.min,
-        ctx.config.interval.pray.max,
-    );
+    const target = ctx.config.main.commands.tomain
+        ? ` <@${ctx.config.main.userid}>`
+        : "";
 
-    await withRateLimit(ctx, {
-        type: "Farm",
-        module: capitalize(type),
+    selfLoop(ctx, channel, {
+        type,
         key: `luck:${type}`,
-        run: async () => {
-            const target = ctx.config.main.commands.tomain
-                ? ` <@${ctx.config.main.userid}>`
-                : "";
-            const content = `${ctx.prefix()}${type}${target}`;
-            await channel.send({ content });
-            ctx.global.total[type]++;
-            ctx.logger.info(
+        intervalKey: "pray",
+        buildContent: () => `${ctx.prefix()}${type}${target}`,
+        onRun: (c) => {
+            c.global.total[type]++;
+            c.logger.info(
                 "Farm",
                 capitalize(type),
-                `Total ${type}: ${ctx.global.total[type]}`,
-            );
-        },
-        onSuccess: () => {
-            ctx.loops.schedule(
-                () => prayOrCurse(ctx, type),
-                interval,
-                `luck:${type}`,
+                `Total ${type}: ${c.global.total[type]}`,
             );
         },
     });

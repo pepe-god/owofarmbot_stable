@@ -10,7 +10,7 @@
  * {@link toBotError}/{@link handleModuleError}, log them, and reschedule. They
  * deliberately do not re-throw: throwing from inside a `finally` reschedule
  * would break the loop. Classification (not re-throwing) is what lets the
- * anti-crash handler in `src/core/index.js` and the modules themselves respond
+ * anti-crash handler in `src/core/bot.js` and the modules themselves respond
  * differently per error kind.
  *
  * Subclasses:
@@ -124,7 +124,7 @@ function toBotError(err, type, module, fallback) {
  * Use inside module `catch` blocks to replace raw `ctx.logger.alert(...)`
  * logging with typed, classified errors while preserving the same log volume.
  *
- * @param {import("../core/botContext.js")} ctx - The bot context (logger + global).
+ * @param {Object} ctx - The bot context (logger + global).
  * @param {unknown} err - The raw caught error.
  * @param {Object} meta - Classification metadata.
  * @param {string} meta.type - High-level feature name.
@@ -160,7 +160,7 @@ function describeError(err) {
  * {@link resetRateLimitBackoff} from the normal (recovered) reschedule path so
  * the counter restarts once the bot sends successfully again.
  *
- * @param {import("../core/botContext.js")} ctx - The bot context.
+ * @param {Object} ctx - The bot context.
  * @param {string} key - Stable per-loop key (e.g. "farm:hunt").
  * @returns {number} Backoff delay in milliseconds.
  */
@@ -179,7 +179,7 @@ function nextRateLimitDelay(ctx, key) {
  * Reset the rate-limit attempt counter for a loop key, typically called from
  * the normal reschedule path once a command sends successfully.
  *
- * @param {import("../core/botContext.js")} ctx - The bot context.
+ * @param {Object} ctx - The bot context.
  * @param {string} key - Stable per-loop key (e.g. "farm:hunt").
  * @returns {void}
  */
@@ -196,7 +196,7 @@ function resetRateLimitBackoff(ctx, key) {
  * `onSuccess` so the module can schedule its next normal iteration.
  * An optional `onFinally` runs in the finally block regardless of outcome.
  *
- * @param {import("../core/botContext.js")} ctx - The bot context.
+ * @param {Object} ctx - The bot context.
  * @param {Object} opts
  * @param {string} opts.type - Feature type (e.g. "Farm").
  * @param {string} opts.module - Subsystem name (e.g. "Hunt", "Pray").

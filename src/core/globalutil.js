@@ -2,8 +2,6 @@
  * General-purpose runtime utilities: removeInvisibleChars, waitForMessage, commandrandomizer, getrand, waitWhileBusy.
  */
 
-const { BUSY_FLAGS } = require("../core/constants.js");
-
 /**
  * Capitalize the first character of a string.
  * @param {string} s - Input string.
@@ -18,7 +16,7 @@ exports.removeInvisibleChars = (str) => {
 
 /**
  * Wait for a Discord message matching `filter`; uses an immediate listener, falling back to a MessageCollector after `timeout` ms.
- * @param {BotContext} ctx - The bot context (provides the Discord `client` for event listeners).
+ * @param {Object} ctx - The bot context (provides the Discord `client` for event listeners).
  * @param {TextChannel} channel - The channel to collect from.
  * @param {Function} filter - Predicate that returns true for the wanted message.
  * @param {number} [timeout=6100] - Milliseconds before collector fallback.
@@ -70,17 +68,10 @@ exports.commandrandomizer = (arr) =>
 exports.getrand = (min, max) => Math.random() * (max - min) + min;
 
 /**
- * Pause execution while any global busy flag (paused/captchadetected/inventory) is active; resolves via the state machine when available, else polls.
- * @param {BotContext} ctx - The bot context (provides `state`/`global` and `delay`).
+ * Pause execution while any global busy flag (paused/captchadetected/inventory) is active.
+ * @param {Object} ctx - The bot context (provides `state` and `delay`).
  * @returns {Promise<void>} Resolves when all flags are clear.
  */
 exports.waitWhileBusy = async (ctx) => {
-    if (ctx.state && typeof ctx.state.waitUntilIdle === "function") {
-        await ctx.state.waitUntilIdle();
-        return;
-    }
-    // Fallback for contexts without a state machine: poll the same busy flags the state machine owns.
-    while (BUSY_FLAGS.some((flag) => ctx.global[flag])) {
-        await ctx.delay(500);
-    }
+    await ctx.state.waitUntilIdle();
 };

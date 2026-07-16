@@ -4,7 +4,7 @@
     "private": true,
     "packageManager": "pnpm@11.9.0",
     "description": "Discord OwO farm bot stable with CAPTCHA(BAN) protection",
-    "main": "src/main.js",
+    "main": "src/core/bot.js",
     "repository": {
         "type": "git",
         "url": ""
@@ -29,8 +29,8 @@
     "license": "ISC",
     "type": "commonjs",
     "scripts": {
-        "start": "node src/main.js",
-        "run": "node src/main.js",
+        "start": "node src/core/bot.js",
+        "run": "node src/core/bot.js",
         "setup": "pnpm install",
         "test": "node --test \"tests/**/*.test.js\"",
         "lint": "biome check .",
@@ -42,8 +42,7 @@
         "debug": "^4.4.3",
         "discord.js-selfbot-v13": "^3.6.1",
         "dotenv": "^17.4.2",
-        "node-notifier": "^10.0.1",
-        "valibot": "^1.0.0"
+        "node-notifier": "^10.0.1"
     },
     "bugs": {
         "url": ""

@@ -1,6 +1,6 @@
 /**
  * Handle the autostart flow on ready: if `autostart` is enabled, clears stale captcha flag, unpauses, and triggers `mainHandler` (first start vs. resume via `temp.started`).
- * @param {Client} ctx - The Discord ctx instance.
+ * @param {Object} ctx - The bot context.
  */
 async function handleAutoStart(ctx) {
     // Respect the `autostart` toggle in config.
@@ -10,21 +10,9 @@ async function handleAutoStart(ctx) {
         return ctx.logger.warn("Bot", "AutoStart", "Bot is already working!!!");
     }
 
-    // Clear a stale captcha flag from a previous session, then unpause.
-    if (ctx.global.captchadetected) {
-        ctx.state.captchaSolved();
-    }
-    ctx.state.resume();
-
-    // loops.tryStart() is the atomic gate: true exactly once (first start), else plain resume.
-    if (ctx.loops.tryStart()) {
-        ctx.global.temp.started = true;
+    const firstStart = require("../services/mainHandler.js").startOrResume(ctx);
+    if (firstStart) {
         ctx.logger.info("Bot", "AutoStart", "BOT started have fun ;)");
-
-        // Small delay so the ctx/RPC is fully settled before orchestrating.
-        setTimeout(() => {
-            require("../services/mainHandler.js")(ctx);
-        }, 1000);
     } else {
         ctx.logger.info("Bot", "AutoStart", "Restarted BOT after a pause :3");
     }
