@@ -39,6 +39,7 @@
     },
     "dependencies": {
         "chalk": "^4.1.2",
+        "debug": "^4.4.3",
         "discord.js-selfbot-v13": "^3.6.1",
         "dotenv": "^17.4.2",
         "node-notifier": "^10.0.1",
@@ -50,5 +51,10 @@
     "homepage": "",
     "devDependencies": {
         "@biomejs/biome": "^2.5.4"
+    },
+    "pnpm": {
+        "public-hoist-pattern": [
+            "debug"
+        ]
     }
 }

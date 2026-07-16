@@ -15,6 +15,11 @@ const LEVEL_BY_COLOR = {
 const ALERT_LOG_DIR = path.join(__dirname, "../../data/logs");
 const ALERT_LOG_PATH = path.join(ALERT_LOG_DIR, "alert.log");
 
+// Cap the alert file so it can never grow without bound. Once the file exceeds
+// this size (1 MB) the next write truncates it back to a small recent window
+// instead of appending forever.
+const ALERT_LOG_MAX_BYTES = 1024 * 1024;
+
 /**
  * Lightweight, in-memory logger with colored console output and optional
  * shutdown dump.
@@ -111,11 +116,28 @@ class Logger {
     _appendAlertToFile(type, module, result) {
         try {
             fs.mkdirSync(ALERT_LOG_DIR, { recursive: true });
-            fs.appendFileSync(
-                ALERT_LOG_PATH,
+            const line =
                 `[${new Date().toLocaleTimeString()}] ${type} >> ` +
-                    `${this.ctx.global.type} > ${module} > ${result}\n`,
-            );
+                `${this.ctx.global.type} > ${module} > ${result}\n`;
+
+            // Rotate (truncate) when the file has already grown past the cap,
+            // so a repeated-alert loop can never balloon the log on disk.
+            let truncate = false;
+            try {
+                const stat = fs.statSync(ALERT_LOG_PATH);
+                truncate = stat.size + line.length > ALERT_LOG_MAX_BYTES;
+            } catch (_err) {
+                /* file does not exist yet — append normally */
+            }
+
+            if (truncate) {
+                fs.writeFileSync(
+                    ALERT_LOG_PATH,
+                    `--- alert.log rotated at ${new Date().toISOString()} ---\n${line}`,
+                );
+            } else {
+                fs.appendFileSync(ALERT_LOG_PATH, line);
+            }
         } catch (_err) {
             /* logging must never crash the bot */
         }
