@@ -32,6 +32,7 @@
         "start": "node src/main.js",
         "run": "node src/main.js",
         "setup": "pnpm install",
+        "test": "node --test \"tests/**/*.test.js\"",
         "lint": "biome check .",
         "format": "biome format --write .",
         "lint:fix": "biome check --write ."

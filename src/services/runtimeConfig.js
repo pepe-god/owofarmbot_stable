@@ -63,7 +63,4 @@ function loadConfig() {
     return { config };
 }
 
-// Backward compatibility: resolve config at require-time for existing consumers.
-const { config } = loadConfig();
-
-module.exports = { loadConfig, config };
+module.exports = { loadConfig };

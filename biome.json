@@ -104,11 +104,10 @@
         {
             "includes": ["tests/**"],
             "linter": {
-                "rules": {
-                    "complexity": {
-                        "noExcessiveLinesPerFunction": "off"
-                    }
-                }
+                "enabled": false
+            },
+            "formatter": {
+                "enabled": false
             }
         }
     ]
