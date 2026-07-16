@@ -48,7 +48,7 @@ function createGlobalState(name, type) {
             need: [],
             use: "",
             isevent: true,
-            rareLevel: 0,
+            rareLevel: 7,
             huntssinceinv: 0,
             missingHandled: false,
         },
