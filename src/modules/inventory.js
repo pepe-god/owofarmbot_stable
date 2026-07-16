@@ -70,10 +70,9 @@ async function fetchInventoryData(ctx, channel) {
  */
 function parseItemCodes(invContent) {
     const values = [];
-    // OwO lists item codes either backtick-quoted (`057`) or as bare 2-3 digit
-    // codes in the "Inventory =" line. Match both so gem selection works
-    // regardless of which format the current OwO version emits.
-    const regex = /`?(\d{2,3})`?/g;
+    // OwO lists item codes as 2-3 digit numbers (optionally backtick-quoted).
+    // Match the digits directly; the backtick is not part of the code.
+    const regex = /(\d{2,3})/g;
     let match;
     while ((match = regex.exec(invContent)) !== null) {
         values.push(match[1]);
