@@ -26,6 +26,11 @@ module.exports = async (ctx) => {
     await inventory(ctx, channel);
 };
 
+// Exported for unit testing (behavior unchanged).
+module.exports.parseItemCodes = parseItemCodes;
+module.exports.selectGemCodes = selectGemCodes;
+module.exports.useItemsFromInventory = useItemsFromInventory;
+
 /**
  * Send `owo inv`, wait for OwO's "Inventory =" reply (newer than the command); returns null on timeout or pause/captcha.
  * @param {Client} ctx - The Discord ctx instance (sets `global.inventory`).
@@ -70,9 +75,10 @@ async function fetchInventoryData(ctx, channel) {
  */
 function parseItemCodes(invContent) {
     const values = [];
-    // OwO lists item codes as 2-3 digit numbers (optionally backtick-quoted).
-    // Match the digits directly; the backtick is not part of the code.
-    const regex = /(\d{2,3})/g;
+    // OwO lists item codes as 2-3 digit numbers wrapped in backticks
+    // (e.g. `057`). Match only the backtick-quoted codes so arbitrary
+    // numbers in the reply (quantities, ranks, ids) are ignored.
+    const regex = /`(\d{2,3})`/g;
     let match;
     while ((match = regex.exec(invContent)) !== null) {
         values.push(match[1]);
