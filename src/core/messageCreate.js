@@ -11,23 +11,6 @@ const CAPTCHA_PHRASES = [
 ];
 
 /**
- * Determine whether a captcha message contains a web link requiring
- * automated browser solving.
- *
- * @param {string} msgcontent - Lowercased message content.
- * @param {?Object} helloChristopher - Optional button component linking to owobot.com.
- * @param {?string} canulickmymonster - Optional URL containing owobot.com.
- * @returns {boolean} True if the message appears to be a web captcha.
- */
-function isWebCaptchaMessage(msgcontent, helloChristopher, canulickmymonster) {
-    const suspiciousPhrases = [".com", "please use the link"];
-    const hasSuspiciousContent = suspiciousPhrases.some((phrase) =>
-        msgcontent.includes(phrase),
-    );
-    return hasSuspiciousContent || helloChristopher || canulickmymonster;
-}
-
-/**
  * Escape special regex characters in a string so it can be used safely
  * inside a RegExp constructor.
  *
@@ -45,17 +28,10 @@ function escapeRegex(str) {
  * depending on the alert configuration.
  */
 function sendDesktopNotifications(ctx) {
-    const showDesktop =
-        !ctx.config.settings.captcha.autosolve ||
-        ctx.config.settings.captcha.alerttype.desktop.force;
-
-    if (
-        showDesktop &&
-        ctx.config.settings.captcha.alerttype.desktop.notification
-    ) {
+    if (ctx.config.settings.captcha.alerttype.desktop.notification) {
         require("../modules/captchaNotify.js")(ctx);
     }
-    if (showDesktop && ctx.config.settings.captcha.alerttype.desktop.prompt) {
+    if (ctx.config.settings.captcha.alerttype.desktop.prompt) {
         const promptmessage = `Captcha detected! Solve the captcha and type ${ctx.prefix()}resume in farm channel`;
         // Escape single quotes for PowerShell single-quoted string context
         // (powered by a user-controlled prefix — never shell-interpolated).
@@ -75,10 +51,9 @@ function sendDesktopNotifications(ctx) {
 
 /**
  * Send a Discord webhook alert when a captcha is detected.
- * Skipped if auto-solve is enabled or webhook URL is not configured.
+ * Skipped if webhook URL is not configured.
  */
 function sendWebhookNotification(ctx) {
-    if (ctx.config.settings.captcha.autosolve) return;
     const webhookurl = ctx.config.settings.captcha.alerttype.webhookurl;
     if (
         !ctx.config.settings.captcha.alerttype.webhook ||
@@ -104,45 +79,10 @@ function sendWebhookNotification(ctx) {
 }
 
 /**
- * Launch automated Chromium browser instances to solve the captcha.
- *
- * Spawns `src/core/captcha.js` for each configured thread, with
- * a 3s stagger between spawns.
- */
-async function launchAutoSolve(ctx) {
-    if (process.platform === "android") {
-        ctx.logger.warn("Bot", "Captcha", "Unsupported platform!");
-        return;
-    }
-
-    let spawnthread = ctx.config.settings.captcha.autosolve_thread;
-    if (Number.isNaN(spawnthread) || spawnthread < 1) {
-        spawnthread = 1;
-    }
-    ctx.logger.info(
-        "Bot",
-        "Captcha",
-        `Opening automated Chromium browser... Thread Count: ${spawnthread}`,
-    );
-
-    for (let spawncount = 0; spawncount < spawnthread; spawncount++) {
-        // Pass the token via the OwoToken env var (not argv) so it never
-        // appears in the worker's command line, which is visible via `ps`.
-        ctx.child_process.spawn(
-            "node",
-            ["./core/captcha.js", `--userid=${ctx.client.user.id}`],
-            { env: { ...process.env, OwoToken: ctx.config.main.token } },
-        );
-        await ctx.delay(3000);
-    }
-}
-
-/**
  * Handle a newly received OwO message that may contain a captcha.
  *
  * Validates the message is from OwO in a monitored channel and
- * contains captcha-related phrases before triggering alerts and
- * optional auto-solve.
+ * contains captcha-related phrases before triggering desktop/webhook alerts.
  */
 async function handleCaptchaDetection(ctx, message, msgcontent) {
     // Only react to captchas inside channels we actively farm in
@@ -174,30 +114,9 @@ async function handleCaptchaDetection(ctx, message, msgcontent) {
     );
     ctx.logger.warn("Bot", "Captcha", `Bot Paused: ${ctx.global.paused}`);
 
-    let helloChristopher, canulickmymonster;
-    if (message.components.length > 0 && message.components[0].components[0]) {
-        // OwO sometimes embeds a button whose URL points at owobot.com.
-        // helloChristopher: a button whose exact URL is "owobot.com".
-        // canulickmymonster: the first button whose URL merely contains it.
-        helloChristopher = message.components[0].components.find(
-            (button) => button.url?.toLowerCase() === "owobot.com",
-        );
-        canulickmymonster = message.components[0].components[0].url
-            ?.toLowerCase()
-            .includes("owobot.com");
-    }
-
-    // Always notify the user; auto-solve (below) is optional.
+    // Notify the user via desktop toast/webhook and optionally a prompt.
     sendDesktopNotifications(ctx);
     sendWebhookNotification(ctx);
-
-    // Only auto-solve when enabled AND the message links to a web captcha.
-    if (
-        ctx.config.settings.captcha.autosolve &&
-        isWebCaptchaMessage(msgcontent, helloChristopher, canulickmymonster)
-    ) {
-        await launchAutoSolve(ctx);
-    }
 }
 
 /**
@@ -295,7 +214,6 @@ module.exports = async (ctx, message) => {
     handleCommand(ctx, message);
 };
 
-module.exports.isWebCaptchaMessage = isWebCaptchaMessage;
 module.exports.escapeRegex = escapeRegex;
 module.exports.handleCaptchaDetection = handleCaptchaDetection;
 module.exports.handleCaptchaSolved = handleCaptchaSolved;

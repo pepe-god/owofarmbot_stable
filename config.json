@@ -41,8 +41,6 @@
       "pausefor": 5
     },
     "captcha": {
-      "autosolve": true,
-      "autosolve_thread": 1,
       "alerttype": {
         "webhook": true,
         "webhookurl": "(use WEBHOOK_URL in .env)",

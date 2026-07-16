@@ -5,7 +5,6 @@ const messageCreate = require("../src/core/messageCreate.js");
 const { makeCtx } = require("./helpers/makeCtx.js");
 
 const {
-    isWebCaptchaMessage,
     escapeRegex,
     handleCaptchaDetection,
     handleCaptchaSolved,
@@ -37,7 +36,6 @@ function makeClient(overrides = {}) {
             settings: {
                 autoresume: false,
                 captcha: {
-                    autosolve: false,
                     alerttype: {
                         webhook: false,
                         webhookurl: "",
@@ -83,34 +81,6 @@ function makeMessage({
         author: { id: "408785106942164992" },
     };
 }
-
-// --- isWebCaptchaMessage ---
-
-describe("isWebCaptchaMessage", () => {
-    it("detects .com links", () => {
-        assert.strictEqual(isWebCaptchaMessage("visit .com"), true);
-        assert.strictEqual(isWebCaptchaMessage("click here .com now"), true);
-    });
-
-    it("detects 'please use the link'", () => {
-        assert.strictEqual(
-            isWebCaptchaMessage("please use the link below"),
-            true,
-        );
-    });
-
-    it("returns true when helloChristopher button present", () => {
-        assert.ok(isWebCaptchaMessage("plain", {}));
-    });
-
-    it("returns true when canulickmymonster url present", () => {
-        assert.ok(isWebCaptchaMessage("plain", undefined, true));
-    });
-
-    it("returns falsy with no suspicious content", () => {
-        assert.ok(!isWebCaptchaMessage("just a normal message"));
-    });
-});
 
 // --- escapeRegex ---
 
@@ -195,7 +165,7 @@ describe("handleCaptchaDetection", () => {
         assert.strictEqual(client.global.total.captcha, 0);
     });
 
-    it("flags and pauses on a real web captcha (autosolve off, notifications off)", async () => {
+    it("flags and pauses on a real web captcha", async () => {
         const client = makeClient();
         const message = makeMessage({
             channelId: "111",
@@ -212,51 +182,6 @@ describe("handleCaptchaDetection", () => {
         assert.strictEqual(client.global.paused, true);
         assert.strictEqual(client.global.total.captcha, 1);
     });
-
-    it("launches auto-solve browser when autosolve enabled on a web captcha", async () => {
-        const spawn = mock.fn();
-        const client = makeClient({
-            config: {
-                settings: {
-                    autoresume: false,
-                    captcha: {
-                        autosolve: true,
-                        autosolve_thread: 1,
-                        alerttype: {
-                            webhook: false,
-                            webhookurl: "",
-                            desktop: {
-                                force: false,
-                                notification: false,
-                                prompt: false,
-                            },
-                        },
-                    },
-                },
-            },
-            child_process: { spawn, exec: () => {} },
-        });
-        const message = makeMessage({
-            channelId: "111",
-            content: "<@123> please complete your captcha .com",
-        });
-
-        await handleCaptchaDetection(
-            client,
-            message,
-            "please complete your captcha .com",
-        );
-
-        assert.strictEqual(spawn.mock.calls.length, 1);
-        const args = spawn.mock.calls[0].arguments;
-        assert.strictEqual(args[0], "node");
-        assert.strictEqual(args[1][0], "./core/captcha.js");
-        assert.strictEqual(args[1][1], "--userid=123");
-        // Token must be passed via the OwoToken env var, never on the argv
-        // (argv would expose it in `ps`).
-        assert.strictEqual(args[2].env.OwoToken, "test_token");
-        assert.ok(!args[1].some((a) => a.startsWith("--token=")));
-    });
 });
 
 // --- Captcha detection user-facing feedback ---
@@ -269,7 +194,6 @@ describe("captcha detection feedback", () => {
                 settings: {
                     autoresume: false,
                     captcha: {
-                        autosolve: false,
                         alerttype: {
                             webhook: false,
                             webhookurl: "",
@@ -301,7 +225,6 @@ describe("captcha detection feedback", () => {
                 settings: {
                     autoresume: false,
                     captcha: {
-                        autosolve: false,
                         alerttype: {
                             webhook: false,
                             webhookurl: "",
@@ -361,7 +284,6 @@ describe("captcha detection feedback", () => {
                 settings: {
                     autoresume: false,
                     captcha: {
-                        autosolve: false,
                         alerttype: {
                             webhook: false,
                             webhookurl: "",
@@ -405,7 +327,6 @@ describe("captcha detection feedback", () => {
                 settings: {
                     autoresume: false,
                     captcha: {
-                        autosolve: false,
                         alerttype: {
                             webhook: false,
                             webhookurl: "",
@@ -460,7 +381,6 @@ describe("captcha detection feedback", () => {
                 settings: {
                     autoresume: false,
                     captcha: {
-                        autosolve: false,
                         alerttype: {
                             webhook: false,
                             webhookurl: "",
@@ -502,7 +422,7 @@ describe("captcha detection feedback", () => {
         assert.ok(spawnArgs[1][3].includes("System.Windows.MessageBox]::Show"));
     });
 
-    it("skips desktop notifications when autosolve is on (no force)", async () => {
+    it("triggers both desktop notification AND prompt simultaneously", async () => {
         const notify = mock.fn();
         const spawn = mock.fn(() => ({ on: () => {} }));
         const client = captchaClient({
@@ -512,8 +432,6 @@ describe("captcha detection feedback", () => {
                 settings: {
                     autoresume: false,
                     captcha: {
-                        autosolve: true,
-                        autosolve_thread: 1,
                         alerttype: {
                             webhook: false,
                             webhookurl: "",
@@ -538,73 +456,9 @@ describe("captcha detection feedback", () => {
             "please complete your captcha",
         );
 
-        // Desktop notifications should be suppressed when autosolve active
-        // (unless force: true). Note: message has NO ".com" so auto-solve
-        // does NOT trigger either (isWebCaptchaMessage returns false).
-        assert.strictEqual(
-            notify.mock.calls.length,
-            0,
-            "no desktop notification when autosolve active",
-        );
-        // Only spawn that should happen would be from auto-solve, but since
-        // the message has no web captcha indicator, auto-solve doesn't run.
-        assert.strictEqual(
-            spawn.mock.calls.length,
-            0,
-            "no powershell spawn when autosolve active",
-        );
-    });
-
-    it("forces desktop notifications when autosolve + force: true", async () => {
-        const notify = mock.fn();
-        const spawn = mock.fn(() => ({ on: () => {} }));
-        const client = captchaClient({
-            notifier: { notify },
-            child_process: { spawn, exec: () => {} },
-            config: {
-                settings: {
-                    autoresume: false,
-                    captcha: {
-                        autosolve: true,
-                        autosolve_thread: 1,
-                        alerttype: {
-                            webhook: false,
-                            webhookurl: "",
-                            desktop: {
-                                force: true,
-                                notification: true,
-                                prompt: true,
-                            },
-                        },
-                    },
-                },
-            },
-        });
-        const message = makeMessage({
-            channelId: "111",
-            content: "<@123> please complete your captcha",
-        });
-
-        await handleCaptchaDetection(
-            client,
-            message,
-            "please complete your captcha",
-        );
-
-        // force: true overrides autosolve suppression — desktop fires
-        // (message has no ".com" so auto-solve doesn't trigger).
-        assert.strictEqual(
-            notify.mock.calls.length,
-            1,
-            "force should enable notification",
-        );
-        // PowerShell prompt should also fire (desktop.prompt: true + force)
+        assert.strictEqual(notify.mock.calls.length, 1);
         const spawnCmd = spawn.mock.calls[0]?.arguments?.[0];
-        assert.strictEqual(
-            spawnCmd,
-            "powershell.exe",
-            "force should enable powershell prompt",
-        );
+        assert.strictEqual(spawnCmd, "powershell.exe");
     });
 
     it("increments captcha counter on each new detection", async () => {
@@ -644,7 +498,6 @@ describe("captcha detection feedback", () => {
                 settings: {
                     autoresume: false,
                     captcha: {
-                        autosolve: false,
                         alerttype: {
                             webhook: false,
                             webhookurl: "",
@@ -682,56 +535,6 @@ describe("captcha detection feedback", () => {
         assert.ok(
             script.includes("System.Windows.MessageBox]::Show"),
             "should be a valid MessageBox command",
-        );
-    });
-
-    it("launches auto-solve when message contains .com and autosolve enabled", async () => {
-        const notify = mock.fn();
-        const spawn = mock.fn(() => ({ on: () => {} }));
-        const client = captchaClient({
-            notifier: { notify },
-            child_process: { spawn, exec: () => {} },
-            config: {
-                settings: {
-                    autoresume: false,
-                    captcha: {
-                        autosolve: true,
-                        autosolve_thread: 1,
-                        alerttype: {
-                            webhook: false,
-                            webhookurl: "",
-                            desktop: {
-                                force: false,
-                                notification: false,
-                                prompt: false,
-                            },
-                        },
-                    },
-                },
-            },
-        });
-        const message = makeMessage({
-            channelId: "111",
-            content: "<@123> please complete your captcha .com",
-        });
-
-        await handleCaptchaDetection(
-            client,
-            message,
-            "please complete your captcha .com",
-        );
-
-        // Auto-solve spawns node ./core/captcha.js
-        assert.strictEqual(spawn.mock.calls.length, 1);
-        const [cmd, cmdArgs] = spawn.mock.calls[0].arguments;
-        assert.strictEqual(cmd, "node");
-        assert.strictEqual(cmdArgs[0], "./core/captcha.js");
-
-        // Desktop notifications are suppressed (autosolve active, force: false)
-        assert.strictEqual(
-            notify.mock.calls.length,
-            0,
-            "no desktop notification when autosolve active",
         );
     });
 });
@@ -795,7 +598,6 @@ describe("handleCaptchaSolved", () => {
                 settings: {
                     autoresume: true,
                     captcha: {
-                        autosolve: false,
                         alerttype: {
                             webhook: false,
                             webhookurl: "",

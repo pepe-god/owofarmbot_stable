@@ -55,7 +55,6 @@ function makeValidConfig() {
             },
             safety: { autopause: false, pauseafter: 0, pausefor: 0 },
             captcha: {
-                autosolve: false,
                 alerttype: {
                     webhook: false,
                     desktop: {

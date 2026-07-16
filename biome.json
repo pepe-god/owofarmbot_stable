@@ -38,11 +38,6 @@
     },
     "overrides": [
         {
-            "includes": ["src/vendor/hcaptchasolver/**"],
-            "linter": { "enabled": false },
-            "formatter": { "enabled": false }
-        },
-        {
             "includes": ["config.json"],
             "linter": { "enabled": false },
             "formatter": { "indentWidth": 2 }

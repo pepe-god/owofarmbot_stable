@@ -311,7 +311,6 @@ Safety:
   Pause For: ${config.settings.safety.pausefor} - type: ${typeof config.settings.safety.pausefor}
 
 Captcha:
-  Auto Solve: ${config.settings.captcha.autosolve} - type: ${typeof config.settings.captcha.autosolve}
   Alert Type:
     Webhook: ${config.settings.captcha.alerttype.webhook} - type: ${typeof config.settings.captcha.alerttype.webhook}
     Desktop:

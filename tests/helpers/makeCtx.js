@@ -102,8 +102,6 @@ function createDefaultConfig() {
                 pausefor: 5,
             },
             captcha: {
-                autosolve: false,
-                autosolve_thread: 1,
                 alerttype: {
                     webhook: true,
                     webhookurl: "",

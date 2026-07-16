@@ -84,7 +84,6 @@ const registerCommands = async (ctx) => {
     const EXCLUDE = new Set([
         "index.js",
         "globalutil.js",
-        "captcha.js",
         "bot.js",
         "botContext.js",
     ]);
