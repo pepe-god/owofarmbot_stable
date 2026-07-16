@@ -1,50 +1,40 @@
 # OwO Farm Bot Stable
 
-Auto farm bot for OwO Discord bot.
+An automated farming bot for the OwO Discord bot.
 
-Fork with refactored codebase, test infrastructure, and cleaned-up dependencies.
+A cleaned-up fork with a refactored codebase, test infrastructure, and trimmed dependencies.
 
 ## Requirements
 
-- [Node.js](https://nodejs.org/) v22+
+- [Node.js](https://nodejs.org/) v22 or newer
 - [pnpm](https://pnpm.io/installation)
 
-## Install & Run
+## Setup & Run
 
 ```bash
 pnpm install
 ```
 
-Edit `config.json` with your token and channel IDs, then:
+Fill in your token and channel IDs in `config.json`, then start the bot:
 
 ```bash
 pnpm start
 ```
 
-Type `owostart` in your farm channel to begin.
+Type `<prefix>start` in your farm channel to begin (default prefix is `owo`, e.g. `owostart`).
 
 ## Commands
 
-| Command | Action |
-|---------|--------|
-| `owostart` | Start farming |
-| `owopause` | Pause farming |
-| `oworesume` | Resume farming |
-| `oworestart` | Restart farming |
-| `owostats` | Show stats |
+Commands use your configured prefix (default `owo`). Replace `<prefix>` below with yours.
 
-## Test
+| Command            | Action            |
+| ------------------ | ----------------- |
+| `<prefix>start`    | Start farming (alias: `resume`) |
+| `<prefix>pause`    | Pause farming     |
+| `<prefix>restart`  | Restart farming (aliases: `reboot`, `stop`) |
+| `<prefix>stats`    | Show current stats |
 
-```bash
-pnpm test
-```
-
-## Lint
-
-```bash
-pnpm lint
-pnpm lint:fix
-```
+## Credits
 
 Originally created by [Mid0aria / Mid0Hub](https://github.com/Mid0Hub).
 
