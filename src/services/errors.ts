@@ -33,19 +33,41 @@ const RATE_LIMIT_PATTERNS = [
     /too many requests/i,
 ];
 
+interface BotErrorOptions {
+    cause?: unknown;
+}
+
+interface RateLimitErrorOptions extends BotErrorOptions {
+    retryAfter?: number;
+}
+
+import type { CtxWithLogger } from "../core/types.js";
+
+interface HandleModuleMeta {
+    type: string;
+    module: string;
+    fallback: string;
+}
+
 /**
  * Base class for all structured bot errors.
- *
- * @extends Error
  */
-class BotError extends Error {
+export class BotError extends Error {
+    type: string;
+    module: string;
+
     /**
-     * @param {string} type - High-level feature (e.g. "Farm", "Quest").
-     * @param {string} module - Subsystem that raised the error (e.g. "Hunt").
-     * @param {string} message - Human-readable description.
-     * @param {{ cause?: unknown }} [options] - Optional error cause for chaining.
+     * @param type - High-level feature (e.g. "Farm", "Quest").
+     * @param module - Subsystem that raised the error (e.g. "Hunt").
+     * @param message - Human-readable description.
+     * @param options - Optional error cause for chaining.
      */
-    constructor(type, module, message, options = {}) {
+    constructor(
+        type: string,
+        module: string,
+        message: string,
+        options: BotErrorOptions = {},
+    ) {
         super(message, { cause: options.cause });
         this.name = this.constructor.name;
         this.type = type;
@@ -58,17 +80,22 @@ class BotError extends Error {
  * Discord so callers can inspect the original rate-limit duration.
  * Backoff logic lives in {@link nextRateLimitDelay} which manages external
  * attempt counters on `ctx.global.temp.rateLimit`.
- *
- * @extends BotError
  */
-class RateLimitError extends BotError {
+export class RateLimitError extends BotError {
+    retryAfter: number;
+
     /**
-     * @param {string} type - High-level feature.
-     * @param {string} module - Subsystem that raised the error.
-     * @param {string} message - Human-readable description.
-     * @param {{ cause?: unknown, retryAfter?: number }} [options]
+     * @param type - High-level feature.
+     * @param module - Subsystem that raised the error.
+     * @param message - Human-readable description.
+     * @param options - Optional cause and retryAfter.
      */
-    constructor(type, module, message, options = {}) {
+    constructor(
+        type: string,
+        module: string,
+        message: string,
+        options: RateLimitErrorOptions = {},
+    ) {
         super(type, module, message, options);
         this.retryAfter = options.retryAfter ?? 0;
     }
@@ -79,16 +106,19 @@ class RateLimitError extends BotError {
  *
  * Recognizes already-wrapped `RateLimitError`s, HTTP 429 status codes, and the
  * common rate-limit message substrings emitted by discord.js-selfbot-v13.
- *
- * @param {unknown} err - The caught error.
- * @returns {boolean} True if the error looks like a rate limit.
  */
-function isRateLimitError(err) {
+function isRateLimitError(err: unknown): boolean {
     if (err instanceof RateLimitError) return true;
     if (!err || typeof err !== "object") return false;
-    const code = err.code ?? err.status ?? err.httpStatus;
-    if (RATE_LIMIT_CODES.has(code)) return true;
-    const message = typeof err.message === "string" ? err.message : String(err);
+    const code =
+        (err as Record<string, unknown>).code ??
+        (err as Record<string, unknown>).status ??
+        (err as Record<string, unknown>).httpStatus;
+    if (RATE_LIMIT_CODES.has(code as number)) return true;
+    const message =
+        typeof (err as Record<string, unknown>).message === "string"
+            ? ((err as Record<string, unknown>).message as string)
+            : String(err);
     return RATE_LIMIT_PATTERNS.some((re) => re.test(message));
 }
 
@@ -98,18 +128,20 @@ function isRateLimitError(err) {
  * Rate-limit errors become `RateLimitError` (carrying Discord's `retryAfter`),
  * everything else becomes a plain `BotError`. The original error is preserved
  * as `cause` for stack chaining.
- *
- * @param {unknown} err - The raw caught error.
- * @param {string} type - High-level feature name.
- * @param {string} module - Subsystem name.
- * @param {string} fallback - Prefix describing what failed (e.g. "Error while hunting").
- * @returns {BotError} The wrapped, classified error.
  */
-function toBotError(err, type, module, fallback) {
-    const message = `${fallback}: ${err?.message ? err.message : String(err)}`;
+function toBotError(
+    err: unknown,
+    type: string,
+    module: string,
+    fallback: string,
+): BotError {
+    const errObj = err as Record<string, unknown> | undefined;
+    const message = `${fallback}: ${errObj?.message ? String(errObj.message) : String(err)}`;
     if (isRateLimitError(err)) {
         const retryAfter =
-            typeof err.retryAfter === "number" ? err.retryAfter * 1000 : 0;
+            typeof errObj?.retryAfter === "number"
+                ? (errObj.retryAfter as number) * 1000
+                : 0;
         return new RateLimitError(type, module, message, {
             cause: err,
             retryAfter,
@@ -123,16 +155,12 @@ function toBotError(err, type, module, fallback) {
  *
  * Use inside module `catch` blocks to replace raw `ctx.logger.alert(...)`
  * logging with typed, classified errors while preserving the same log volume.
- *
- * @param {Object} ctx - The bot context (logger + global).
- * @param {unknown} err - The raw caught error.
- * @param {Object} meta - Classification metadata.
- * @param {string} meta.type - High-level feature name.
- * @param {string} meta.module - Subsystem name.
- * @param {string} meta.fallback - Prefix describing what failed.
- * @returns {BotError} The wrapped, classified error (for instanceof checks).
  */
-function handleModuleError(ctx, err, { type, module, fallback }) {
+export function handleModuleError(
+    ctx: CtxWithLogger,
+    err: unknown,
+    { type, module, fallback }: HandleModuleMeta,
+): BotError {
     const wrapped = toBotError(err, type, module, fallback);
     ctx.logger.alert(type, module, wrapped.message);
     ctx.logger.debug(wrapped);
@@ -141,11 +169,8 @@ function handleModuleError(ctx, err, { type, module, fallback }) {
 
 /**
  * Classification label for the anti-crash handler.
- *
- * @param {unknown} err - The error to describe.
- * @returns {string} A short "[Class] [type > module]" or "Unclassified" label.
  */
-function describeError(err) {
+export function describeError(err: unknown): string {
     if (err instanceof BotError) {
         return `${err.name} [${err.type} > ${err.module}]`;
     }
@@ -159,16 +184,14 @@ function describeError(err) {
  * Consecutive rate limits for the same key grow the delay; call
  * {@link resetRateLimitBackoff} from the normal (recovered) reschedule path so
  * the counter restarts once the bot sends successfully again.
- *
- * @param {Object} ctx - The bot context.
- * @param {string} key - Stable per-loop key (e.g. "farm:hunt").
- * @returns {number} Backoff delay in milliseconds.
  */
-function nextRateLimitDelay(ctx, key) {
+export function nextRateLimitDelay(ctx: CtxWithLogger, key: string): number {
+    if (!ctx.global.temp.rateLimit) {
+        ctx.global.temp.rateLimit = {};
+    }
     const store = ctx.global.temp.rateLimit;
-    if (!store) ctx.global.temp.rateLimit = {};
-    const attempt = (ctx.global.temp.rateLimit[key] ?? 0) + 1;
-    ctx.global.temp.rateLimit[key] = attempt;
+    const attempt = (store[key] ?? 0) + 1;
+    store[key] = attempt;
     return Math.min(
         RATE_LIMIT_BASE_MS * RATE_LIMIT_FACTOR ** (attempt - 1),
         RATE_LIMIT_CAP_MS,
@@ -178,14 +201,19 @@ function nextRateLimitDelay(ctx, key) {
 /**
  * Reset the rate-limit attempt counter for a loop key, typically called from
  * the normal reschedule path once a command sends successfully.
- *
- * @param {Object} ctx - The bot context.
- * @param {string} key - Stable per-loop key (e.g. "farm:hunt").
- * @returns {void}
  */
-function resetRateLimitBackoff(ctx, key) {
+export function resetRateLimitBackoff(ctx: CtxWithLogger, key: string): void {
     const store = ctx.global.temp.rateLimit;
     if (store) store[key] = 0;
+}
+
+interface WithRateLimitOpts {
+    type: string;
+    module: string;
+    key: string;
+    run: () => Promise<void>;
+    onSuccess: () => void;
+    onFinally?: () => void;
 }
 
 /**
@@ -195,18 +223,11 @@ function resetRateLimitBackoff(ctx, key) {
  * exponential backoff via {@link nextRateLimitDelay}. On success, calls
  * `onSuccess` so the module can schedule its next normal iteration.
  * An optional `onFinally` runs in the finally block regardless of outcome.
- *
- * @param {Object} ctx - The bot context.
- * @param {Object} opts
- * @param {string} opts.type - Feature type (e.g. "Farm").
- * @param {string} opts.module - Subsystem name (e.g. "Hunt", "Pray").
- * @param {string} opts.key - Rate-limit tracking key (e.g. "farm:hunt").
- * @param {() => Promise<void>} opts.run - The action to execute.
- * @param {() => void} opts.onSuccess - Called on success (schedule next run).
- * @param {() => void} [opts.onFinally] - Optional cleanup that always runs.
- * @returns {Promise<void>}
  */
-async function withRateLimit(ctx, opts) {
+export async function withRateLimit(
+    ctx: CtxWithLogger,
+    opts: WithRateLimitOpts,
+): Promise<void> {
     const { type, module, key, run, onSuccess, onFinally = () => {} } = opts;
     let rateLimited = false;
     try {
@@ -225,9 +246,6 @@ async function withRateLimit(ctx, opts) {
                 module,
                 `Rate limited, backing off ${delay}ms before retry.`,
             );
-            // Re-enter through withRateLimit so subsequent retries also get
-            // error classification, backoff, and cleanup. The call goes through
-            // setTimeout (via ctx.loops.schedule) so there's no deep recursion.
             ctx.loops.schedule(
                 () => withRateLimit(ctx, opts),
                 delay,
@@ -242,11 +260,3 @@ async function withRateLimit(ctx, opts) {
         }
     }
 }
-
-module.exports = {
-    RateLimitError,
-    handleModuleError,
-    describeError,
-    nextRateLimitDelay,
-    withRateLimit,
-};

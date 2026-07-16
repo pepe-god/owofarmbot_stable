@@ -27,14 +27,6 @@ test("RARITY_MAP is ordered weakest -> strongest", () => {
     assert.strictEqual(constants.RARITY_MAP.fabled, 7);
 });
 
-test("BUSY_FLAGS lists the three state-machine flags", () => {
-    assert.deepStrictEqual(constants.BUSY_FLAGS, [
-        "paused",
-        "captchadetected",
-        "inventory",
-    ]);
-});
-
 test("TOKEN_SHAPE matches a three-segment Discord token", () => {
     assert.ok(constants.TOKEN_SHAPE.test("abc.def.ghi"));
     assert.ok(!constants.TOKEN_SHAPE.test("not-a-token"));

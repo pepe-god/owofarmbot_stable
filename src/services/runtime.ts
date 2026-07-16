@@ -10,52 +10,58 @@
  * correct for a selfbot that already reschedules on timers.
  */
 
+interface BusyFlags {
+    paused: boolean;
+    captchadetected: boolean;
+    inventory: boolean;
+}
+
 /**
  * BotState — plain boolean flags for pause / captcha / inventory.
- *
- * @param {Object} globalObj - The shared runtime state object (`ctx.global`).
  */
 class BotState {
-    constructor(globalObj) {
+    global: BusyFlags;
+
+    constructor(globalObj: BusyFlags) {
         this.global = globalObj;
     }
 
-    get status() {
+    get status(): string {
         if (this.global.captchadetected) return "captcha";
         if (this.global.inventory) return "inventory";
         if (this.global.paused) return "paused";
         return "running";
     }
 
-    pause() {
+    pause(): void {
         this.global.paused = true;
     }
 
-    resume() {
+    resume(): void {
         this.global.paused = false;
     }
 
-    captcha() {
+    captcha(): void {
         this.global.captchadetected = true;
         this.global.paused = true;
     }
 
-    captchaSolved(autoresume = false) {
+    captchaSolved(autoresume = false): void {
         this.global.captchadetected = false;
         if (autoresume) this.global.paused = false;
     }
 
-    startInventory() {
+    startInventory(): void {
         this.global.inventory = true;
     }
 
-    endInventory() {
+    endInventory(): void {
         this.global.inventory = false;
     }
 
     /** Resolve once no busy flag is set (polls — simple, no EventEmitter). */
-    waitUntilIdle() {
-        const busy = () =>
+    waitUntilIdle(): Promise<void> {
+        const busy = (): boolean =>
             this.global.paused ||
             this.global.captchadetected ||
             this.global.inventory;
@@ -71,27 +77,35 @@ class BotState {
     }
 }
 
+interface TimerEntry {
+    handle: ReturnType<typeof setTimeout>;
+    name: string;
+}
+
 /**
  * LoopManager — tracks self-rescheduling timers so they can be cancelled on
  * restart, plus an atomic first-start gate.
  */
 class LoopManager {
+    timers: Map<number, TimerEntry>;
+    nextId: number;
+    startedFlag: boolean;
+
     constructor() {
-        /** @type {Map<number, NodeJS.Timeout>} */
         this.timers = new Map();
         this.nextId = 1;
         this.startedFlag = false;
     }
 
     /** True exactly once (first start); false on every later call. */
-    tryStart() {
+    tryStart(): boolean {
         if (this.startedFlag) return false;
         this.startedFlag = true;
         return true;
     }
 
     /** Tracked setTimeout; auto-removed before `fn` runs. */
-    schedule(fn, ms, name = "loop") {
+    schedule(fn: () => void, ms: number, name = "loop"): number {
         const id = this.nextId++;
         const handle = setTimeout(() => {
             this.timers.delete(id);
@@ -102,7 +116,7 @@ class LoopManager {
     }
 
     /** Cancel every tracked timer. Returns how many were cancelled. */
-    stopAll() {
+    stopAll(): number {
         const count = this.timers.size;
         for (const { handle } of this.timers.values()) clearTimeout(handle);
         this.timers.clear();
@@ -110,4 +124,4 @@ class LoopManager {
     }
 }
 
-module.exports = { BotState, LoopManager };
+export { BotState, LoopManager };

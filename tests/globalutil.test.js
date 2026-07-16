@@ -28,8 +28,8 @@ test("removeInvisibleChars strips zero-width and control chars", () => {
     assert.strictEqual(util.removeInvisibleChars(dirty), "hello");
 });
 
-test("waitWhileBusy resolves immediately when no state machine is present and no flags set", async () => {
-    const ctx = { global: { paused: false, captchadetected: false, inventory: false }, delay: () => Promise.resolve() };
+test("waitWhileBusy resolves immediately when state has no flags set", async () => {
+    const ctx = { state: { waitUntilIdle: async () => {} } };
     await util.waitWhileBusy(ctx);
     assert.ok(true);
 });

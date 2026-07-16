@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert");
 
-const LoopManager = require("../src/services/loopManager.js");
+const { LoopManager } = require("../src/services/runtime.js");
 
 test("tryStart returns true exactly once", () => {
     const lm = new LoopManager();

@@ -22,6 +22,11 @@ test.js
 .kilo
 .tmp
 
+# Build output
+dist/
+build/
+out/
+
 # OS files
 Thumbs.db
 .DS_Store

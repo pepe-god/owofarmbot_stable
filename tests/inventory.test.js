@@ -1,8 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert");
 
-const inventory = require("../src/modules/inventory.js");
-const { parseItemCodes, selectGemCodes, useItemsFromInventory } = inventory;
+const { parseItemCodes, selectGemCodes, useItemsFromInventory } = require("../src/modules/inventory.js");
 const { GEM_ITEMS } = require("../src/core/constants.js");
 
 /**

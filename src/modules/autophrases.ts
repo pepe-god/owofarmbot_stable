@@ -1,36 +1,36 @@
-const { selfLoop } = require("./loop.js");
-const { handleModuleError } = require("../services/errors.js");
+/**
+ * Automatic background phrases — sends a random phrase every 8-25s.
+ *
+ * Phrase list is cached from core/phrases.json on first start. Avoids
+ * repeating the previous phrase. Skips while paused/captcha'd.
+ */
 
-let phrasesCache = null;
+import type { Channel, Ctx } from "../core/types.js";
+import { handleModuleError } from "../services/errors.js";
+import { selfLoop } from "./loop.js";
+
+let phrasesCache: string[] | null = null;
 
 /**
  * Pick a random phrase, avoiding repetition of the previous one.
- * @param {number} lastIndex - The previously used phrase index.
- * @returns {{ text: string, idx: number }} Selected phrase and its index.
  */
-function pickPhrase(lastIndex) {
-    let idx = Math.floor(Math.random() * phrasesCache.length);
-    if (phrasesCache.length > 1 && idx === lastIndex) {
-        idx = (idx + 1) % phrasesCache.length;
+function pickPhrase(lastIndex: number): { text: string; idx: number } {
+    const cache = phrasesCache!;
+    let idx = Math.floor(Math.random() * cache.length);
+    if (cache.length > 1 && idx === lastIndex) {
+        idx = (idx + 1) % cache.length;
     }
-    return { text: phrasesCache[idx], idx };
+    return { text: cache[idx], idx };
 }
 
 /**
- * Background loop that sends a random phrase every 8–25s (no repeats); skips
- * while paused/captcha'd or if the channel is lost. Phrase list is loaded from
- * core/phrases.json on first start.
- * @param {Object} ctx - The bot context; provides `fs`, logger and global state.
- * @param {TextChannel} [channel] - The text channel where phrases are sent; undefined disables the loop.
- * @returns {void}
+ * Background loop that sends a random phrase every 8–25s (no repeats).
+ * Skips while paused/captcha'd or if the channel is lost.
+ * Phrase list is loaded from core/phrases.json on first start.
  */
-function startAutophrases(ctx, channel) {
+function startAutophrases(ctx: Ctx, channel?: Channel): void {
     if (!channel) {
-        ctx.logger.debug(
-            "Farm",
-            "Phrases",
-            "Commands channel not found, autophrases disabled.",
-        );
+        ctx.logger.debug("Commands channel not found, autophrases disabled.");
         return;
     }
 
@@ -38,13 +38,13 @@ function startAutophrases(ctx, channel) {
     (async () => {
         if (!phrasesCache) {
             try {
-                const data = await ctx.fs.promises.readFile(
+                const data = await ctx.fs!.promises.readFile(
                     `${__dirname}/../core/phrases.json`,
                     "utf8",
                 );
                 const phrasesObject = JSON.parse(data);
-                phrasesCache = phrasesObject.phrases || [];
-                if (!phrasesCache.length) {
+                const items = phrasesObject.phrases || [];
+                if (!items.length) {
                     ctx.logger.alert(
                         "Farm",
                         "Phrases",
@@ -52,6 +52,7 @@ function startAutophrases(ctx, channel) {
                     );
                     return;
                 }
+                phrasesCache = items;
             } catch (err) {
                 handleModuleError(ctx, err, {
                     type: "Farm",
@@ -71,7 +72,7 @@ function startAutophrases(ctx, channel) {
             logType: "Farm",
             buildContent: () => {
                 const { text, idx } = pickPhrase(
-                    ctx.global.temp.lastPhraseIndex,
+                    ctx.global.temp.lastPhraseIndex!,
                 );
                 ctx.global.temp.lastPhraseIndex = idx;
                 return text;
@@ -83,4 +84,4 @@ function startAutophrases(ctx, channel) {
     })();
 }
 
-module.exports = { startAutophrases };
+export { startAutophrases };

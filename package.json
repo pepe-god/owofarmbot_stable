@@ -29,10 +29,13 @@
     "license": "ISC",
     "type": "commonjs",
     "scripts": {
-        "start": "node src/core/bot.js",
-        "run": "node src/core/bot.js",
+        "start": "node --import tsx src/core/bot.js",
+        "run": "node --import tsx src/core/bot.js",
+        "dev": "node --import tsx src/core/bot.js",
+        "build": "esbuild src/core/bot.ts --bundle --platform=node --format=cjs --outfile=dist/bot.js --packages=external --tsconfig=tsconfig.json --sourcemap",
+        "typecheck": "tsc --noEmit",
         "setup": "pnpm install",
-        "test": "node --test \"tests/**/*.test.js\"",
+        "test": "node --import tsx --test \"tests/**/*.test.js\"",
         "lint": "biome check .",
         "format": "biome format --write .",
         "lint:fix": "biome check --write ."
@@ -49,7 +52,15 @@
     },
     "homepage": "",
     "devDependencies": {
-        "@biomejs/biome": "^2.5.4"
+        "@biomejs/biome": "^2.5.4",
+        "@types/chalk": "^2.2.4",
+        "@types/debug": "^4.1.13",
+        "@types/dotenv": "^8.2.3",
+        "@types/node": "^26.1.1",
+        "@types/node-notifier": "^8.0.5",
+        "esbuild": "^0.28.1",
+        "tsx": "^4.23.1",
+        "typescript": "^7.0.2"
     },
     "pnpm": {
         "public-hoist-pattern": [
