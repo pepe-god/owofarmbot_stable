@@ -1,9 +1,5 @@
-const { getrand } = require("../core/globalutil.js");
-const {
-    handleModuleError,
-    RateLimitError,
-    nextRateLimitDelay,
-} = require("../services/errors.js");
+const { selfLoop } = require("./loop.js");
+const { handleModuleError } = require("../services/errors.js");
 
 let phrasesCache = null;
 
@@ -21,10 +17,12 @@ function pickPhrase(lastIndex) {
 }
 
 /**
- * Background loop that sends a random phrase every 8–25s (no repeats); skips while paused/captcha'd or if the channel is lost.
- * @param {Client} ctx - The Discord ctx instance; provides `fs`, logger and global state.
+ * Background loop that sends a random phrase every 8–25s (no repeats); skips
+ * while paused/captcha'd or if the channel is lost. Phrase list is loaded from
+ * core/phrases.json on first start.
+ * @param {Object} ctx - The bot context; provides `fs`, logger and global state.
  * @param {TextChannel} [channel] - The text channel where phrases are sent; undefined disables the loop.
- * @returns {void} Self-schedules via IIFE.
+ * @returns {void}
  */
 function startAutophrases(ctx, channel) {
     if (!channel) {
@@ -36,56 +34,7 @@ function startAutophrases(ctx, channel) {
         return;
     }
 
-    const MIN_DELAY = 8000;
-    const MAX_DELAY = 25000;
-
-    async function scheduleNext() {
-        const delay = getrand(MIN_DELAY, MAX_DELAY);
-        ctx.logger.debug("Farm", "Phrases", `Next phrase in ${delay}ms`);
-        ctx.loops.schedule(sendPhrase, delay, "farm:phrases");
-    }
-
-    async function sendPhrase() {
-        if (ctx.global.captchadetected || ctx.global.paused) {
-            scheduleNext();
-            return;
-        }
-        if (!channel) {
-            ctx.logger.debug(
-                "Farm",
-                "Phrases",
-                "Channel lost, stopping autophrases.",
-            );
-            return;
-        }
-
-        try {
-            await ctx.globalutil.waitWhileBusy(ctx);
-            const { text, idx } = pickPhrase(ctx.global.temp.lastPhraseIndex);
-            await ctx.delay(800);
-            await channel.send({ content: text });
-            ctx.global.temp.lastPhraseIndex = idx;
-            ctx.logger.info("Farm", "Phrases", "Successfully sent.");
-        } catch (err) {
-            const wrapped = handleModuleError(ctx, err, {
-                type: "Farm",
-                module: "Phrases",
-                fallback: "Error sending phrase",
-            });
-            if (wrapped instanceof RateLimitError) {
-                const delay = nextRateLimitDelay(ctx, "farm:phrases");
-                ctx.logger.warn(
-                    "Farm",
-                    "Phrases",
-                    `Rate limited, backing off ${delay}ms.`,
-                );
-                ctx.loops.schedule(sendPhrase, delay, "farm:phrases:ratelimit");
-                return;
-            }
-        }
-        scheduleNext();
-    }
-
+    // Load phrases.json once (cached) before starting the loop.
     (async () => {
         if (!phrasesCache) {
             try {
@@ -113,7 +62,24 @@ function startAutophrases(ctx, channel) {
             }
         }
         ctx.logger.info("Farm", "Phrases", "Phrases interval started.");
-        scheduleNext();
+        selfLoop(ctx, channel, {
+            type: "phrases",
+            key: "farm:phrases",
+            min: 8000,
+            max: 25000,
+            logModule: "Phrases",
+            logType: "Farm",
+            buildContent: () => {
+                const { text, idx } = pickPhrase(
+                    ctx.global.temp.lastPhraseIndex,
+                );
+                ctx.global.temp.lastPhraseIndex = idx;
+                return text;
+            },
+            onRun: async () => {
+                await ctx.delay(800);
+            },
+        });
     })();
 }
 

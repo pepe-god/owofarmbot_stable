@@ -20,7 +20,9 @@ const { withRateLimit } = require("../services/errors.js");
  * @param {Object} opts
  * @param {string} opts.type - Action type (e.g. "hunt", "pray", "sell").
  * @param {string} opts.key - Rate-limit / schedule key (e.g. "farm:hunt").
- * @param {string} opts.intervalKey - Key into config.interval for min/max bounds.
+ * @param {string} [opts.intervalKey] - Key into config.interval for min/max bounds.
+ * @param {number} [opts.min] - Explicit min interval (ms); used when intervalKey is absent.
+ * @param {number} [opts.max] - Explicit max interval (ms); used when intervalKey is absent.
  * @param {() => string} opts.buildContent - Returns the full command string to send.
  * @param {(ctx: Object, channel: TextChannel, msg: Object) => Promise<void>} [opts.onRun]
  *   Optional extra work after sending (e.g. parse hunt result, increment counter).
@@ -35,6 +37,8 @@ async function selfLoop(ctx, channel, opts) {
         type,
         key,
         intervalKey,
+        min,
+        max,
         buildContent,
         onRun,
         beforeRun,
@@ -45,10 +49,12 @@ async function selfLoop(ctx, channel, opts) {
 
     await ctx.globalutil.waitWhileBusy(ctx);
 
-    const interval = getrand(
-        ctx.config.interval[intervalKey].min,
-        ctx.config.interval[intervalKey].max,
-    );
+    const interval = intervalKey
+        ? getrand(
+              ctx.config.interval[intervalKey].min,
+              ctx.config.interval[intervalKey].max,
+          )
+        : getrand(min, max);
 
     const moduleName =
         logModule || type.charAt(0).toUpperCase() + type.slice(1);

@@ -9,6 +9,13 @@
  */
 exports.capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
+/**
+ * Escape special regex characters so a string can be used safely inside a RegExp constructor.
+ * @param {string} str - Input string.
+ * @returns {string} Regex-safe escaped string.
+ */
+exports.escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 exports.removeInvisibleChars = (str) => {
     const invisibleRegex = /[\u0000-\u001F\u007F\u200B-\u200D\uFEFF]/g;
     return str.replace(invisibleRegex, "");

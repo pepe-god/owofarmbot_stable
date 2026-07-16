@@ -1,4 +1,6 @@
 const { OWO_ID } = require("./constants.js");
+const { escapeRegex } = require("./globalutil.js");
+const notifyCaptcha = require("../modules/captchaNotify.js");
 
 const CAPTCHA_PHRASES = [
     "please complete your captcha",
@@ -9,67 +11,6 @@ const CAPTCHA_PHRASES = [
     "please use the link below so i can check",
     "captcha",
 ];
-
-/**
- * Escape special regex characters so a string can be used safely inside a RegExp constructor.
- * @param {string} str - Input string.
- * @returns {string} Regex-safe escaped string.
- */
-function escapeRegex(str) {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-/**
- * Dispatch desktop notifications (toast and/or native OS prompt) when a captcha is detected, per alert config.
- */
-function sendDesktopNotifications(ctx) {
-    if (ctx.config.settings.captcha.alerttype.desktop.notification) {
-        require("../modules/captchaNotify.js")(ctx);
-    }
-    if (ctx.config.settings.captcha.alerttype.desktop.prompt) {
-        const promptmessage = `Captcha detected! Solve the captcha and type ${ctx.prefix()}resume in farm channel`;
-        // Escape single quotes for PowerShell single-quoted string context (user-controlled prefix — never shell-interpolated).
-        const escaped = promptmessage.replace(/'/g, "''");
-        const psScript = [
-            "Add-Type -AssemblyName PresentationFramework",
-            `[System.Windows.MessageBox]::Show('${escaped}', 'OwO Farm Bot Stable', 'OK', 'Warning')`,
-        ].join("; ");
-        ctx.child_process.spawn("powershell.exe", [
-            "-ExecutionPolicy",
-            "Bypass",
-            "-Command",
-            psScript,
-        ]);
-    }
-}
-
-/**
- * Send a Discord webhook alert when a captcha is detected; skipped if webhook URL is not configured/valid.
- */
-function sendWebhookNotification(ctx) {
-    const webhookurl = ctx.config.settings.captcha.alerttype.webhookurl;
-    if (
-        !ctx.config.settings.captcha.alerttype.webhook ||
-        !(webhookurl?.length > 10) ||
-        !webhookurl.startsWith("https://discord.com/api/webhooks/")
-    )
-        return;
-
-    const { WebhookClient } = require("discord.js-selfbot-v13");
-    const webhookClient = new WebhookClient({
-        url: webhookurl,
-    });
-    let message = `#Token Type: ${ctx.global.type}\n**🚨Captcha detected!🚨 Solve the captcha**`;
-
-    if (!ctx.config.settings.autoresume) {
-        message += `and type ${ctx.prefix()}resume in farm channel`;
-    }
-
-    webhookClient.send({
-        content: message,
-        username: "OwO Farm Bot Stable",
-    });
-}
 
 /**
  * Handle a newly received OwO message that may contain a captcha; validates source/channel/phrase before triggering alerts.
@@ -103,9 +44,8 @@ async function handleCaptchaDetection(ctx, message, msgcontent) {
     );
     ctx.logger.warn("Bot", "Captcha", `Bot Paused: ${ctx.global.paused}`);
 
-    // Notify the user via desktop toast/webhook and optionally a prompt.
-    sendDesktopNotifications(ctx);
-    sendWebhookNotification(ctx);
+    // Notify the user via desktop toast/webhook/prompt.
+    notifyCaptcha(ctx);
 }
 
 /**
