@@ -70,7 +70,10 @@ async function fetchInventoryData(ctx, channel) {
  */
 function parseItemCodes(invContent) {
     const values = [];
-    const regex = /`([^`]+)`/g;
+    // OwO lists item codes either backtick-quoted (`057`) or as bare 2-3 digit
+    // codes in the "Inventory =" line. Match both so gem selection works
+    // regardless of which format the current OwO version emits.
+    const regex = /`?(\d{2,3})`?/g;
     let match;
     while ((match = regex.exec(invContent)) !== null) {
         values.push(match[1]);
@@ -157,7 +160,17 @@ async function inventory(ctx, channel) {
         if (invContent == null) return;
 
         const codes = parseItemCodes(invContent);
+        ctx.logger.info(
+            "Farm",
+            "Inventory",
+            `Parsed codes: ${codes.join(",")}`,
+        );
         selectGemCodes(ctx, codes);
+        ctx.logger.info(
+            "Farm",
+            "Inventory",
+            `Gems to use: "${ctx.global.gems.use}" (need: ${ctx.global.gems.need.join(",")})`,
+        );
 
         await ctx.delay(4000);
         await useItemsFromInventory(ctx, channel, codes);
