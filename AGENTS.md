@@ -41,7 +41,7 @@ Follow these when touching code:
 - `client.delay(ms)` — `() => new Promise(resolve => setTimeout(resolve, ms))`
 
 ## File Organization
-- `src/core/` — consolidated: bot.js (bootstrap), index.js (loader), admin.js, messageCreate.js, ready.js, globalutil.js, captcha.js
+- `src/core/` — consolidated: bot.js (bootstrap), index.js (loader), admin.js, messageCreate.js, ready.js, globalutil.js
 - `src/services/` — orchestration, config validation, logging. Business logic that coordinates modules.
 - `src/modules/` — self-looping farming modules (farm, luck, etc.). Each owns a specific OwO bot feature.
 
@@ -51,7 +51,7 @@ Follow these when touching code:
 - NEVER put business logic in `src/core/globalutil.js`. NEVER make `core/` a dumping ground.
 
 ## Key Files
-- `src/core/globalutil.js` — runtime utilities (waitForMessage, waitWhileBusy, parseDuration, commandrandomizer, getrand, removeInvisibleChars)
+- `src/core/globalutil.js` — runtime utilities (waitForMessage, waitWhileBusy, commandrandomizer, getrand, removeInvisibleChars)
 - `src/services/runtimeConfig.js` — config file loading + .env overrides + default prefix initialization
 - `src/services/configSchema.js` — startup config validation (valibot schema + helpers)
 - `src/services/mainHandler.js` — orchestrator (module.exports + 4 init functions, no top-level requires)
@@ -62,11 +62,9 @@ Follow these when touching code:
 - `complexity/noExcessiveLinesPerFunction` (max 80) — warn
 - `complexity/useMaxParams` (max 5) — warn
 - Indent: 4 spaces, CRLF line endings, double quotes, trailing commas
-- Overrides: hcaptchasolver, tests, config.json all lint-ignored
+- Overrides: tests, config.json all lint-ignored
 - Individual file overrides: main.js (noInnerDeclarations off), inventory.js (noAssignInExpressions off), globalutil.js (noControlCharactersInRegex off), logger.js (biome pass clean — class-based)
 
 ## Remaining Lint Noise (pre-existing, do NOT "fix")
 - `logger.js:3` — `useTemplate` (unsafe fix, changes runtime behavior)
 
-## Ignored Directories
-- `src/vendor/hcaptchasolver/` — 60MB Chrome extension, excluded from lint
