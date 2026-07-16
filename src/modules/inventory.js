@@ -1,5 +1,5 @@
 const { commandrandomizer } = require("../core/globalutil.js");
-const { OWO_ID, GEM_ITEMS, RARITY_MAP } = require("../core/constants.js");
+const { OWO_ID, GEM_ITEMS } = require("../core/constants.js");
 
 /**
  * Map of special inventory item codes -> how to consume them.
@@ -97,11 +97,9 @@ function selectGemCodes(ctx, values) {
     ctx.global.gems.need.forEach((gem) => {
         const codes = GEM_ITEMS[gem];
         if (!codes) return;
-        for (let i = 0; i < codes.length; i++) {
-            if (
-                values.includes(codes[i]) &&
-                ctx.global.rareLevel >= RARITY_MAP.fabled - i
-            ) {
+        // OwO lists the weakest owned code first; pick the weakest one present.
+        for (let i = codes.length - 1; i >= 0; i--) {
+            if (values.includes(codes[i])) {
                 ctx.global.gems.use += `${codes[i]} `;
                 break;
             }
