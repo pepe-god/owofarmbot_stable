@@ -70,7 +70,6 @@ function checkCaptcha(ctx, captchaSince, now, captchaMs) {
     if (!captchaSince) return now;
     if (now - captchaSince > captchaMs) {
         ctx.global.captchadetected = false;
-        // If the user wants auto-resume, also unpause so farming continues.
         if (ctx.config.settings.autoresume) ctx.global.paused = false;
         ctx.logger.alert(
             "Bot",
@@ -104,12 +103,22 @@ function startWatchdog(ctx, options = {}) {
     ctx.logger.info("Bot", "Watchdog", "Watchdog started.");
 
     function tick() {
-        const now = Date.now();
-        for (const flag of STUCK_FLAGS) {
-            checkStuckFlag(ctx, flag, flagSince, now, stuckMs);
+        try {
+            const now = Date.now();
+            for (const flag of STUCK_FLAGS) {
+                checkStuckFlag(ctx, flag, flagSince, now, stuckMs);
+            }
+            captchaSince = checkCaptcha(ctx, captchaSince, now, captchaMs);
+        } catch (err) {
+            // Watchdog must never crash — log and continue scheduling.
+            ctx.logger.alert(
+                "Bot",
+                "Watchdog",
+                `Watchdog tick error: ${err?.message ?? err}`,
+            );
+        } finally {
+            handle = setTimeout(tick, tickMs);
         }
-        captchaSince = checkCaptcha(ctx, captchaSince, now, captchaMs);
-        handle = setTimeout(tick, tickMs);
     }
     let handle = setTimeout(tick, tickMs);
     return handle;

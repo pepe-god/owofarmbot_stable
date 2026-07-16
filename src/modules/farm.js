@@ -16,9 +16,10 @@ const { startAutophrases } = require("./autophrases.js");
  * two actions alternate rather than collide on the same cooldown.
  *
  * @param {Client} ctx - The Discord ctx instance; carries config, logger and global state.
+ * @param {Message} [message] - The originating command message (unused, kept for API compatibility).
  * @returns {void} Kicks off the looping handlers; does not return a meaningful value.
  */
-module.exports = async (ctx) => {
+async function startFarm(ctx, message) {
     const channel = ctx.client.channels.cache.get(
         ctx.config.main.commandschannelid,
     );
@@ -44,7 +45,7 @@ module.exports = async (ctx) => {
             type: "battle",
             cmd: () => commandrandomizer(["b", "battle"]),
         });
-};
+}
 
 /**
  * Generic self-looping action for hunt or battle.
@@ -109,3 +110,6 @@ async function farmAction(ctx, channel, { type, cmd, onResult }) {
         },
     });
 }
+
+module.exports = { startFarm, farmAction };
+module.exports.default = startFarm;

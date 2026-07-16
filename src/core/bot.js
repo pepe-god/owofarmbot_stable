@@ -10,7 +10,8 @@
 const cp = require("node:child_process");
 
 const { DEFAULT_PREFIX } = require("../core/constants.js");
-const { config, DEVELOPER_MODE } = require("../services/runtimeConfig.js");
+const { loadConfig } = require("../services/runtimeConfig.js");
+const { config, DEVELOPER_MODE } = loadConfig();
 const packageJson = require("../../package.json");
 
 const fs = require("node:fs");

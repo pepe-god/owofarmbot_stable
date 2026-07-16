@@ -9,7 +9,7 @@
  * @param {Client} ctx - The Discord ctx instance; reads `settings.safety` and mutates `global.paused`.
  * @returns {void} Seeds the self-rescheduling pause/resume timers; never returns a value.
  */
-module.exports = async (ctx) => {
+function startSafety(ctx) {
     const safetyInterval = ctx.config.settings.safety.pauseafter * 60 * 1000;
     const pauseDuration = ctx.config.settings.safety.pausefor * 60 * 1000;
 
@@ -18,7 +18,7 @@ module.exports = async (ctx) => {
         safetyInterval,
         "safety:pause",
     );
-};
+}
 
 /**
  * Pause the bot for a cooldown window.
@@ -73,5 +73,5 @@ function resume(ctx, pauseDuration, safetyInterval) {
     );
 }
 
-module.exports.pause = pause;
-module.exports.resume = resume;
+module.exports = { startSafety, pause, resume };
+module.exports.default = startSafety;

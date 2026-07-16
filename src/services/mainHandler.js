@@ -16,7 +16,18 @@
  * @returns {Promise<void>} Resolves once every enabled subsystem has been kicked off.
  * @sideeffect Launches all enabled subsystem loops and may set `config.settings.owoprefix` to `"owo"`.
  */
+
 const { DEFAULT_PREFIX } = require("../core/constants.js");
+
+const { startFarm } = require("../modules/farm.js");
+const { startAnimals } = require("../modules/animals.js");
+const { startLuck } = require("../modules/luck.js");
+const { startSafety } = require("../modules/safety.js");
+
+/** Delay between subsystem starts to avoid command floods (ms). */
+const FARM_START_DELAY = 2000;
+/** Delay before starting luck module to space out from farming (ms). */
+const PRAYER_START_DELAY = 32000;
 
 module.exports = async (ctx, message) => {
     await ctx.globalutil.waitWhileBusy(ctx);
@@ -24,7 +35,7 @@ module.exports = async (ctx, message) => {
         ctx.config.settings.owoprefix = DEFAULT_PREFIX;
 
     await initFarming(ctx, message);
-    await ctx.delay(2000);
+    await ctx.delay(FARM_START_DELAY);
 
     await initAnimals(ctx);
     await initPrayer(ctx, message);
@@ -44,8 +55,8 @@ module.exports = async (ctx, message) => {
  */
 async function initFarming(ctx, message) {
     await ctx.globalutil.waitWhileBusy(ctx);
-    await ctx.delay(2000);
-    require("../modules/farm.js")(ctx, message);
+    await ctx.delay(FARM_START_DELAY);
+    await startFarm(ctx, message);
 }
 
 /**
@@ -65,7 +76,7 @@ async function initAnimals(ctx) {
         const channel = ctx.client.channels.cache.get(
             ctx.config.main.commandschannelid,
         );
-        await require("../modules/animals.js")(
+        await startAnimals(
             ctx,
             channel,
             ctx.config.animals.type.sell ? "sell" : "sacrifice",
@@ -86,8 +97,8 @@ async function initPrayer(ctx, message) {
     if (ctx.config.main.commands.pray || ctx.config.main.commands.curse) {
         await ctx.globalutil.waitWhileBusy(ctx);
         // Initial wait to space out luck buffs from farming actions.
-        await ctx.delay(32000);
-        require("../modules/luck.js")(ctx, message);
+        await ctx.delay(PRAYER_START_DELAY);
+        await startLuck(ctx, message);
     }
 }
 
@@ -100,6 +111,6 @@ async function initPrayer(ctx, message) {
  */
 function initSafety(ctx) {
     if (ctx.config.settings.safety.autopause) {
-        require("../modules/safety.js")(ctx);
+        startSafety(ctx);
     }
 }

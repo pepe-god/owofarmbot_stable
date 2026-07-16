@@ -9,12 +9,13 @@ const { withRateLimit } = require("../services/errors.js");
  * and rescheduling is delegated to {@link prayOrCurse}, which loops itself.
  *
  * @param {Client} ctx - The Discord ctx instance; carries config, logger and global state.
+ * @param {Message} [message] - The originating command message (unused, kept for API compatibility).
  * @returns {void} This function only kicks off the self-looping handler.
  */
-module.exports = async (ctx) => {
+async function startLuck(ctx, message) {
     if (ctx.config.main.commands.pray) prayOrCurse(ctx, "pray");
     else if (ctx.config.main.commands.curse) prayOrCurse(ctx, "curse");
-};
+}
 
 /**
  * Self-looping pray/curse command sender.
@@ -55,7 +56,7 @@ async function prayOrCurse(ctx, type) {
             ctx.logger.info(
                 "Farm",
                 capitalize(type),
-                `Total ${type}ed time: ${ctx.global.total[type]}`,
+                `Total ${type}: ${ctx.global.total[type]}`,
             );
         },
         onSuccess: () => {
@@ -67,3 +68,6 @@ async function prayOrCurse(ctx, type) {
         },
     });
 }
+
+module.exports = { startLuck };
+module.exports.default = startLuck;

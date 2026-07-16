@@ -38,8 +38,6 @@ const INTERVAL_DEFAULTS = [
     { type: "animals", min: 610000, max: 661000 },
 ];
 
-// RARITY_LIST and ANIMAL_TYPE_LIST imported from constants.js
-
 // valibot schemas for the pure-shape leaves that map cleanly to the original
 // checks. Custom messages keep the user-facing strings identical.
 const tokenSchema = v.pipe(

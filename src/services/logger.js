@@ -3,7 +3,6 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { isJsonFormat, formatStructured } = require("./structuredLogger.js");
 
-// Maps the chalk color used per level to a stable level name for JSON logs.
 const LEVEL_BY_COLOR = {
     green: "info",
     yellow: "warn",

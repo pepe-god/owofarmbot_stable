@@ -16,7 +16,7 @@ const { withRateLimit } = require("../services/errors.js");
  * @param {string} types - Space-separated animal type suffixes (e.g. `"cow duck"`).
  * @returns {void} This function does not return a value; it self-reschedules via setTimeout.
  */
-module.exports = async function sell(ctx, channel, choose, types) {
+async function sell(ctx, channel, choose, types) {
     if (ctx.global.captchadetected || ctx.global.paused) {
         ctx.loops.schedule(
             () => {
@@ -49,4 +49,7 @@ module.exports = async function sell(ctx, channel, choose, types) {
             );
         },
     });
-};
+}
+
+module.exports = { startAnimals: sell };
+module.exports.default = sell;
