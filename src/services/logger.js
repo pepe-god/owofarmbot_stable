@@ -20,6 +20,19 @@ const ALERT_LOG_PATH = path.join(ALERT_LOG_DIR, "alert.log");
 // instead of appending forever.
 const ALERT_LOG_MAX_BYTES = 1024 * 1024;
 
+// When stdout/stderr is a pipe (e.g. launched via a parent process or `|`),
+// the reader can close it and any further write throws EPIPE. That error must
+// never surface as an uncaughtException — otherwise logging an alert about a
+// crash triggers another crash, spiraling into an infinite alert loop that
+// balloons alert.log. Swallow EPIPE once, process-wide.
+for (const stream of [process.stdout, process.stderr]) {
+    if (stream && typeof stream.on === "function") {
+        stream.on("error", (err) => {
+            if (err && err.code !== "EPIPE") throw err;
+        });
+    }
+}
+
 /**
  * Lightweight, in-memory logger with colored console output and optional
  * shutdown dump.
@@ -208,7 +221,11 @@ class Logger {
      */
     _show() {
         if (this.logs.length === 0) return;
-        console.log(this.logs[this.logs.length - 1]);
+        try {
+            console.log(this.logs[this.logs.length - 1]);
+        } catch (_err) {
+            /* EPIPE / broken pipe — never let logging crash the bot */
+        }
     }
 }
 
