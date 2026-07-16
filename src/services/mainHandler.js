@@ -9,15 +9,14 @@
  *
  * Each subsystem is a self-looping module that manages its own timers.
  * This function only triggers their initial launch (with small inter-subsystem
- * delays to avoid command floods). It also normalizes an empty `owoprefix`.
+ * delays to avoid command floods). The `owoprefix` default is already applied
+ * at startup by `runtimeConfig.js`, so no normalization is needed here.
  *
  * @param {Client} ctx - The Discord ctx instance; carries config and global state.
  * @param {Message} message - The command message that triggered start/resume (passed to modules that need it).
  * @returns {Promise<void>} Resolves once every enabled subsystem has been kicked off.
- * @sideeffect Launches all enabled subsystem loops and may set `config.settings.owoprefix` to `"owo"`.
+ * @sideeffect Launches all enabled subsystem loops.
  */
-
-const { DEFAULT_PREFIX } = require("../core/constants.js");
 
 const { startFarm } = require("../modules/farm.js");
 const { startAnimals } = require("../modules/animals.js");
@@ -31,8 +30,6 @@ const PRAYER_START_DELAY = 32000;
 
 module.exports = async (ctx, message) => {
     await ctx.globalutil.waitWhileBusy(ctx);
-    if (!ctx.config.settings.owoprefix.length)
-        ctx.config.settings.owoprefix = DEFAULT_PREFIX;
 
     await initFarming(ctx, message);
     await ctx.delay(FARM_START_DELAY);

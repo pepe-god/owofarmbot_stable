@@ -126,8 +126,4 @@ function startWatchdog(ctx, options = {}) {
 
 module.exports = {
     startWatchdog,
-    STUCK_FLAGS,
-    DEFAULT_STUCK_FLAG_MS,
-    DEFAULT_CAPTCHA_MAX_MS,
-    DEFAULT_TICK_MS,
 };

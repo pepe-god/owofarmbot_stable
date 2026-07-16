@@ -342,5 +342,4 @@ module.exports = {
     validateConfig,
     parseConfigErrors,
     getDebugConfig,
-    checkToken,
 };

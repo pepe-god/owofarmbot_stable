@@ -137,4 +137,4 @@ function startHealthServer(ctx, options = {}) {
     return server;
 }
 
-module.exports = { buildHealthPayload, handleRequest, startHealthServer };
+module.exports = { startHealthServer };

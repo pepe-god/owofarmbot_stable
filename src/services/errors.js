@@ -14,8 +14,6 @@
  * differently per error kind.
  *
  * Subclasses:
- *  - `ConfigError` — fatal configuration problems (bot exits via configSchema).
- *  - `CaptchaError` — captcha detection/solving failures.
  *  - `RateLimitError` — Discord rate-limit hits; carries retry metadata and an
  *    exponential-backoff helper so loops can back off instead of hammering.
  */
@@ -54,21 +52,6 @@ class BotError extends Error {
         this.module = module;
     }
 }
-
-/**
- * Fatal configuration error (missing/invalid config). Surfaced by
- * `configSchema.js`; the bot terminates once these are detected.
- *
- * @extends BotError
- */
-class ConfigError extends BotError {}
-
-/**
- * Captcha detection or solving failure.
- *
- * @extends BotError
- */
-class CaptchaError extends BotError {}
 
 /**
  * Discord rate-limit hit. Carries an optional `retryAfter` (ms) reported by
@@ -262,8 +245,6 @@ async function withRateLimit(ctx, opts) {
 
 module.exports = {
     BotError,
-    ConfigError,
-    CaptchaError,
     RateLimitError,
     isRateLimitError,
     toBotError,
@@ -272,7 +253,4 @@ module.exports = {
     nextRateLimitDelay,
     resetRateLimitBackoff,
     withRateLimit,
-    RATE_LIMIT_BASE_MS,
-    RATE_LIMIT_FACTOR,
-    RATE_LIMIT_CAP_MS,
 };
