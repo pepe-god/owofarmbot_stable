@@ -97,8 +97,9 @@ function selectGemCodes(ctx, values) {
     ctx.global.gems.need.forEach((gem) => {
         const codes = GEM_ITEMS[gem];
         if (!codes) return;
-        // OwO lists the weakest owned code first; pick the weakest one present.
-        for (let i = codes.length - 1; i >= 0; i--) {
+        // GEM_ITEMS lists strongest-first; pick the highest-quality owned code
+        // OwO actually has (falls back to weaker ones if the best is absent).
+        for (let i = 0; i < codes.length; i++) {
             if (values.includes(codes[i])) {
                 ctx.global.gems.use += `${codes[i]} `;
                 break;
