@@ -1,10 +1,5 @@
 /**
- * Handle the autostart flow on ready.
- *
- * If `autostart` is enabled, clears any stale captcha flag, unpauses
- * the bot, and triggers `mainHandler` after a short delay.
- * Distinguishes first start from resume-after-pause via `temp.started`.
- *
+ * Handle the autostart flow on ready: if `autostart` is enabled, clears stale captcha flag, unpauses, and triggers `mainHandler` (first start vs. resume via `temp.started`).
  * @param {Client} ctx - The Discord ctx instance.
  */
 async function handleAutoStart(ctx) {
@@ -21,8 +16,7 @@ async function handleAutoStart(ctx) {
     }
     ctx.state.resume();
 
-    // loops.tryStart() is the single atomic gate for first-start vs. resume.
-    // First time -> start the orchestrator; later (after a pause) -> just resume.
+    // loops.tryStart() is the atomic gate: true exactly once (first start), else plain resume.
     if (ctx.loops.tryStart()) {
         ctx.global.temp.started = true;
         ctx.logger.info("Bot", "AutoStart", "BOT started have fun ;)");
@@ -37,8 +31,7 @@ async function handleAutoStart(ctx) {
 }
 
 /**
- * Ready event'te yapılan hazırlık adımlarını yönetir:
- *   - autostart açıksa botu ilk/tekrar başlatma
+ * Ready event handler: logs startup, sets up the cache sweeper, and runs autostart.
  */
 module.exports = async (ctx) => {
     ctx.logger.info(
@@ -54,14 +47,7 @@ module.exports = async (ctx) => {
 };
 
 /**
- * Periodically trim the Discord message cache to avoid unbounded memory
- * growth. Runs every 5 minutes via {@link LoopManager} and deletes the
- * oldest ~85% of cached messages across all visible channels.
- *
- * Using LoopManager instead of a raw `setInterval` ensures the sweeper is
- * tracked and can be cancelled by {@link LoopManager#stopAll} during restarts,
- * preventing duplicate sweepers on reconnection.
- *
+ * Periodically trim the Discord message cache (oldest 85% every 5 min) via LoopManager so it is trackable/cancellable on restart.
  * @param {Client} ctx - The Discord ctx instance.
  */
 function setupSweeper(ctx) {

@@ -1,7 +1,5 @@
 /**
- * Send a reply message to the command channel and optionally delete
- * the triggering command message for a clean UX.
- *
+ * Delete the triggering command message and optionally send a reply (if chatfeedback is on).
  * @param {Client} ctx - The Discord ctx instance.
  * @param {Message} message - The command message to delete.
  * @param {string} text - The reply text to send.
@@ -14,19 +12,12 @@ async function replyAndDelete(ctx, message, text) {
 }
 
 /**
- * Admin command definitions.
- *
- * Commands:
- *  - pause: Pause the bot.
- *  - restart: Restart the entire process.
- *  - start/resume: Resume or start the bot.
- *  - stats: Display runtime statistics.
+ * Admin command definitions: pause, restart, start/resume, stats.
  */
 const commands = [
     {
         config: { name: "pause" },
         run: async (ctx, message) => {
-            // Toggle the global pause flag.
             if (ctx.global.paused) {
                 await replyAndDelete(ctx, message, "Bot is already paused!!!");
             } else {
@@ -38,15 +29,12 @@ const commands = [
     {
         config: { name: "restart", aliases: ["reboot", "stop"] },
         run: async (ctx, message) => {
-            // Graceful shutdown: cancel every pending loop timer, close the
-            // Discord connection cleanly, then force-exit. The cluster primary
-            // (src/main.js) re-forks on any worker exit, so this restarts us.
+            // Graceful shutdown: stop loops, close Discord, force-exit (cluster primary re-forks).
             await message.channel.send("The bot is being restarted...");
             ctx.loops.stopAll();
             try {
                 await ctx.client.destroy();
             } finally {
-                // Guarantee exit even if destroy() throws.
                 setTimeout(() => process.exit(0), 2000);
             }
         },
@@ -54,7 +42,6 @@ const commands = [
     {
         config: { name: "start", aliases: ["resume"] },
         run: async (ctx, message) => {
-            // Guard: can't resume something that isn't paused.
             if (!ctx.global.paused) {
                 return replyAndDelete(
                     ctx,
@@ -62,12 +49,10 @@ const commands = [
                     "Bot is already working!!!",
                 );
             }
-            // A captcha flag from a previous session must be cleared on resume.
+            // Clear a stale captcha flag from a previous session on resume.
             if (ctx.global.captchadetected) ctx.state.captchaSolved();
             ctx.state.resume();
-            // First ever start -> launch the full farming orchestrator.
-            // `loops.tryStart()` is the single atomic gate; it returns true
-            // exactly once, so a duplicate start becomes a plain resume.
+            // `loops.tryStart()` is the atomic gate: true exactly once (first start), else plain resume.
             if (ctx.loops.tryStart()) {
                 ctx.global.temp.started = true;
                 await replyAndDelete(ctx, message, "BOT started have fun ;)");
@@ -76,7 +61,6 @@ const commands = [
                     1000,
                 );
             } else {
-                // Already started before -> just unpause the existing loops.
                 await replyAndDelete(ctx, message, "Resuming :)");
             }
         },

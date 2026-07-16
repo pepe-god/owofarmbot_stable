@@ -15,13 +15,7 @@ const ITEM_ACTIONS = {
 };
 
 /**
- * Inventory module entry point — runs the inventory consumption loop.
- *
- * Resolves the commands channel and runs the one-shot {@link inventory}
- * routine, which fetches the inventory, applies configured gems and consumable
- * items. Unlike the other farm modules this is not self-rescheduling; it is
- * invoked on demand (e.g. from the farm gem handler).
- *
+ * Entry point: resolves the commands channel and runs the one-shot {@link inventory} routine (invoked on demand, not self-rescheduling).
  * @param {Client} ctx - The Discord ctx instance; carries config, logger and global state.
  * @returns {Promise<void>} Resolves once the inventory routine has finished.
  */
@@ -33,13 +27,7 @@ module.exports = async (ctx) => {
 };
 
 /**
- * Send the inventory command and wait for OwO's inventory reply.
- *
- * Marks the global inventory flag (which pauses competing actions), sends
- * `owo inv`, and waits for OwO's "Inventory =" embed/message newer than the
- * command. Returns null on timeout or if the bot becomes paused/captcha'd while
- * waiting, so the caller can abort gracefully.
- *
+ * Send `owo inv`, wait for OwO's "Inventory =" reply (newer than the command); returns null on timeout or pause/captcha.
  * @param {Client} ctx - The Discord ctx instance (sets `global.inventory`).
  * @param {TextChannel} channel - The commands channel.
  * @returns {Promise<string|null>} Raw inventory message content, or null on timeout/pause.
@@ -76,11 +64,7 @@ async function fetchInventoryData(ctx, channel) {
 }
 
 /**
- * Extract inline item codes from the inventory response text.
- *
- * Scans the raw inventory message for backtick-quoted tokens (OwO uses these
- * for item codes, e.g. `` `057` ``) and returns them in order of appearance.
- *
+ * Extract backtick-quoted item codes (e.g. `` `057` ``) from the inventory response, in order of appearance.
  * @param {string} invContent - Raw inventory message content.
  * @returns {string[]} Array of item codes found between backticks.
  */
@@ -95,16 +79,10 @@ function parseItemCodes(invContent) {
 }
 
 /**
- * Mark gem item codes for use based on config and current rarity level.
- *
- * For every gem the farm loop still needs, finds the weakest owned code
- * (`GEM_ITEMS`) that the user can use at their current `rareLevel`, and appends
- * it to `ctx.global.gems.use`. No-op when gem usage is disabled or no gems
- * are needed.
- *
+ * For each needed gem, append the weakest owned `GEM_ITEMS` code usable at the current `rareLevel` to `ctx.global.gems.use`.
  * @param {Client} ctx - The Discord ctx instance; reads `global.gems.need`, `global.rareLevel`, and writes `global.gems.use`.
  * @param {string[]} values - Extracted inventory item codes.
- * @returns {void} Mutates `ctx.global.gems.use`; does not return a value.
+ * @returns {void} Mutates `ctx.global.gems.use`.
  */
 function selectGemCodes(ctx, values) {
     if (
@@ -129,13 +107,7 @@ function selectGemCodes(ctx, values) {
 }
 
 /**
- * Use inventory items that are enabled in config.
- *
- * Iterates the extracted codes; for each code present in `ITEM_ACTIONS` whose
- * `setting` is enabled in config, sends the appropriate use command (quantity
- * "all") and resets the hunt-since-inventory counter. A short delay separates
- * each use to respect rate limits.
- *
+ * For each enabled `ITEM_ACTIONS` code, send its use command ("all") and reset the hunt-since-inventory counter; 2.5s delay between uses.
  * @param {Client} ctx - The Discord ctx instance; reads `config.settings.inventory.use`.
  * @param {TextChannel} channel - The commands channel.
  * @param {string[]} values - Extracted inventory item codes.
@@ -154,12 +126,7 @@ async function useItemsFromInventory(ctx, channel, values) {
 }
 
 /**
- * Apply the selected gem codes with a single `use` command.
- *
- * Sends one `use <gem codes>` command for everything queued by
- * {@link selectGemCodes}, then clears the gem need/use state and the
- * "missing handled" flag so the next shortage is treated as fresh.
- *
+ * Send one `use <gem codes>` command for everything queued by {@link selectGemCodes}, then clear gem need/use state and the "missing handled" flag.
  * @param {Client} ctx - The Discord ctx instance; reads/writes `global.gems`.
  * @param {TextChannel} channel - The commands channel.
  * @returns {Promise<void>} Resolves after the gem use command has been sent.
@@ -176,13 +143,7 @@ async function applyGems(ctx, channel) {
 }
 
 /**
- * Core inventory routine: fetch, parse, use items, apply gems.
- *
- * Guards against concurrent/blocked runs, fetches the inventory, selects gem
- * codes, uses enabled consumables, applies gems, then clears the global
- * inventory flag. Always clears the flag on the failure path so the bot does
- * not get stuck "paused".
- *
+ * Core routine: fetch inventory, select gem codes, use enabled items, apply gems, then clear the inventory flag (always, via finally).
  * @param {Client} ctx - The Discord ctx instance.
  * @param {TextChannel} channel - The commands channel.
  * @returns {Promise<void>} Resolves once the routine has completed (success or abort).
@@ -204,21 +165,12 @@ async function inventory(ctx, channel) {
 
         ctx.logger.info("Farm", "Inventory", `Paused: ${ctx.global.inventory}`);
     } finally {
-        // Always release the inventory flag so a thrown error (e.g. a failed
-        // channel.send, captcha pause, or delayed cooldown) cannot leave the
-        // bot permanently "paused"/stuck.
         ctx.state.endInventory();
     }
 }
 
 /**
- * Send a generic use/item command with rate-limit and pause awareness.
- *
- * Marks the global `use` flag, sends the command, logs it, then releases the
- * flag after a cooldown. Aborts early when a captcha is detected, or when the
- * bot is paused (unless the caller is the inventory routine itself, which is
- * allowed to proceed so gems can be applied while the inventory flag is held).
- *
+ * Send a generic use/item command; sets `global.use`, aborts on captcha or pause (except `"inventory"` caller), releases the flag after a 5s cooldown.
  * @param {Client} ctx - The Discord ctx instance (sets `global.use`).
  * @param {TextChannel} channel - The commands channel.
  * @param {string} item - The item/command string to send (after the prefix).
@@ -238,9 +190,6 @@ async function use(ctx, channel, item, count, where) {
         ctx.logger.info("Farm", "Use", item);
         await ctx.delay(5000);
     } finally {
-        // Guarantee the use flag is released even if send/cooldown throws or
-        // is interrupted (e.g. by a captcha pause), preventing a livelock
-        // where farm.js spins forever on a stuck `global.use`.
         ctx.global.use = false;
     }
 }

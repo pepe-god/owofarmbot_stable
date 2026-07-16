@@ -1,13 +1,8 @@
 /**
- * Centralized constants shared across the bot.
- *
- * Hardcoding IDs/strings in many modules makes them fragile and hard to
- * audit. Anything that is a fixed external identifier (Discord/OwO ids, etc.)
- * lives here instead.
+ * Centralized constants shared across the bot (fixed external IDs/strings live here).
  */
 
-// OwO (408785106942164992) is the only bot that can issue captcha prompts,
-// hunt results, inventory replies, etc.
+// OwO (408785106942164992) is the only bot that can issue captcha prompts, hunt results, inventory replies, etc.
 const OWO_ID = "408785106942164992";
 
 // Default prefix used when config.settings.owoprefix is empty.

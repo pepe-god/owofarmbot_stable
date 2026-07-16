@@ -1,18 +1,6 @@
 /**
- * BotContext — explicit dependency-injection container.
- *
- * Replaces the previous "god object" pattern where every service was
- * monkeypatched onto the Discord.js client (`Object.assign(client, {...})`).
- * Modules now receive a `BotContext` and read their dependencies from it
- * directly, so the real dependency graph is visible in each module's
- * signature, and the Discord client is used only as the Discord API.
- *
- * Injected services (formerly `client.logger`, `client.global`, ...):
- *   logger, config, global, loops, globalutil, delay, prefix,
- *   chalk, childprocess, notifier, fs
- *
- * Discord API (formerly `client.channels`, `client.user`, `client.login`, ...):
- *   client — the underlying Discord.js client instance
+ * BotContext — explicit dependency-injection container (replaces the old `Object.assign(client, {...})` god object).
+ * Modules receive a `ctx` and read dependencies from it; the Discord client is used only as the Discord API.
  */
 class BotContext {
     /**

@@ -1,13 +1,7 @@
 /**
- * Safety module entry point — enforces a periodic pause cycle.
- *
- * Implements an automatic cooldown to lower the risk of rate limits or bans.
- * After running for `pauseafter` minutes the bot pauses itself for `pausefor`
- * minutes, then automatically resumes and repeats. The cycle is started by
- * scheduling the first pause after the runtime duration.
- *
+ * Enforces a periodic pause cycle: after `pauseafter` min runtime, pause for `pausefor` min, then resume and repeat.
  * @param {Client} ctx - The Discord ctx instance; reads `settings.safety` and mutates `global.paused`.
- * @returns {void} Seeds the self-rescheduling pause/resume timers; never returns a value.
+ * @returns {void} Seeds the self-rescheduling pause/resume timers.
  */
 function startSafety(ctx) {
     const safetyInterval = ctx.config.settings.safety.pauseafter * 60 * 1000;
@@ -21,16 +15,11 @@ function startSafety(ctx) {
 }
 
 /**
- * Pause the bot for a cooldown window.
- *
- * No-op if the bot is already paused or a captcha is being handled. Otherwise
- * sets `global.paused`, logs the action, and schedules {@link resume} after
- * `pauseDuration` ms.
- *
+ * Pause the bot (no-op if already paused or captcha'd), set `global.paused`, and schedule {@link resume} after `pauseDuration` ms.
  * @param {Client} ctx - The Discord ctx instance; mutates `global.paused`.
  * @param {number} pauseDuration - Cooldown length in ms before resuming.
  * @param {number} safetyInterval - Cooldown length in ms before the next pause.
- * @returns {void} Schedules {@link resume}; does not return a value.
+ * @returns {void} Schedules {@link resume}.
  */
 function pause(ctx, pauseDuration, safetyInterval) {
     if (ctx.global.paused || ctx.global.captchadetected) return;
@@ -44,16 +33,11 @@ function pause(ctx, pauseDuration, safetyInterval) {
 }
 
 /**
- * Resume the bot after a safety pause.
- *
- * If a captcha is still being handled, the resume is deferred by 30s instead of
- * clearing the pause. Otherwise clears `global.paused`, logs, and schedules the
- * next {@link pause} after `safetyInterval` ms.
- *
+ * Resume after a safety pause; if a captcha is still active, defer by 30s, otherwise clear `global.paused` and schedule the next {@link pause}.
  * @param {Client} ctx - The Discord ctx instance; mutates `global.paused`.
  * @param {number} pauseDuration - Cooldown length in ms (passed through to {@link pause}).
  * @param {number} safetyInterval - Cooldown length in ms before the next pause.
- * @returns {void} Schedules the next pause (or a deferred resume); does not return a value.
+ * @returns {void} Schedules the next pause (or a deferred resume).
  */
 function resume(ctx, pauseDuration, safetyInterval) {
     if (ctx.global.captchadetected) {

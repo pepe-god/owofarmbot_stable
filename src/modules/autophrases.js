@@ -21,17 +21,10 @@ function pickPhrase(lastIndex) {
 }
 
 /**
- * Start the autophrases background loop.
- *
- * Lazily loads phrases from `src/core/phrases.json` (cached for the process
- * lifetime), then repeatedly sends a random phrase at a randomized 8–25s
- * interval. Consecutive phrases avoid repeating the previous one, and the loop
- * skips a round (and reschedules) while paused/captcha'd or if the channel is
- * lost. Exits silently when the channel is missing or the phrase list is empty.
- *
+ * Background loop that sends a random phrase every 8–25s (no repeats); skips while paused/captcha'd or if the channel is lost.
  * @param {Client} ctx - The Discord ctx instance; provides `fs`, logger and global state.
  * @param {TextChannel} [channel] - The text channel where phrases are sent; undefined disables the loop.
- * @returns {void} Runs an IIFE that self-schedules; does not return a value.
+ * @returns {void} Self-schedules via IIFE.
  */
 function startAutophrases(ctx, channel) {
     if (!channel) {

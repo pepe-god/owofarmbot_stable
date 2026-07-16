@@ -2,16 +2,7 @@ const { commandrandomizer, getrand } = require("../core/globalutil.js");
 const { OWO_ID, REQUIRED_GEMS } = require("../core/constants.js");
 
 /**
- * Analyze a hunt result for missing gems or the active event star, then queue
- * inventory usage if any required item is absent.
- *
- * Only runs when gem usage is enabled in config. Waits for OwO's hunt-result
- * reply (a catch or "You found:" message newer than the sent command), then
- * recomputes `ctx.global.gems.need`: any of the `REQUIRED_GEMS` missing from
- * the message, plus the event `star` the first time it is expected (and clears
- * the event flag if it never appears). When items are missing, {@link
- * handleMissingGems} is invoked to decide how to resolve them.
- *
+ * Recompute `ctx.global.gems.need` from the hunt reply (missing REQUIRED_GEMS + first-time event star) and delegate to handleMissingGems.
  * @param {Client} ctx - The Discord ctx instance; holds gem and event state.
  * @param {TextChannel} channel - The text channel where the hunt was sent.
  * @param {Object} huntmsg - The message object of the sent hunt command (used as a reply floor).
@@ -65,21 +56,11 @@ async function huntResult(ctx, channel, huntmsg) {
 }
 
 /**
- * Decide how to resolve missing gems detected by {@link huntResult}.
- *
- * Policy:
- *  - First time gems are missing: immediately open **all** lootboxes, then run
- *    the inventory module 5s later to apply gems.
- *  - If the current hunt dropped a lootbox: run the inventory module 2s later.
- *  - Otherwise: once enough hunts have passed without an inventory check
- *    (random 15–30), run the inventory module 2s later.
- *
- * No-op when the inventory command is disabled in config.
- *
+ * Resolve missing gems: first shortage opens all lootboxes + inventory in 5s; a lootbox drop or 15–30 hunts since last check triggers inventory in 2s.
  * @param {Client} ctx - The Discord ctx instance; holds gem/inventory state.
  * @param {TextChannel} channel - The text channel where commands are sent.
  * @param {string} huntContent - Raw content of the hunt result message.
- * @returns {void} May schedule inventory runs via setTimeout; does not return a value.
+ * @returns {void} May schedule inventory runs via setTimeout.
  */
 function handleMissingGems(ctx, channel, huntContent) {
     ctx.logger.warn("Farm", "Hunt", `Missing gems: ${ctx.global.gems.need}`);

@@ -11,9 +11,7 @@ const CAPTCHA_PHRASES = [
 ];
 
 /**
- * Escape special regex characters in a string so it can be used safely
- * inside a RegExp constructor.
- *
+ * Escape special regex characters so a string can be used safely inside a RegExp constructor.
  * @param {string} str - Input string.
  * @returns {string} Regex-safe escaped string.
  */
@@ -22,10 +20,7 @@ function escapeRegex(str) {
 }
 
 /**
- * Dispatch desktop notifications when a captcha is detected.
- *
- * Triggers system toast notifications and/or a native OS prompt
- * depending on the alert configuration.
+ * Dispatch desktop notifications (toast and/or native OS prompt) when a captcha is detected, per alert config.
  */
 function sendDesktopNotifications(ctx) {
     if (ctx.config.settings.captcha.alerttype.desktop.notification) {
@@ -33,8 +28,7 @@ function sendDesktopNotifications(ctx) {
     }
     if (ctx.config.settings.captcha.alerttype.desktop.prompt) {
         const promptmessage = `Captcha detected! Solve the captcha and type ${ctx.prefix()}resume in farm channel`;
-        // Escape single quotes for PowerShell single-quoted string context
-        // (powered by a user-controlled prefix — never shell-interpolated).
+        // Escape single quotes for PowerShell single-quoted string context (user-controlled prefix — never shell-interpolated).
         const escaped = promptmessage.replace(/'/g, "''");
         const psScript = [
             "Add-Type -AssemblyName PresentationFramework",
@@ -50,8 +44,7 @@ function sendDesktopNotifications(ctx) {
 }
 
 /**
- * Send a Discord webhook alert when a captcha is detected.
- * Skipped if webhook URL is not configured.
+ * Send a Discord webhook alert when a captcha is detected; skipped if webhook URL is not configured/valid.
  */
 function sendWebhookNotification(ctx) {
     const webhookurl = ctx.config.settings.captcha.alerttype.webhookurl;
@@ -79,14 +72,10 @@ function sendWebhookNotification(ctx) {
 }
 
 /**
- * Handle a newly received OwO message that may contain a captcha.
- *
- * Validates the message is from OwO in a monitored channel and
- * contains captcha-related phrases before triggering desktop/webhook alerts.
+ * Handle a newly received OwO message that may contain a captcha; validates source/channel/phrase before triggering alerts.
  */
 async function handleCaptchaDetection(ctx, message, msgcontent) {
-    // Only react to captchas inside channels we actively farm in
-    // (commands channel and the OwO DM channel).
+    // Only react to captchas inside channels we actively farm in (commands channel and the OwO DM channel).
     const CHANNEL_IDS = [
         ctx.config.main.commandschannelid,
         ctx.config.main.owodmchannelid,
@@ -120,9 +109,7 @@ async function handleCaptchaDetection(ctx, message, msgcontent) {
 }
 
 /**
- * Handle a captcha solved notification (DM from OwO).
- *
- * Resets the captcha flag and resumes the bot if autoresume is enabled.
+ * Handle a captcha solved notification (DM from OwO); resets the flag and resumes if autoresume is enabled.
  */
 function handleCaptchaSolved(ctx, message, msgcontent) {
     if (
@@ -150,16 +137,11 @@ function handleCaptchaSolved(ctx, message, msgcontent) {
 }
 
 /**
- * Parse and dispatch a user command message.
- *
- * Strips the prefix/mention, extracts the command name and arguments,
- * looks up the registered command, and executes it if the author
- * matches the configured user ID.
+ * Parse and dispatch a user command message; strips prefix/mention, looks up the command, and runs it if the author is the configured owner.
  */
 function handleCommand(ctx, message) {
     const PREFIX = ctx.prefix();
-    // Accept either a mention of the bot OR the configured prefix, then any
-    // amount of whitespace, as the command trigger.
+    // Accept either a mention of the bot OR the configured prefix, then any amount of whitespace, as the command trigger.
     const prefixRegex = new RegExp(
         `^(<@!?${ctx.client.user.id}>|${escapeRegex(PREFIX)})\\s*`,
     );
@@ -178,8 +160,7 @@ function handleCommand(ctx, message) {
         ctx.client.commands.get(command) ||
         ctx.client.commands.get(ctx.client.aliases.get(command));
 
-    // Unknown command -> ignore. Security gate: only the configured owner
-    // user ID may run admin commands.
+    // Unknown command -> ignore. Security gate: only the configured owner user ID may run admin commands.
     if (!cmd) return;
     if (message.author.id !== ctx.config.main.userid) return;
     try {
@@ -194,16 +175,10 @@ function handleCommand(ctx, message) {
 }
 
 /**
- * Main message event handler.
- *
- * Every incoming message flows through this function. The routing order is:
- *  1. Captcha detection (only from OwO bot on monitored channels)
- *  2. Captcha solved notification (DM from OwO)
- *  3. User command dispatch
+ * Main message event handler: routes OwO messages to captcha detection/solved, then dispatches user commands.
  */
 module.exports = async (ctx, message) => {
-    // 408785106942164992 is OwO's official bot ID. Only its messages can
-    // contain captcha prompts or "solved" confirmations.
+    // 408785106942164992 is OwO's official bot ID. Only its messages can contain captcha prompts or "solved" confirmations.
     if (message.author.id === OWO_ID) {
         const msgcontent = ctx.globalutil.removeInvisibleChars(
             message.content.toLowerCase(),

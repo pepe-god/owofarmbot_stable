@@ -8,16 +8,10 @@ const { huntResult } = require("./gemHandler.js");
 const { startAutophrases } = require("./autophrases.js");
 
 /**
- * Farm module entry point — boots the hunt/battle loop and optional autophrases.
- *
- * Resolves the command channel, optionally starts the autophrases background
- * loop, then launches the self-looping {@link farmAction} handler. When hunt is
- * enabled, a battle loop is started 2s later (if battle is also enabled) so the
- * two actions alternate rather than collide on the same cooldown.
- *
+ * Boots the hunt/battle loop (battle starts 2s after hunt) and optional autophrases.
  * @param {Client} ctx - The Discord ctx instance; carries config, logger and global state.
  * @param {Message} [message] - The originating command message (unused, kept for API compatibility).
- * @returns {void} Kicks off the looping handlers; does not return a meaningful value.
+ * @returns {void}
  */
 async function startFarm(ctx, message) {
     const channel = ctx.client.channels.cache.get(
@@ -48,22 +42,14 @@ async function startFarm(ctx, message) {
 }
 
 /**
- * Generic self-looping action for hunt or battle.
- *
- * Waits for the bot to be idle, then blocks other competing actions via the
- * `ctx.global[type]` flag and sends the randomized command. The global
- * counter for the action is incremented and logged. If an `onResult` handler is
- * supplied (hunt only) it is awaited to process the response (e.g. gem checks).
- * The `ctx.global[type]` flag is always cleared in the `finally` block and
- * the next iteration is scheduled after a randomized interval from config.
- *
+ * Self-looping hunt/battle sender: waits for idle, sends the randomized command, increments the counter, and reschedules after a randomized interval.
  * @param {Client} ctx - The Discord ctx instance.
  * @param {TextChannel} channel - The text channel where commands are sent.
  * @param {Object} opts - Action configuration.
  * @param {"hunt"|"battle"} opts.type - Which action this loop performs.
  * @param {() => string} opts.cmd - Returns the randomized base command token (without prefix).
  * @param {(ctx: Client, channel: TextChannel, msg: Object) => Promise<void>} [opts.onResult] - Optional handler run against the sent message's reply.
- * @returns {void} Self-reschedules via setTimeout; does not return a value.
+ * @returns {void} Self-reschedules via setTimeout.
  */
 async function farmAction(ctx, channel, { type, cmd, onResult }) {
     await ctx.globalutil.waitWhileBusy(ctx);

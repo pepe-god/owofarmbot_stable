@@ -1,19 +1,11 @@
 /**
- * General-purpose runtime utilities used across the bot.
- *
- * Included helpers:
- *  - removeInvisibleChars: strip zero-width/control characters.
- *  - waitForMessage: wait for a specific message with a fallback timeout.
- *  - commandrandomizer: pick a random element from an array.
- *  - getrand: generate a random float between min and max.
- *  - waitWhileBusy: block execution while bot is paused/captcha/inventory.
+ * General-purpose runtime utilities: removeInvisibleChars, waitForMessage, commandrandomizer, getrand, waitWhileBusy.
  */
 
 const { BUSY_FLAGS } = require("../core/constants.js");
 
 /**
  * Capitalize the first character of a string.
- *
  * @param {string} s - Input string.
  * @returns {string} The string with its first letter uppercased.
  */
@@ -25,11 +17,7 @@ exports.removeInvisibleChars = (str) => {
 };
 
 /**
- * Wait for a Discord message that satisfies the given filter.
- *
- * Uses an immediate `messageCreate` listener first, then falls back to a
- * `MessageCollector` after `timeout` ms if no matching message arrives.
- *
+ * Wait for a Discord message matching `filter`; uses an immediate listener, falling back to a MessageCollector after `timeout` ms.
  * @param {BotContext} ctx - The bot context (provides the Discord `client` for event listeners).
  * @param {TextChannel} channel - The channel to collect from.
  * @param {Function} filter - Predicate that returns true for the wanted message.
@@ -66,7 +54,6 @@ exports.waitForMessage = (ctx, channel, filter, timeout = 6100) => {
 
 /**
  * Return a random element from the provided array.
- *
  * @template T
  * @param {T[]} arr - Array to sample from.
  * @returns {T} Randomly selected element.
@@ -76,7 +63,6 @@ exports.commandrandomizer = (arr) =>
 
 /**
  * Generate a random floating-point number between min and max.
- *
  * @param {number} min - Lower bound (inclusive).
  * @param {number} max - Upper bound (exclusive).
  * @returns {number} Random float in [min, max).
@@ -84,17 +70,7 @@ exports.commandrandomizer = (arr) =>
 exports.getrand = (min, max) => Math.random() * (max - min) + min;
 
 /**
- * Pause execution while any global busy flag is active.
- *
- * Busy flags checked:
- *  - paused: user/admin paused the bot.
- *  - captchadetected: OwO captcha detected and not yet solved.
- *  - inventory: inventory module is currently running.
- *
- * When the bot state machine is available (`ctx.state`), this resolves via a
- * one-shot subscription the instant the last busy flag clears — no polling.
- * A polling fallback (3s) is retained for contexts without a state machine.
- *
+ * Pause execution while any global busy flag (paused/captchadetected/inventory) is active; resolves via the state machine when available, else polls.
  * @param {BotContext} ctx - The bot context (provides `state`/`global` and `delay`).
  * @returns {Promise<void>} Resolves when all flags are clear.
  */
@@ -103,8 +79,7 @@ exports.waitWhileBusy = async (ctx) => {
         await ctx.state.waitUntilIdle();
         return;
     }
-    // Fallback for contexts without a state machine: poll the same busy flags
-    // the state machine owns.
+    // Fallback for contexts without a state machine: poll the same busy flags the state machine owns.
     while (BUSY_FLAGS.some((flag) => ctx.global[flag])) {
         await ctx.delay(500);
     }

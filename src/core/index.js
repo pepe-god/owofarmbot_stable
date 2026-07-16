@@ -1,19 +1,10 @@
 /**
- * Consolidated handler entry point.
- *
- * Loads and wires the three core runtime subsystems in order:
- *  1. Anti-crash — global process error listeners
- *  2. Command registration — discovers and registers text/slash commands
- *  3. Event binding — attaches Discord event handlers to the ctx
- *
+ * Consolidated handler entry point: wires anti-crash listeners, command registration, and event binding (in that order).
  * @param {Client} ctx - The Discord ctx instance.
  */
 
 /**
- * Install global process-level error listeners.
- *
- * Catches unhandled promise rejections and uncaught exceptions,
- * logging them through the ctx's logger before the process exits.
+ * Install global process-level error listeners (unhandledRejection, uncaughtException) logged via ctx's logger.
  */
 const setupAntiCrash = (ctx) => {
     const { RateLimitError, describeError } = require("../services/errors.js");
@@ -21,6 +12,7 @@ const setupAntiCrash = (ctx) => {
     const logError = (type, err, origin = null) => {
         // Sanitize error output: redact anything that looks like a Discord
         // token (segment.segment.segment) to prevent secrets in logs.
+        // Sanitize error output: redact anything that looks like a Discord token (segment.segment.segment) to prevent secrets in logs.
         const sanitize = (text) =>
             typeof text === "string"
                 ? text.replace(
@@ -56,11 +48,7 @@ Classification: ${describeError(err)}
 };
 
 /**
- * Register a single command file.
- *
- * Supports both single-command and multi-command exports (arrays).
- * Registers aliases if present.
- *
+ * Register a single command file (supports single or array exports; registers aliases if present).
  * @param {Client} ctx - The Discord ctx instance.
  * @param {Function|Function[]} pull - Exported command(s) from file.
  */
@@ -79,8 +67,7 @@ const registerCommand = (ctx, pull) => {
  * Discover and register all commands/events from src/core/.
  */
 const registerCommands = async (ctx) => {
-    // These files are infrastructure (loader, helpers, standalone CLIs),
-    // not commands or events, so they must be skipped during discovery.
+    // Skip infrastructure files (loader, helpers, standalone CLIs) during discovery.
     const EXCLUDE = new Set([
         "index.js",
         "globalutil.js",
@@ -104,8 +91,7 @@ const registerCommands = async (ctx) => {
     for (const file of files) {
         try {
             const pull = require(`./${file}`);
-            // A module exporting a function is treated as an event handler
-            // (event name = filename). Anything else is command definitions.
+            // A function export is an event handler (event name = filename); otherwise it's command definitions.
             if (typeof pull === "function") {
                 bindEvent(ctx, file, pull);
             } else {
@@ -122,9 +108,7 @@ const registerCommands = async (ctx) => {
 };
 
 /**
- * Bind a single event file to the ctx.
- * The event name is derived from the filename (without .js).
- *
+ * Bind a single event file to the ctx; event name is derived from the filename (without .js).
  * @param {Client} ctx - The Discord ctx instance.
  * @param {string} file - Event filename (e.g. "messageCreate.js").
  * @param {Function} evt - Exported handler function from the event module.
@@ -135,12 +119,7 @@ const bindEvent = (ctx, file, evt) => {
 };
 
 /**
- * Master entry point for the handler system.
- *
- * Executes all three setup phases in order:
- *  1. Anti-crash listeners
- *  2. Command registration
- *  3. Event binding
+ * Master entry point: runs anti-crash, command registration, then event binding.
  */
 module.exports = async (ctx) => {
     setupAntiCrash(ctx);

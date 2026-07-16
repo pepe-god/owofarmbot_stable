@@ -2,15 +2,10 @@ const { getrand, capitalize } = require("../core/globalutil.js");
 const { withRateLimit } = require("../services/errors.js");
 
 /**
- * Luck module entry point — starts the pray/curse loop.
- *
- * Sends either `pray` or `curse` commands (never both) to maintain the luck
- * buff, depending on which option is enabled in config. The actual sending
- * and rescheduling is delegated to {@link prayOrCurse}, which loops itself.
- *
+ * Starts the pray/curse loop (whichever is enabled in config) via {@link prayOrCurse}.
  * @param {Client} ctx - The Discord ctx instance; carries config, logger and global state.
  * @param {Message} [message] - The originating command message (unused, kept for API compatibility).
- * @returns {void} This function only kicks off the self-looping handler.
+ * @returns {void}
  */
 async function startLuck(ctx, message) {
     if (ctx.config.main.commands.pray) prayOrCurse(ctx, "pray");
@@ -18,19 +13,10 @@ async function startLuck(ctx, message) {
 }
 
 /**
- * Self-looping pray/curse command sender.
- *
- * Resolves the current commands channel from ctx each iteration so that a
- * channel change mid-session doesn't cause the loop to silently fail.
- * Waits for the bot to be idle (no captcha, no pause, no busy flags), then
- * sends the chosen command to the configured channel. If `tomain` is enabled
- * in config, the command is targeted at the main user via a mention. The total
- * count for the action is incremented and logged, and the next run is scheduled
- * after a randomized interval drawn from the `pray` config range.
- *
+ * Self-looping pray/curse sender: resolves the channel each iteration, waits for idle, sends the command (mentioning the user if `tomain`), then reschedules after a randomized interval.
  * @param {Client} ctx - The Discord ctx instance.
  * @param {"pray"|"curse"} type - Which luck command to send.
- * @returns {void} Self-reschedules via setTimeout; never resolves a meaningful value.
+ * @returns {void} Self-reschedules via setTimeout.
  */
 async function prayOrCurse(ctx, type) {
     const channel = ctx.client.channels.cache.get(

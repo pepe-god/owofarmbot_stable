@@ -1,10 +1,5 @@
 /**
- * Bot runtime bootstrap.
- *
- * Responsibilities:
- *  - Load configuration and package metadata.
- *  - Build the shared global state object attached to the Discord client.
- *  - Validate config, then log in and register handlers/commands.
+ * Bot runtime bootstrap: load config, build global state, validate, then log in and register handlers/commands.
  */
 
 const cp = require("node:child_process");
@@ -24,15 +19,12 @@ const { attachState } = require("../services/botState.js");
 const BotContext = require("./botContext.js");
 const { startWatchdog } = require("../services/watchdog.js");
 
-//client
+// Discord.js selfbot client
 const { Client, Collection } = require("discord.js-selfbot-v13");
 const client = new Client();
 
 /**
- * Factory that creates the shared global state object stored at
- * `client.global`. This object tracks runtime flags (paused, captcha,
- * inventory) and counters for every bot feature.
- *
+ * Factory that creates the shared global state object stored at `client.global` (runtime flags + per-feature counters).
  * @param {string} name - Identifier for this state instance.
  * @param {string} type - Display type used in logs/RPC.
  * @returns {Object} The initialized global state object.
@@ -75,22 +67,14 @@ function createGlobalState(name, type) {
 
 const owofarmbot_stable = createGlobalState("owofarmbot_stable", "Main");
 
-// Bind the event-driven state machine to the busy flags. This makes the flag
-// reads/writes flow through `BotState` so `waitWhileBusy` can resolve on state
-// changes instead of polling (see globalutil.js).
+// Bind the event-driven state machine to the busy flags so `waitWhileBusy` resolves on state changes instead of polling.
 const botState = attachState(owofarmbot_stable);
 
 const notifier = require("node-notifier");
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Build the explicit dependency-injection container.
- *
- * Previously every service was monkeypatched onto the Discord client
- * (`Object.assign(client, {...})`), turning `client` into a god object.
- * Now the dependencies are grouped in a `BotContext` so modules receive an
- * explicit `ctx` and the Discord client is only used as the Discord API
- * (`ctx.client`).
+ * Build the explicit dependency-injection container (replaces the old `Object.assign(client, {...})` god object).
  */
 const prefix = () =>
     globalutil.commandrandomizer([DEFAULT_PREFIX, config.settings.owoprefix]);
@@ -123,8 +107,7 @@ process.on("SIGINT", () => {
 });
 startWatchdog(ctx);
 
-// Opt-in health/metrics endpoint. Only starts when HEALTH_PORT is set so the
-// default runtime opens no ports (see src/services/health.js).
+// Opt-in health/metrics endpoint; only starts when HEALTH_PORT is set (default runtime opens no ports).
 if (process.env.HEALTH_PORT) {
     const { startHealthServer } = require("../services/health.js");
     startHealthServer(ctx, { port: Number(process.env.HEALTH_PORT) });
@@ -134,9 +117,7 @@ if (process.env.HEALTH_PORT) {
 process.title = `OwO Farm Bot Stable v${packageJson.version}`;
 
 /**
- * Use an IIFE to allow top-level async/await without requiring
- * the file to be fully module-exported. This bootstraps config
- * validation and login before the process continues.
+ * Top-level async bootstrap: validate config, then log in.
  */
 (async () => {
     const result = configSchema.validateConfig(ctx, config);
@@ -153,14 +134,11 @@ process.title = `OwO Farm Bot Stable v${packageJson.version}`;
 })();
 
 /**
- * Finalizes client setup: initializes command/alias collections,
- * loads handlers, and logs into Discord using the configured token.
+ * Finalizes client setup: init command/alias collections, load handlers, and log in.
  */
 async function initializeBot() {
-    // Discord.js uses Collection maps to store registered commands/aliases.
     for (const x of ["aliases", "commands"]) client[x] = new Collection();
 
-    // Run the consolidated handler loader (anti-crash, commands, events).
     await require("./index.js")(ctx);
 
     ctx.logger.info("Bot", "Startup", "Logging in...");
