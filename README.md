@@ -10,22 +10,39 @@ An automated farming bot for the OwO Discord bot.
 
 - [Node.js](https://nodejs.org/) v22 or newer
 - pnpm — run `corepack enable pnpm` after installing Node.js
+- **Termux (Android):** `pkg install nodejs git` then `npm install -g pnpm`
 
 ## Quick Start
 
+### Desktop / Server
+
 ```bash
-# 1. Download & install
 git clone <repo-url>
 cd owofarmbot_stable
 pnpm install
-
-# 2. Create .env from the example file and fill in your token & user ID
 cp .env.example .env
 # Edit .env with your Discord token and user ID
+# Edit config.json — set your channel IDs and toggle features
+pnpm start
+```
 
-# 3. Edit config.json — set your channel IDs and toggle features
+### Termux (Android)
 
-# 4. Start the bot
+```bash
+pkg update && pkg upgrade
+pkg install nodejs git
+npm install -g pnpm
+git clone <repo-url>
+cd owofarmbot_stable
+pnpm install
+cp .env.example .env
+# Edit .env with your Discord token and user ID
+# Edit config.json — set your channel IDs and toggle features
+
+# ⚠ Important for Termux: disable the Windows-only CAPTCHA popup
+# Edit config.json and set: "prompt": false
+# (Under settings → captcha → alerttype → desktop)
+
 pnpm start
 ```
 
@@ -86,6 +103,10 @@ A: Discord → `Ctrl+Shift+I` → Storage → Local Storage → Copy `token` val
 A: Enable Developer Mode in Discord settings, then right-click → Copy ID.
 
 When you get a CAPTCHA, the bot pauses until you solve it and type `oworesume`.
+
+**Q: Does this work on Termux (Android)?**  
+A: Yes. Install Node.js via `pkg install nodejs`, then follow the Termux quick-start above.  
+   The only change needed is setting `"prompt": false` in config.json (the CAPTCHA popup uses `powershell.exe` which is Windows-only — the webhook notification still works).
 
 ---
 
